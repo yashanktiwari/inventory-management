@@ -5,10 +5,8 @@
 - mvn clean package
 
 ## For MySQL:
-- CREATE USER 'inventory_user'@'%' IDENTIFIED BY 'inventory123';
-
-- GRANT ALL PRIVILEGES ON *.* TO 'inventory_user'@'%';
-
+- CREATE USER 'inventory_user'@'%' IDENTIFIED BY 'StrongPassword123'; 
+- GRANT ALL PRIVILEGES ON inventory_db.* TO 'inventory_user'@'%'; 
 - FLUSH PRIVILEGES;
 
 
