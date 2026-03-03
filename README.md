@@ -1,3 +1,9 @@
+## To run the application:
+- mvn clean javafx:run
+
+## For packaging:
+- mvn clean package
+
 ## The command to create package the project to .exe:
 
 & "C:\Program Files\Java\jdk-24\bin\jpackage.exe" `
