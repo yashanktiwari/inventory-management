@@ -4,6 +4,14 @@
 ## For packaging:
 - mvn clean package
 
+## For MySQL:
+- CREATE USER 'inventory_user'@'%' IDENTIFIED BY 'inventory123';
+
+- GRANT ALL PRIVILEGES ON *.* TO 'inventory_user'@'%';
+
+- FLUSH PRIVILEGES;
+
+
 ## The command to create package the project to .exe:
 
 & "C:\Program Files\Java\jdk-24\bin\jpackage.exe" `
