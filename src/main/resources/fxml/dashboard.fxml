@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.inventory.ui.controller.DashboardController">
+
+    <top>
+        <Label text="Inventory Transaction History"
+               style="-fx-font-size: 20px; -fx-padding: 10;" />
+    </top>
+
+    <center>
+        <VBox spacing="10" style="-fx-padding: 10;"
+              VBox.vgrow="ALWAYS">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Search:"/>
+                <TextField fx:id="searchField"
+                           promptText="Search by Item ID / Item Name / Employee ID / Person Name"
+                           prefWidth="300"/>
+            </HBox>
+            <TableView fx:id="historyTable"
+                       VBox.vgrow="ALWAYS">
+                <columns>
+
+                    <TableColumn fx:id="serialColumn" text="No." prefWidth="50"/>
+                    <TableColumn fx:id="itemIdColumn" text="Item ID" prefWidth="80"/>
+                    <TableColumn fx:id="itemColumn" text="Item Name" prefWidth="150"/>
+                    <TableColumn fx:id="employeeIdColumn" text="Employee ID" prefWidth="120"/>
+                    <TableColumn fx:id="personColumn" text="Person Name" prefWidth="150"/>
+                    <TableColumn fx:id="issuedColumn" text="Issued Date" prefWidth="180"/>
+                    <TableColumn fx:id="returnedColumn" text="Returned Date" prefWidth="180"/>
+                    <TableColumn fx:id="remarksColumn" text="Remarks" prefWidth="150"/>
+                    <TableColumn fx:id="actionColumn" text="Mark as Returned" prefWidth="120"/>
+                    <TableColumn fx:id="deleteColumn" text="Delete Transaction" prefWidth="120"/>
+
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox spacing="10" style="-fx-padding: 10;">
+            <Button text="Refresh" onAction="#handleRefresh"/>
+            <Button text="Add Transaction" onAction="#handleAddTransaction"/>
+            <Button text="Export Excel" onAction="#handleExportExcel"/>
+            <Button text="Export PDF" onAction="#handleExportPDF"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label text="Developed by Yashank Tiwari"
+                   style="-fx-font-size: 12px; -fx-text-fill: gray;" />
+        </HBox>
+    </bottom>
+
+</BorderPane>

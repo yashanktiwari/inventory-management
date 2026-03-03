@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="15"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.inventory.ui.controller.AddTransactionController"
+      style="-fx-padding: 25; -fx-background-color: #f4f6f8;">
+
+    <Label text="Issue Item"
+           style="-fx-font-size: 20px; -fx-font-weight: bold;" />
+
+    <GridPane hgap="15" vgap="15">
+
+        <columnConstraints>
+            <ColumnConstraints minWidth="130"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+        </columnConstraints>
+
+        <Label text="Item Name *" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="itemNameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Item ID *" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="itemIdField"
+                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Employee ID *" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="employeeIdField"
+                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Person Name *" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="personNameField"
+                   GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Department:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="departmentField"
+                   GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="Remarks:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextArea fx:id="remarksField"
+                  GridPane.rowIndex="5" GridPane.columnIndex="1"
+                  prefRowCount="3"/>
+
+    </GridPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancel" onAction="#handleCancel"/>
+        <Button text="Save"
+                style="-fx-background-color: #2e7d32; -fx-text-fill: white;"
+                onAction="#handleSave"/>
+    </HBox>
+
+</VBox>
