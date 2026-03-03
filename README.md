@@ -1,4 +1,5 @@
-The command to create package the project to .exe:
+## The command to create package the project to .exe:
+
 & "C:\Program Files\Java\jdk-24\bin\jpackage.exe" `
   --input target `
   --name InventoryManagementSystem `
