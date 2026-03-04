@@ -41,7 +41,7 @@ public class TransactionDAO {
             try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 insertStmt.setString(1, itemId);
                 insertStmt.setInt(2, personId);
-                insertStmt.setString(3, LocalDateTime.now().toString());
+                insertStmt.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
                 insertStmt.setString(4, remarks);
 
                 insertStmt.executeUpdate();
@@ -65,7 +65,7 @@ public class TransactionDAO {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
 
-            pstmt.setString(1, LocalDateTime.now().toString());
+            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
             pstmt.setInt(2, itemId);
 
             int rowsUpdated = pstmt.executeUpdate();
@@ -99,12 +99,18 @@ public class TransactionDAO {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                String issued = issuedTs != null ? issuedTs.toString() : null;
+                String returned = returnedTs != null ? returnedTs.toString() : null;
+
                 Transaction transaction = new Transaction(
                         rs.getInt("transaction_id"),
                         rs.getInt("item_id"),
                         rs.getInt("person_id"),
-                        rs.getString("issued_datetime"),
-                        rs.getString("returned_datetime"),
+                        issued,
+                        returned,
                         rs.getString("remarks")
                 );
 
@@ -142,14 +148,20 @@ public class TransactionDAO {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                String issued = issuedTs != null ? issuedTs.toString() : null;
+                String returned = returnedTs != null ? returnedTs.toString() : null;
+
                 TransactionHistory history = new TransactionHistory(
                         rs.getInt("transaction_id"),
                         rs.getString("item_id"),
                         rs.getString("item_name"),
                         rs.getString("employee_id"),
                         rs.getString("person_name"),
-                        rs.getString("issued_datetime"),
-                        rs.getString("returned_datetime"),
+                        issued,
+                        returned,
                         rs.getString("remarks")
                 );
 
@@ -174,7 +186,7 @@ public class TransactionDAO {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, java.time.LocalDateTime.now().toString());
+            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
             pstmt.setInt(2, transactionId);
 
             pstmt.executeUpdate();
@@ -236,14 +248,20 @@ public class TransactionDAO {
 
             while (rs.next()) {
 
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                String issued = issuedTs != null ? issuedTs.toString() : null;
+                String returned = returnedTs != null ? returnedTs.toString() : null;
+
                 TransactionHistory history = new TransactionHistory(
                         rs.getInt("transaction_id"),
                         rs.getString("item_id"),
                         rs.getString("item_name"),
                         rs.getString("employee_id"),
                         rs.getString("person_name"),
-                        rs.getString("issued_datetime"),
-                        rs.getString("returned_datetime"),
+                        issued,
+                        returned,
                         rs.getString("remarks")
                 );
 

@@ -2,13 +2,37 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.inventory.ui.controller.DashboardController">
 
     <top>
-        <Label text="Inventory Transaction History"
-               style="-fx-font-size: 20px; -fx-padding: 10;" />
+        <VBox>
+            <MenuBar>
+                <Menu text="File">
+                    <MenuItem text="Setup Database"
+                              onAction="#handleSetupDatabase"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="Backup Database"
+                              onAction="#handleBackupDatabase"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="Restore Database"
+                              onAction="#handleRestoreDatabase"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="Exit"
+                              onAction="#handleExit"/>
+                </Menu>
+
+                <Menu text="About">
+                    <MenuItem text="About Application"
+                              onAction="#handleAbout"/>
+                </Menu>
+            </MenuBar>
+
+            <Label text="Inventory Transaction History"
+                   style="-fx-font-size: 20px; -fx-padding: 10;" />
+        </VBox>
     </top>
 
     <center>
@@ -41,13 +65,20 @@
     </center>
 
     <bottom>
-        <HBox spacing="10" style="-fx-padding: 10;">
-            <Button text="Refresh" onAction="#handleRefresh"/>
-            <Button text="Add Transaction" onAction="#handleAddTransaction"/>
-            <Button text="Export Excel" onAction="#handleExportExcel"/>
-            <Button text="Export PDF" onAction="#handleExportPDF"/>
+        <HBox spacing="10" style="-fx-padding: 10;" alignment="CENTER_LEFT">
+
+            <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefresh"/>
+            <Button fx:id="addTransactionButton" text="Add Transaction" onAction="#handleAddTransaction"/>
+            <Button fx:id="exportExcelButton" text="Export Excel" onAction="#handleExportExcel"/>
+            <Button fx:id="exportPDFButton" text="Export PDF" onAction="#handleExportPDF"/>
 
             <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- 🔥 Connection Indicator -->
+            <HBox spacing="5" alignment="CENTER">
+                <Circle fx:id="statusDot" radius="6"/>
+                <Label fx:id="statusLabel" text="Checking connection..."/>
+            </HBox>
 
             <Label text="Developed by Yashank Tiwari"
                    style="-fx-font-size: 12px; -fx-text-fill: gray;" />
