@@ -3,18 +3,15 @@ package com.inventory.ui.controller;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
-import com.inventory.model.Transaction;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.AlertUtil;
+import com.inventory.util.TableFreezeManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.scene.control.Alert;
@@ -26,6 +23,7 @@ import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.SplitPane;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -34,6 +32,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.util.prefs.Preferences;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -159,9 +158,26 @@ public class DashboardController {
     private String mysqldumpPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe";
     private String mysqlPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
     private static final String RESTORE_PASSWORD = "admin123";
+    private final Preferences prefs =
+            Preferences.userNodeForPackage(DashboardController.class);
+    private Node originalCenter;
+
+    private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
+    private TableFreezeManager<TransactionHistory> freezeManager;
+    private BorderPane rootPane;
 
     @FXML
     public void initialize() {
+        Platform.runLater(() -> {
+            rootPane = (BorderPane) historyTable.getScene().getRoot();
+            originalCenter = rootPane.getCenter();
+        });
+
+        freezeManager = new TableFreezeManager<>(historyTable);
+        Platform.runLater(this::restoreColumnOrder);
+        historyTable.getColumns().addListener((javafx.collections.ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
+            saveColumnOrder();
+        });
         centerAllColumns(historyTable);
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
@@ -396,7 +412,6 @@ public class DashboardController {
 
         remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
 
-
         // 🔹 Date Formatting
         issuedColumn.setCellValueFactory(cellData -> {
 
@@ -413,7 +428,6 @@ public class DashboardController {
                     dateTime.format(formatter)
             );
         });
-
 
         returnedColumn.setCellValueFactory(cellData -> {
 
@@ -434,7 +448,6 @@ public class DashboardController {
                     dateTime.format(formatter)
             );
         });
-
 
         // 🔹 Search
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
@@ -736,6 +749,44 @@ public class DashboardController {
                 }
             });
         });
+    }
+
+    @FXML
+    private void handleFreezeColumns() {
+
+        TextInputDialog dialog = new TextInputDialog("2");
+        dialog.setTitle("Freeze Columns");
+        dialog.setHeaderText("Freeze first N columns");
+
+        dialog.showAndWait().ifPresent(input -> {
+
+            try {
+
+                int count = Integer.parseInt(input);
+
+                SplitPane pane = freezeManager.freezeColumns(count);
+
+                VBox.setVgrow(pane, Priority.ALWAYS);
+
+                rootPane.setCenter(pane);
+
+            } catch (Exception e) {
+
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Invalid number of columns.");
+                alert.show();
+            }
+
+        });
+    }
+
+    @FXML
+    private void handleUnfreezeColumns() {
+        freezeManager.restoreOriginalTable();
+
+        if (originalCenter != null) {
+            rootPane.setCenter(originalCenter);
+        }
     }
 
     private void loadHistory() {
@@ -1194,4 +1245,120 @@ public class DashboardController {
 
         }
     }
+
+    private void restoreColumnOrder() {
+
+        String order = prefs.get(COLUMN_ORDER_KEY, null);
+
+        if (order == null) return;
+
+        String[] ids = order.split(",");
+
+        ObservableList<TableColumn<TransactionHistory, ?>> columns =
+                historyTable.getColumns();
+
+        for (String id : ids) {
+
+            columns.stream()
+                    .filter(c -> id.equals(c.getId()))
+                    .findFirst()
+                    .ifPresent(col -> {
+
+                        columns.remove(col);
+                        columns.add(col);
+
+                    });
+        }
+    }
+
+    private void saveColumnOrder() {
+
+        StringBuilder order = new StringBuilder();
+
+        for (TableColumn<?, ?> column : historyTable.getColumns()) {
+
+            if (column.getId() != null) {
+                order.append(column.getId()).append(",");
+            }
+        }
+
+        prefs.put(COLUMN_ORDER_KEY, order.toString());
+    }
+
+//    @FXML
+//    private void handleFreezeColumns() {
+//
+//        TextInputDialog dialog = new TextInputDialog("2");
+//        dialog.setTitle("Freeze Columns");
+//        dialog.setHeaderText("Freeze first N columns");
+//        dialog.setContentText("Enter number of columns to freeze:");
+//
+//        Optional<String> result = dialog.showAndWait();
+//
+//        result.ifPresent(input -> {
+//
+//            try {
+//
+//                int count = Integer.parseInt(input);
+//
+//                if (count <= 0 || count >= historyTable.getColumns().size()) {
+//                    AlertUtil.showError("Error", "Invalid column count.");
+//                    return;
+//                }
+//
+//                freezeColumns(count);
+//
+//            } catch (NumberFormatException e) {
+//                AlertUtil.showError("Error", "Please enter a valid number.");
+//            }
+//
+//        });
+//    }
+
+//    private void freezeColumns(int count) {
+//        TableView<TransactionHistory> frozenTable = new TableView<>();
+//        TableView<TransactionHistory> scrollTable = new TableView<>();
+//
+//        frozenTable.setItems(historyTable.getItems());
+//        scrollTable.setItems(historyTable.getItems());
+//
+//        frozenTable.getColumns().addAll(
+//                historyTable.getColumns().subList(0, count)
+//        );
+//
+//        scrollTable.getColumns().addAll(
+//                historyTable.getColumns().subList(count, historyTable.getColumns().size())
+//        );
+//
+//        frozenTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+//        scrollTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+//
+//        // 🔹 Sync vertical scroll
+//        syncVerticalScroll(frozenTable, scrollTable);
+//
+//        SplitPane splitPane = new SplitPane(frozenTable, scrollTable);
+//        splitPane.setDividerPositions(0.25);
+//
+//        BorderPane root = (BorderPane) historyTable.getParent().getParent();
+//        root.setCenter(splitPane);
+//    }
+//
+//    private void syncVerticalScroll(TableView<?> frozenTable, TableView<?> scrollTable) {
+//
+//        frozenTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+//
+//            ScrollBar frozenBar =
+//                    (ScrollBar) frozenTable.lookup(".scroll-bar:vertical");
+//
+//            ScrollBar scrollBar =
+//                    (ScrollBar) scrollTable.lookup(".scroll-bar:vertical");
+//
+//            if (frozenBar != null && scrollBar != null) {
+//
+//                frozenBar.valueProperty().bindBidirectional(
+//                        scrollBar.valueProperty()
+//                );
+//            }
+//        });
+//    }
 }
