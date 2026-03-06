@@ -3,11 +3,13 @@ package com.inventory.ui.controller;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
+import com.inventory.model.Transaction;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.AlertUtil;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -28,8 +30,11 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -48,39 +53,92 @@ public class DashboardController {
     @FXML
     private TableColumn<TransactionHistory, Integer> serialColumn;
 
+    // 🔹 Transaction Info
     @FXML
-    private TableColumn<TransactionHistory, String> itemIdColumn;
+    private TableColumn<TransactionHistory, String> buySellColumn;
 
     @FXML
-    private TableColumn<TransactionHistory, String> itemColumn;
+    private TableColumn<TransactionHistory, String> plantColumn;
 
+    @FXML
+    private TableColumn<TransactionHistory, String> departmentColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> locationColumn;
+
+    // 🔹 Employee Info
     @FXML
     private TableColumn<TransactionHistory, String> employeeIdColumn;
 
     @FXML
-    private TableColumn<TransactionHistory, String> personColumn;
+    private TableColumn<TransactionHistory, String> employeeNameColumn;
 
+    // 🔹 Network / Device
+    @FXML
+    private TableColumn<TransactionHistory, String> ipAddressColumn;
+
+    // 🔹 Item Info
+    @FXML
+    private TableColumn<TransactionHistory, String> itemCodeColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> itemNameColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> itemMakeColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> itemModelColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> itemSerialColumn;
+
+    // 🔹 SIM / IMEI
+    @FXML
+    private TableColumn<TransactionHistory, String> imeiColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> simColumn;
+
+    // 🔹 Purchase Info
+    @FXML
+    private TableColumn<TransactionHistory, String> poColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> partyColumn;
+
+    // 🔹 Status
+    @FXML
+    private TableColumn<TransactionHistory, String> statusColumn;
+
+    // 🔹 Dates
     @FXML
     private TableColumn<TransactionHistory, String> issuedColumn;
 
     @FXML
     private TableColumn<TransactionHistory, String> returnedColumn;
 
+    // 🔹 Remarks
     @FXML
     private TableColumn<TransactionHistory, String> remarksColumn;
 
+    // 🔹 Actions
     @FXML
     private TableColumn<TransactionHistory, Void> actionColumn;
 
     @FXML
     private TableColumn<TransactionHistory, Void> deleteColumn;
 
+
+    // 🔹 Connection Status
     @FXML
     private javafx.scene.shape.Circle statusDot;
 
     @FXML
     private Label statusLabel;
 
+
+    // 🔹 Buttons
     @FXML
     private Button addTransactionButton;
 
@@ -93,7 +151,6 @@ public class DashboardController {
     @FXML
     private Button refreshButton;
 
-
     private ObservableList<TransactionHistory> masterData;
     private FilteredList<TransactionHistory> filteredData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
@@ -101,13 +158,15 @@ public class DashboardController {
             DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
     private String mysqldumpPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe";
     private String mysqlPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
+    private static final String RESTORE_PASSWORD = "admin123";
 
     @FXML
     public void initialize() {
-        actionColumn.setCellFactory(col -> new javafx.scene.control.TableCell<>() {
+        centerAllColumns(historyTable);
 
-            private final javafx.scene.control.Button returnBtn =
-                    new javafx.scene.control.Button("Return");
+        actionColumn.setCellFactory(col -> new TableCell<>() {
+
+            private final Button returnBtn = new Button("Return");
 
             {
                 returnBtn.setOnAction(event -> {
@@ -116,34 +175,38 @@ public class DashboardController {
                             getTableView().getItems().get(getIndex());
 
                     if (history.getReturnedDateTime() == null) {
+
                         transactionDAO.returnItemByTransactionId(
                                 history.getTransactionId()
                         );
+
                         loadHistory();
                     }
                 });
             }
+
             @Override
             protected void updateItem(Void item, boolean empty) {
+
                 super.updateItem(item, empty);
 
                 if (empty) {
                     setGraphic(null);
-                } else {
-
-                    TransactionHistory history =
-                            getTableView().getItems().get(getIndex());
-
-                    if (history.getReturnedDateTime() != null) {
-                        returnBtn.setDisable(true);
-                        returnBtn.setText("Returned");
-                    } else {
-                        returnBtn.setDisable(false);
-                        returnBtn.setText("Return");
-                    }
-
-                    setGraphic(returnBtn);
+                    return;
                 }
+
+                TransactionHistory history =
+                        getTableView().getItems().get(getIndex());
+
+                if (history.getReturnedDateTime() != null) {
+                    returnBtn.setDisable(true);
+                    returnBtn.setText("Returned");
+                } else {
+                    returnBtn.setDisable(false);
+                    returnBtn.setText("Return");
+                }
+
+                setGraphic(returnBtn);
             }
         });
 
@@ -153,8 +216,8 @@ public class DashboardController {
 
             {
                 deleteButton.setStyle(
-                        "-fx-background-color: #ff4d4d; " +
-                                "-fx-text-fill: white; " +
+                        "-fx-background-color: #ff4d4d;" +
+                                "-fx-text-fill: white;" +
                                 "-fx-font-weight: bold;"
                 );
 
@@ -169,6 +232,7 @@ public class DashboardController {
                     alert.setContentText("Are you sure you want to delete this record?");
 
                     alert.showAndWait().ifPresent(response -> {
+
                         if (response == ButtonType.OK) {
 
                             transactionDAO.deleteTransaction(
@@ -183,6 +247,7 @@ public class DashboardController {
 
             @Override
             protected void updateItem(Void item, boolean empty) {
+
                 super.updateItem(item, empty);
 
                 if (empty) {
@@ -193,74 +258,83 @@ public class DashboardController {
             }
         });
 
-        employeeIdColumn.setCellValueFactory(
-                new PropertyValueFactory<>("employeeId")
-        );
+
+        // 🔹 Serial Column
         serialColumn.setCellValueFactory(cellData ->
                 new SimpleIntegerProperty(
                         historyTable.getItems().indexOf(cellData.getValue()) + 1
                 ).asObject()
         );
-        itemIdColumn.setCellValueFactory(
-                new PropertyValueFactory<>("itemId")
-        );
 
-        itemIdColumn.setCellFactory(col ->
-                new TableCell<TransactionHistory, String>() {
 
-                    private final Hyperlink link = new Hyperlink();
-                    {
-                        link.setBorder(null);
-                        link.setPadding(javafx.geometry.Insets.EMPTY);
-                        link.setUnderline(false);
+        // 🔹 Bind Columns to New Model
+        buySellColumn.setCellValueFactory(new PropertyValueFactory<>("buySell"));
+        buySellColumn.setCellFactory(column -> new TableCell<TransactionHistory, String>() {
+            @Override
+            protected void updateItem(String value, boolean empty) {
+                super.updateItem(value, empty);
 
-                        link.setOnAction(event -> {
-                            TransactionHistory history =
-                                    getTableView().getItems().get(getIndex());
-
-                            openItemHistoryPage(
-                                    history.getItemId(),
-                                    history.getItemName()
-                            );
-                        });
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(value);
+                    setAlignment(Pos.CENTER);
+                    if ("Buy".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color: #d4edda; -fx-text-fill: black;");
+                    } else if ("Sell".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color: #f8d7da; -fx-text-fill: black;");
+                    } else {
+                        setStyle("");
                     }
+                }
+            }
+        });
 
-                    @Override
-                    protected void updateItem(String itemId, boolean empty) {
-                        super.updateItem(itemId, empty);
+        plantColumn.setCellValueFactory(new PropertyValueFactory<>("plant"));
+        departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
+        locationColumn.setCellValueFactory(new PropertyValueFactory<>("location"));
 
-                        if (empty || itemId == null) {
-                            setGraphic(null);
-                        } else {
-                            link.setText(itemId);
+        employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+        employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
 
-                            getTableRow().selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
-                                if (isNowSelected) {
-                                    link.setStyle("-fx-text-fill: white;");
-                                } else {
-                                    link.setStyle("-fx-text-fill: #1a73e8;");
-                                }
-                            });
+        ipAddressColumn.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));
 
-                            setGraphic(link);
-                        }
-                    }
-                });
+        itemCodeColumn.setCellValueFactory(new PropertyValueFactory<>("itemCode"));
+        itemNameColumn.setCellValueFactory(new PropertyValueFactory<>("itemName"));
+        itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
+        itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
+        itemSerialColumn.setCellValueFactory(new PropertyValueFactory<>("itemSerial"));
 
-        itemColumn.setCellValueFactory(new PropertyValueFactory<>("itemName"));
-        personColumn.setCellValueFactory(new PropertyValueFactory<>("personName"));
+        imeiColumn.setCellValueFactory(new PropertyValueFactory<>("imeiNo"));
+        simColumn.setCellValueFactory(new PropertyValueFactory<>("simNo"));
+
+        poColumn.setCellValueFactory(new PropertyValueFactory<>("poNo"));
+        partyColumn.setCellValueFactory(new PropertyValueFactory<>("partyName"));
+
+        statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
+
+        remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
+
+
+        // 🔹 Date Formatting
         issuedColumn.setCellValueFactory(cellData -> {
 
             String raw = cellData.getValue().getIssuedDateTime();
-            if (raw == null) return new SimpleStringProperty("");
+
+            if (raw == null) {
+                return new SimpleStringProperty("");
+            }
 
             LocalDateTime dateTime =
-                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
+                    Timestamp.valueOf(raw).toLocalDateTime();
 
             return new SimpleStringProperty(
                     dateTime.format(formatter)
             );
         });
+
+
         returnedColumn.setCellValueFactory(cellData -> {
 
             String raw = cellData.getValue().getReturnedDateTime();
@@ -270,14 +344,15 @@ public class DashboardController {
             }
 
             LocalDateTime dateTime =
-                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
+                    Timestamp.valueOf(raw).toLocalDateTime();
 
             return new SimpleStringProperty(
                     dateTime.format(formatter)
             );
         });
-        remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
 
+
+        // 🔹 Search
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
 
             if (filteredData == null) return;
@@ -290,16 +365,30 @@ public class DashboardController {
 
                 String keyword = newValue.toLowerCase();
 
-                return (history.getItemId() != null &&
-                        history.getItemId().toLowerCase().contains(keyword))
-                        || (history.getItemName() != null &&
-                        history.getItemName().toLowerCase().contains(keyword))
-                        || (history.getEmployeeId() != null &&
-                        history.getEmployeeId().toLowerCase().contains(keyword))
-                        || (history.getPersonName() != null &&
-                        history.getPersonName().toLowerCase().contains(keyword));
+                return
+                        (history.getItemCode() != null &&
+                                history.getItemCode().toLowerCase().contains(keyword))
+
+                                ||      (history.getItemName() != null &&
+                                history.getItemName().toLowerCase().contains(keyword))
+
+                                ||      (history.getEmployeeId() != null &&
+                                history.getEmployeeId().toLowerCase().contains(keyword))
+
+                                ||      (history.getEmployeeName() != null &&
+                                history.getEmployeeName().toLowerCase().contains(keyword))
+
+                                ||      (history.getDepartment() != null &&
+                                history.getDepartment().toLowerCase().contains(keyword))
+
+                                ||      (history.getLocation() != null &&
+                                history.getLocation().toLowerCase().contains(keyword))
+
+                                ||      (history.getItemSerial() != null &&
+                                history.getItemSerial().toLowerCase().contains(keyword));
             });
         });
+
         updateConnectionStatus();
         loadHistory();
         startConnectionMonitor();
@@ -342,7 +431,7 @@ public class DashboardController {
                     getClass().getResource("/fxml/add-transaction.fxml")
             );
 
-            Scene scene = new Scene(loader.load(), 400, 500);
+            Scene scene = new Scene(loader.load(), 700, 650);
 
             Stage stage = new Stage();
             stage.setTitle("Add Transaction");
@@ -475,6 +564,10 @@ public class DashboardController {
 
     @FXML
     private void handleRestoreDatabase() {
+
+        if (!verifyRestorePassword()) {
+            return;
+        }
 
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Restore Database");
@@ -918,5 +1011,88 @@ public class DashboardController {
             }
 
         }).start();
+    }
+
+    private boolean verifyRestorePassword() {
+
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Authorization Required");
+        dialog.setHeaderText("Enter Restore Password");
+
+        ButtonType loginBtn = new ButtonType("Verify", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(loginBtn, ButtonType.CANCEL);
+
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Password");
+
+        VBox container = new VBox(10, passwordField);
+        container.setPadding(new Insets(15));
+
+        dialog.getDialogPane().setContent(container);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == loginBtn) {
+                return passwordField.getText();
+            }
+            return null;
+        });
+
+        Optional<String> result = dialog.showAndWait();
+
+        if (result.isEmpty()) {
+            return false;
+        }
+
+        if (!RESTORE_PASSWORD.equals(result.get())) {
+
+            AlertUtil.showError(
+                    "Access Denied",
+                    "Incorrect restore password."
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private <T> void centerColumn(TableColumn<TransactionHistory, T> column) {
+        column.setCellFactory(tc -> new TableCell<>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.toString());
+                }
+
+                setAlignment(Pos.CENTER);
+            }
+        });
+    }
+
+    private void centerAllColumns(TableView<TransactionHistory> table) {
+
+        for (TableColumn<?, ?> column : table.getColumns()) {
+
+            column.setCellFactory(col -> new TableCell() {
+
+                @Override
+                protected void updateItem(Object item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(item.toString());
+                    }
+
+                    setAlignment(Pos.CENTER);
+                }
+            });
+
+        }
     }
 }

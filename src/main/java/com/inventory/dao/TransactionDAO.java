@@ -1,7 +1,6 @@
 package com.inventory.dao;
 
 import com.inventory.database.DBConnection;
-import com.inventory.model.Transaction;
 import com.inventory.model.TransactionHistory;
 
 import java.sql.*;
@@ -11,42 +10,77 @@ import java.util.List;
 
 public class TransactionDAO {
 
-    // 🔹 Issue Item
-    public void issueItem(String itemId, int personId, String remarks) {
+    // 🔹 Insert Transaction
+    public void addTransaction(
+            String buySell,
+            String plant,
+            String department,
+            String location,
+            String employeeId,
+            String employeeName,
+            String ipAddress,
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial,
+            String imeiNo,
+            String simNo,
+            String poNo,
+            String partyName,
+            String status,
+            String remarks
+    ) {
 
-        String checkSql = """
-                SELECT COUNT(*) FROM transactions
-                WHERE item_id = ? AND returned_datetime IS NULL
+        String sql = """
+                INSERT INTO transactions(
+                    buy_sell,
+                    plant,
+                    department,
+                    location,
+                    employee_id,
+                    employee_name,
+                    ip_address,
+                    item_code,
+                    item_name,
+                    item_make,
+                    item_model,
+                    item_serial,
+                    imei_no,
+                    sim_no,
+                    po_no,
+                    party_name,
+                    status,
+                    issued_datetime,
+                    remarks
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
-        String insertSql = """
-                INSERT INTO transactions(item_id, person_id, issued_datetime, remarks)
-                VALUES (?, ?, ?, ?)
-                """;
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-        try (Connection conn = DBConnection.getConnection()) {
+            pstmt.setString(1, buySell);
+            pstmt.setString(2, plant);
+            pstmt.setString(3, department);
+            pstmt.setString(4, location);
+            pstmt.setString(5, employeeId);
+            pstmt.setString(6, employeeName);
+            pstmt.setString(7, ipAddress);
+            pstmt.setString(8, itemCode);
+            pstmt.setString(9, itemName);
+            pstmt.setString(10, itemMake);
+            pstmt.setString(11, itemModel);
+            pstmt.setString(12, itemSerial);
+            pstmt.setString(13, imeiNo);
+            pstmt.setString(14, simNo);
+            pstmt.setString(15, poNo);
+            pstmt.setString(16, partyName);
+            pstmt.setString(17, status);
+            pstmt.setTimestamp(18, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setString(19, remarks);
 
-            // Step 1: Check if item already issued
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setString(1, itemId);
-                ResultSet rs = checkStmt.executeQuery();
-
-                if (rs.next() && rs.getInt(1) > 0) {
-                    System.out.println("Item is already issued to someone.");
-                    return;
-                }
-            }
-
-            // Step 2: Insert transaction
-            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                insertStmt.setString(1, itemId);
-                insertStmt.setInt(2, personId);
-                insertStmt.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
-                insertStmt.setString(4, remarks);
-
-                insertStmt.executeUpdate();
-                System.out.println("Item issued successfully.");
-            }
+            pstmt.executeUpdate();
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -54,134 +88,13 @@ public class TransactionDAO {
     }
 
     // 🔹 Return Item
-    public void returnItem(int itemId) {
-
-        String updateSql = """
-                UPDATE transactions
-                SET returned_datetime = ?
-                WHERE item_id = ? AND returned_datetime IS NULL
-                """;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
-
-            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
-            pstmt.setInt(2, itemId);
-
-            int rowsUpdated = pstmt.executeUpdate();
-
-            if (rowsUpdated > 0) {
-                System.out.println("Item returned successfully.");
-            } else {
-                System.out.println("No active transaction found for this item.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // 🔹 Get Transaction History by Item
-    public List<Transaction> getTransactionHistoryByItem(int itemId) {
-
-        List<Transaction> transactions = new ArrayList<>();
-
-        String sql = """
-                SELECT * FROM transactions
-                WHERE item_id = ?
-                ORDER BY issued_datetime DESC
-                """;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, itemId);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
-                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
-
-                String issued = issuedTs != null ? issuedTs.toString() : null;
-                String returned = returnedTs != null ? returnedTs.toString() : null;
-
-                Transaction transaction = new Transaction(
-                        rs.getInt("transaction_id"),
-                        rs.getInt("item_id"),
-                        rs.getInt("person_id"),
-                        issued,
-                        returned,
-                        rs.getString("remarks")
-                );
-
-                transactions.add(transaction);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return transactions;
-    }
-
-    public List<TransactionHistory> getAllTransactions() {
-
-        List<TransactionHistory> historyList = new ArrayList<>();
-
-        String sql = """
-                SELECT t.transaction_id,
-                                           i.item_id,
-                                           i.item_name,
-                                           p.employee_id,
-                                           p.person_name,
-                                           t.issued_datetime,
-                                           t.returned_datetime,
-                                           t.remarks
-            FROM transactions t
-            JOIN items i ON t.item_id = i.item_id
-            JOIN persons p ON t.person_id = p.person_id
-            ORDER BY t.issued_datetime DESC
-            """;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-
-            while (rs.next()) {
-                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
-                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
-
-                String issued = issuedTs != null ? issuedTs.toString() : null;
-                String returned = returnedTs != null ? returnedTs.toString() : null;
-
-                TransactionHistory history = new TransactionHistory(
-                        rs.getInt("transaction_id"),
-                        rs.getString("item_id"),
-                        rs.getString("item_name"),
-                        rs.getString("employee_id"),
-                        rs.getString("person_name"),
-                        issued,
-                        returned,
-                        rs.getString("remarks")
-                );
-
-                historyList.add(history);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return historyList;
-    }
-
     public void returnItemByTransactionId(int transactionId) {
 
         String sql = """
-            UPDATE transactions
-            SET returned_datetime = ?
-            WHERE transaction_id = ?
-            """;
+                UPDATE transactions
+                SET returned_datetime = ?, status = 'Returned'
+                WHERE transaction_id = ?
+                """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -196,55 +109,20 @@ public class TransactionDAO {
         }
     }
 
-    public boolean isItemCurrentlyIssued(String itemId) {
-
-        String sql = """
-            SELECT 1 FROM transactions
-            WHERE item_id = ?
-            AND returned_datetime IS NULL
-            """;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, itemId);
-            ResultSet rs = pstmt.executeQuery();
-
-            return rs.next();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    public List<TransactionHistory> getTransactionsByItemId(String itemId) {
+    // 🔹 Get All Transactions
+    public List<TransactionHistory> getAllTransactions() {
 
         List<TransactionHistory> historyList = new ArrayList<>();
 
         String sql = """
-        SELECT t.transaction_id,
-               i.item_id,
-               i.item_name,
-               p.employee_id,
-               p.person_name,
-               t.issued_datetime,
-               t.returned_datetime,
-               t.remarks
-        FROM transactions t
-        JOIN items i ON t.item_id = i.item_id
-        JOIN persons p ON t.person_id = p.person_id
-        WHERE i.item_id = ?
-        ORDER BY t.issued_datetime DESC
-        """;
+                SELECT *
+                FROM transactions
+                ORDER BY issued_datetime DESC
+                """;
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, itemId);
-
-            ResultSet rs = stmt.executeQuery();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
 
@@ -255,13 +133,36 @@ public class TransactionDAO {
                 String returned = returnedTs != null ? returnedTs.toString() : null;
 
                 TransactionHistory history = new TransactionHistory(
+
                         rs.getInt("transaction_id"),
-                        rs.getString("item_id"),
-                        rs.getString("item_name"),
+
+                        rs.getString("buy_sell"),
+                        rs.getString("plant"),
+                        rs.getString("department"),
+                        rs.getString("location"),
+
                         rs.getString("employee_id"),
-                        rs.getString("person_name"),
+                        rs.getString("employee_name"),
+
+                        rs.getString("ip_address"),
+
+                        rs.getString("item_code"),
+                        rs.getString("item_name"),
+                        rs.getString("item_make"),
+                        rs.getString("item_model"),
+                        rs.getString("item_serial"),
+
+                        rs.getString("imei_no"),
+                        rs.getString("sim_no"),
+
+                        rs.getString("po_no"),
+                        rs.getString("party_name"),
+
+                        rs.getString("status"),
+
                         issued,
                         returned,
+
                         rs.getString("remarks")
                 );
 
@@ -275,6 +176,78 @@ public class TransactionDAO {
         return historyList;
     }
 
+    // 🔹 Search by Item Code
+    public List<TransactionHistory> getTransactionsByItemCode(String itemCode) {
+
+        List<TransactionHistory> historyList = new ArrayList<>();
+
+        String sql = """
+                SELECT *
+                FROM transactions
+                WHERE item_code = ?
+                ORDER BY issued_datetime DESC
+                """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, itemCode);
+
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                String issued = issuedTs != null ? issuedTs.toString() : null;
+                String returned = returnedTs != null ? returnedTs.toString() : null;
+
+                TransactionHistory history = new TransactionHistory(
+
+                        rs.getInt("transaction_id"),
+
+                        rs.getString("buy_sell"),
+                        rs.getString("plant"),
+                        rs.getString("department"),
+                        rs.getString("location"),
+
+                        rs.getString("employee_id"),
+                        rs.getString("employee_name"),
+
+                        rs.getString("ip_address"),
+
+                        rs.getString("item_code"),
+                        rs.getString("item_name"),
+                        rs.getString("item_make"),
+                        rs.getString("item_model"),
+                        rs.getString("item_serial"),
+
+                        rs.getString("imei_no"),
+                        rs.getString("sim_no"),
+
+                        rs.getString("po_no"),
+                        rs.getString("party_name"),
+
+                        rs.getString("status"),
+
+                        issued,
+                        returned,
+
+                        rs.getString("remarks")
+                );
+
+                historyList.add(history);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return historyList;
+    }
+
+    // 🔹 Delete Transaction
     public void deleteTransaction(int transactionId) {
 
         String sql = "DELETE FROM transactions WHERE transaction_id = ?";
@@ -285,7 +258,89 @@ public class TransactionDAO {
             pstmt.setInt(1, transactionId);
             pstmt.executeUpdate();
 
-            System.out.println("Transaction deleted successfully.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void createTransaction(
+            String buySell,
+            String plant,
+            String department,
+            String location,
+            String employeeId,
+            String employeeName,
+            String ipAddress,
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial,
+            String imeiNo,
+            String simNo,
+            String poNo,
+            String partyName,
+            String status,
+            String remarks
+    ) {
+
+        String sql = """
+        INSERT INTO transactions (
+            buy_sell,
+            plant,
+            department,
+            location,
+            employee_id,
+            employee_name,
+            ip_address,
+            item_code,
+            item_name,
+            item_make,
+            item_model,
+            item_serial,
+            imei_no,
+            sim_no,
+            po_no,
+            party_name,
+            status,
+            issued_datetime,
+            remarks
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, buySell);
+            pstmt.setString(2, plant);
+            pstmt.setString(3, department);
+            pstmt.setString(4, location);
+
+            pstmt.setString(5, employeeId);
+            pstmt.setString(6, employeeName);
+
+            pstmt.setString(7, ipAddress);
+
+            pstmt.setString(8, itemCode);
+            pstmt.setString(9, itemName);
+            pstmt.setString(10, itemMake);
+            pstmt.setString(11, itemModel);
+            pstmt.setString(12, itemSerial);
+
+            pstmt.setString(13, imeiNo);
+            pstmt.setString(14, simNo);
+
+            pstmt.setString(15, poNo);
+            pstmt.setString(16, partyName);
+
+            pstmt.setString(17, status);
+
+            pstmt.setTimestamp(18, Timestamp.valueOf(LocalDateTime.now()));
+
+            pstmt.setString(19, remarks);
+
+            pstmt.executeUpdate();
 
         } catch (SQLException e) {
             e.printStackTrace();

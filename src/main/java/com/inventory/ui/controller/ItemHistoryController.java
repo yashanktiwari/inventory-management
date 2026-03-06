@@ -17,13 +17,37 @@ import java.time.format.DateTimeFormatter;
 public class ItemHistoryController {
 
     @FXML private Label titleLabel;
+
     @FXML private TableView<TransactionHistory> itemHistoryTable;
+
     @FXML private TableColumn<TransactionHistory, Integer> serialColumn;
-    @FXML private TableColumn<TransactionHistory, String> employeeColumn;
-    @FXML private TableColumn<TransactionHistory, String> personColumn;
+
     @FXML private TableColumn<TransactionHistory, String> issuedColumn;
     @FXML private TableColumn<TransactionHistory, String> returnedColumn;
     @FXML private TableColumn<TransactionHistory, String> remarksColumn;
+    @FXML private TableColumn<TransactionHistory, String> buySellColumn;
+    @FXML private TableColumn<TransactionHistory, String> plantColumn;
+    @FXML private TableColumn<TransactionHistory, String> departmentColumn;
+    @FXML private TableColumn<TransactionHistory, String> locationColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> employeeIdColumn;
+    @FXML private TableColumn<TransactionHistory, String> employeeNameColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> ipColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> itemCodeColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemNameColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemMakeColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemModelColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemSerialColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> imeiColumn;
+    @FXML private TableColumn<TransactionHistory, String> simColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> poColumn;
+    @FXML private TableColumn<TransactionHistory, String> partyColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> statusColumn;
 
     @FXML
     private void handleExportExcel() {
@@ -77,26 +101,82 @@ public class ItemHistoryController {
                 ).asObject()
         );
 
-        employeeColumn.setCellValueFactory(cellData ->
-                new SimpleStringProperty(cellData.getValue().getEmployeeId())
-        );
+        buySellColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getBuySell()));
 
-        personColumn.setCellValueFactory(cellData ->
-                new SimpleStringProperty(cellData.getValue().getPersonName())
-        );
+        plantColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getPlant()));
+
+        departmentColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getDepartment()));
+
+        locationColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getLocation()));
+
+        employeeIdColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getEmployeeId()));
+
+        employeeNameColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getEmployeeName()));
+
+        ipColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getIpAddress()));
+
+        itemCodeColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemCode()));
+
+        itemNameColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemName()));
+
+        itemMakeColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemMake()));
+
+        itemModelColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemModel()));
+
+        itemSerialColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemSerial()));
+
+        imeiColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getImeiNo()));
+
+        simColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getSimNo()));
+
+        poColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getPoNo()));
+
+        partyColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getPartyName()));
+
+        statusColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getStatus()));
 
         issuedColumn.setCellValueFactory(cellData -> {
+
             String raw = cellData.getValue().getIssuedDateTime();
+
+            if (raw == null) return new SimpleStringProperty("");
+
             LocalDateTime dateTime = LocalDateTime.parse(raw);
-            return new SimpleStringProperty(dateTime.format(formatter));
+
+            return new SimpleStringProperty(
+                    dateTime.format(formatter)
+            );
         });
 
         returnedColumn.setCellValueFactory(cellData -> {
+
             String raw = cellData.getValue().getReturnedDateTime();
-            if (raw == null) return new SimpleStringProperty("Not Returned");
+
+            if (raw == null)
+                return new SimpleStringProperty("Not Returned");
 
             LocalDateTime dateTime = LocalDateTime.parse(raw);
-            return new SimpleStringProperty(dateTime.format(formatter));
+
+            return new SimpleStringProperty(
+                    dateTime.format(formatter)
+            );
         });
 
         remarksColumn.setCellValueFactory(cellData ->
@@ -105,7 +185,7 @@ public class ItemHistoryController {
 
         itemHistoryTable.setItems(
                 FXCollections.observableArrayList(
-                        transactionDAO.getTransactionsByItemId(itemId)
+                        transactionDAO.getTransactionsByItemCode(itemId)
                 )
         );
     }

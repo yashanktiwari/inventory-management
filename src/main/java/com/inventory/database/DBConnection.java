@@ -99,17 +99,40 @@ public class DBConnection {
                 """;
 
             String createTransactionsTable = """
-                CREATE TABLE IF NOT EXISTS transactions (
-                    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-                    item_id VARCHAR(100) NOT NULL,
-                    person_id INT NOT NULL,
-                    issued_datetime DATETIME NOT NULL,
-                    returned_datetime DATETIME,
-                    remarks TEXT,
-                    FOREIGN KEY (item_id) REFERENCES items(item_id),
-                    FOREIGN KEY (person_id) REFERENCES persons(person_id)
-                )
-                """;
+CREATE TABLE IF NOT EXISTS transactions (
+
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+
+    buy_sell VARCHAR(50),
+    plant VARCHAR(100),
+    department VARCHAR(100),
+    location VARCHAR(100),
+
+    employee_id VARCHAR(100),
+    employee_name VARCHAR(255),
+
+    ip_address VARCHAR(100),
+
+    item_code VARCHAR(100),
+    item_name VARCHAR(255),
+    item_make VARCHAR(255),
+    item_model VARCHAR(255),
+    item_serial VARCHAR(255),
+
+    imei_no VARCHAR(100),
+    sim_no VARCHAR(100),
+
+    po_no VARCHAR(100),
+    party_name VARCHAR(255),
+
+    status VARCHAR(50),
+
+    issued_datetime DATETIME,
+    returned_datetime DATETIME,
+
+    remarks TEXT
+)
+""";
 
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
