@@ -1,3 +1,18 @@
+## Feature List (Till now):
+1. Client-Server architecture
+2. Add transactions
+3. Buy/Sell only
+4. Issued/Returned and Scrapped
+5. All the columns added
+6. Search by almost all the column
+7. Refresh
+8. Export to excel (all + single item)
+9. Export to pdf (all + single item)
+10. Sorting by columns
+11. Backup db
+12. Restore db
+13. Item history page
+
 ## To run the application:
 - mvn clean javafx:run
 
