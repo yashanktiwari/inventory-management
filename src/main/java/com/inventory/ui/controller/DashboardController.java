@@ -166,79 +166,97 @@ public class DashboardController {
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
 
-            private final Button returnBtn = new Button("Return");
+                    private final Button updateBtn = new Button("Update");
 
-            {
-                returnBtn.setOnAction(event -> {
+                    {
+                        updateBtn.setOnAction(event -> {
 
-                    TransactionHistory history =
-                            getTableView().getItems().get(getIndex());
+                            TransactionHistory history =
+                                    getTableView().getItems().get(getIndex());
 
-                    if (history.getReturnedDateTime() == null) {
+                            if (!"Sell".equalsIgnoreCase(history.getBuySell())) {
+                                return;
+                            }
 
-                        transactionDAO.returnItemByTransactionId(
-                                history.getTransactionId()
-                        );
+                            ChoiceDialog<String> dialog =
+                                    new ChoiceDialog<>("Returned", "Returned", "Scrap");
 
-                        loadHistory();
+                            dialog.setTitle("Update Status");
+                            dialog.setHeaderText("Select new status");
+
+                            Optional<String> result = dialog.showAndWait();
+
+                            result.ifPresent(status -> {
+
+                                transactionDAO.updateTransactionStatus(
+                                        history.getTransactionId(),
+                                        status
+                                );
+
+                                loadHistory();
+                            });
+                        });
+                    }
+
+                    @Override
+                    protected void updateItem(Void item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty) {
+                            setGraphic(null);
+                            return;
+                        }
+                        TransactionHistory history =
+                                getTableView().getItems().get(getIndex());
+
+                        String buySell = history.getBuySell();
+                        String status = history.getStatus();
+                        // BUY → always disabled
+                        if ("Buy".equalsIgnoreCase(buySell)) {
+                            updateBtn.setDisable(true);
+                            updateBtn.setText("In Stock");
+
+                        }
+                        // SELL → depends on status
+                        else if ("Sell".equalsIgnoreCase(buySell)) {
+                            if ("Issued".equalsIgnoreCase(status)) {
+                                updateBtn.setDisable(false);
+                                updateBtn.setText("Issued");
+                            } else if ("Returned".equalsIgnoreCase(status)) {
+                                updateBtn.setDisable(true);
+                                updateBtn.setText("Returned");
+                            } else if ("Scrap".equalsIgnoreCase(status) || "Scrapped".equalsIgnoreCase(status)) {
+                                updateBtn.setDisable(true);
+                                updateBtn.setText("Scrapped");
+                            } else {
+                                updateBtn.setDisable(true);
+                                updateBtn.setText(status);
+                            }
+                        }
+                        setGraphic(updateBtn);
                     }
                 });
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-
-                super.updateItem(item, empty);
-
-                if (empty) {
-                    setGraphic(null);
-                    return;
-                }
-
-                TransactionHistory history =
-                        getTableView().getItems().get(getIndex());
-
-                if (history.getReturnedDateTime() != null) {
-                    returnBtn.setDisable(true);
-                    returnBtn.setText("Returned");
-                } else {
-                    returnBtn.setDisable(false);
-                    returnBtn.setText("Return");
-                }
-
-                setGraphic(returnBtn);
-            }
-        });
 
         deleteColumn.setCellFactory(param -> new TableCell<>() {
-
             private final Button deleteButton = new Button("Delete");
-
             {
                 deleteButton.setStyle(
                         "-fx-background-color: #ff4d4d;" +
                                 "-fx-text-fill: white;" +
                                 "-fx-font-weight: bold;"
                 );
-
                 deleteButton.setOnAction(event -> {
-
                     TransactionHistory data =
                             getTableView().getItems().get(getIndex());
-
                     Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                     alert.setTitle("Confirm Delete");
                     alert.setHeaderText("Delete Transaction?");
                     alert.setContentText("Are you sure you want to delete this record?");
 
                     alert.showAndWait().ifPresent(response -> {
-
                         if (response == ButtonType.OK) {
-
                             transactionDAO.deleteTransaction(
                                     data.getTransactionId()
                             );
-
                             loadHistory();
                         }
                     });
@@ -301,6 +319,36 @@ public class DashboardController {
         ipAddressColumn.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));
 
         itemCodeColumn.setCellValueFactory(new PropertyValueFactory<>("itemCode"));
+        itemCodeColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setOnAction(event -> {
+
+                    TransactionHistory history =
+                            getTableView().getItems().get(getIndex());
+
+                    openItemHistoryPage(
+                            history.getItemCode(),
+                            history.getItemName()
+                    );
+                });
+            }
+
+            @Override
+            protected void updateItem(String itemCode, boolean empty) {
+
+                super.updateItem(itemCode, empty);
+
+                if (empty || itemCode == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(itemCode);
+                    setGraphic(link);
+                }
+            }
+        });
         itemNameColumn.setCellValueFactory(new PropertyValueFactory<>("itemName"));
         itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
         itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
@@ -313,6 +361,38 @@ public class DashboardController {
         partyColumn.setCellValueFactory(new PropertyValueFactory<>("partyName"));
 
         statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
+        statusColumn.setCellFactory(column -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(Pos.CENTER);
+
+                    switch (value.toLowerCase()) {
+
+                        case "issued" ->
+                                setStyle("-fx-background-color:#d6eaff; -fx-text-fill: black;");
+
+                        case "returned" ->
+                                setStyle("-fx-background-color:#d4edda; -fx-text-fill: black;");
+
+                        case "scrap" ->
+                                setStyle("-fx-background-color:#e0e0e0; -fx-text-fill: black;");
+
+                        case "in stock" ->
+                                setStyle("-fx-background-color:#fff3cd; -fx-text-fill: black;");
+                    }
+                }
+            }
+        });
 
         remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
 
@@ -337,12 +417,16 @@ public class DashboardController {
 
         returnedColumn.setCellValueFactory(cellData -> {
 
-            String raw = cellData.getValue().getReturnedDateTime();
-
+            TransactionHistory history = cellData.getValue();
+            // If item was bought → show --
+            if ("Buy".equalsIgnoreCase(history.getBuySell())) {
+                return new SimpleStringProperty("--");
+            }
+            String raw = history.getReturnedDateTime();
+            // If Sell but not yet returned
             if (raw == null) {
                 return new SimpleStringProperty("Not Returned");
             }
-
             LocalDateTime dateTime =
                     Timestamp.valueOf(raw).toLocalDateTime();
 
@@ -358,34 +442,45 @@ public class DashboardController {
             if (filteredData == null) return;
 
             filteredData.setPredicate(history -> {
-
                 if (newValue == null || newValue.isBlank()) {
                     return true;
                 }
-
                 String keyword = newValue.toLowerCase();
-
                 return
-                        (history.getItemCode() != null &&
-                                history.getItemCode().toLowerCase().contains(keyword))
-
-                                ||      (history.getItemName() != null &&
-                                history.getItemName().toLowerCase().contains(keyword))
-
-                                ||      (history.getEmployeeId() != null &&
-                                history.getEmployeeId().toLowerCase().contains(keyword))
-
-                                ||      (history.getEmployeeName() != null &&
-                                history.getEmployeeName().toLowerCase().contains(keyword))
-
-                                ||      (history.getDepartment() != null &&
+                        (history.getBuySell() != null &&
+                                history.getBuySell().toLowerCase().contains(keyword)
+                                || (history.getPlant() != null &&
+                                history.getPlant().toLowerCase().contains(keyword))
+                                || (history.getDepartment() != null &&
                                 history.getDepartment().toLowerCase().contains(keyword))
-
                                 ||      (history.getLocation() != null &&
                                 history.getLocation().toLowerCase().contains(keyword))
-
+                                || (history.getEmployeeId() != null &&
+                                history.getEmployeeId().toLowerCase().contains(keyword))
+                                ||      (history.getEmployeeName() != null &&
+                                history.getEmployeeName().toLowerCase().contains(keyword))
+                                || (history.getIpAddress() != null &&
+                                history.getIpAddress().toLowerCase().contains(keyword))
+                                || history.getItemCode() != null &&
+                                history.getItemCode().toLowerCase().contains(keyword))
+                                ||      (history.getItemName() != null &&
+                                history.getItemName().toLowerCase().contains(keyword))
+                                || (history.getItemMake() != null &&
+                                history.getItemMake().toLowerCase().contains(keyword))
+                                || (history.getItemModel() != null &&
+                                history.getItemModel().toLowerCase().contains(keyword))
                                 ||      (history.getItemSerial() != null &&
-                                history.getItemSerial().toLowerCase().contains(keyword));
+                                history.getItemSerial().toLowerCase().contains(keyword))
+                                || (history.getImeiNo() != null &&
+                                history.getImeiNo().toLowerCase().contains(keyword))
+                                || (history.getSimNo() != null &&
+                                history.getSimNo().toLowerCase().contains(keyword))
+                                || (history.getPoNo() != null &&
+                                history.getPoNo().toLowerCase().contains(keyword))
+                                || (history.getPartyName() != null &&
+                                history.getPartyName().toLowerCase().contains(keyword))
+                                || (history.getStatus() != null &&
+                                history.getStatus().toLowerCase().contains(keyword));
             });
         });
 
@@ -679,7 +774,11 @@ public class DashboardController {
 
             Stage stage = new Stage();
             stage.setTitle("Item History");
-            stage.setScene(new Scene(root));
+
+            Scene scene = new Scene(root, 1200, 650); // fixed window size
+
+            stage.setScene(scene);
+            stage.setResizable(true);
             stage.show();
 
         } catch (Exception e) {

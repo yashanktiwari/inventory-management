@@ -92,7 +92,7 @@ public class ItemHistoryController {
             DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
 
     public void loadItemHistory(String itemId, String itemName) {
-
+        centerAllColumns(itemHistoryTable);
         titleLabel.setText("History for Item: " + itemId + " (" + itemName + ")");
 
         serialColumn.setCellValueFactory(cellData ->
@@ -103,6 +103,30 @@ public class ItemHistoryController {
 
         buySellColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getBuySell()));
+
+        buySellColumn.setCellFactory(column -> new TableCell<TransactionHistory, String>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(javafx.geometry.Pos.CENTER);
+
+                    if ("Buy".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+                    } else if ("Sell".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color:#f8d7da; -fx-text-fill:black;");
+                    }
+                }
+            }
+        });
 
         plantColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getPlant()));
@@ -152,13 +176,47 @@ public class ItemHistoryController {
         statusColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getStatus()));
 
+        statusColumn.setCellFactory(column -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(javafx.geometry.Pos.CENTER);
+
+                    switch (value.toLowerCase()) {
+
+                        case "issued" ->
+                                setStyle("-fx-background-color:#d6eaff; -fx-text-fill:black;");
+
+                        case "returned" ->
+                                setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+
+                        case "scrap" ->
+                                setStyle("-fx-background-color:#e0e0e0; -fx-text-fill:black;");
+
+                        case "in stock" ->
+                                setStyle("-fx-background-color:#fff3cd; -fx-text-fill:black;");
+                    }
+                }
+            }
+        });
+
         issuedColumn.setCellValueFactory(cellData -> {
 
             String raw = cellData.getValue().getIssuedDateTime();
 
             if (raw == null) return new SimpleStringProperty("");
 
-            LocalDateTime dateTime = LocalDateTime.parse(raw);
+            LocalDateTime dateTime =
+                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
 
             return new SimpleStringProperty(
                     dateTime.format(formatter)
@@ -172,7 +230,8 @@ public class ItemHistoryController {
             if (raw == null)
                 return new SimpleStringProperty("Not Returned");
 
-            LocalDateTime dateTime = LocalDateTime.parse(raw);
+            LocalDateTime dateTime =
+                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
 
             return new SimpleStringProperty(
                     dateTime.format(formatter)
@@ -188,5 +247,28 @@ public class ItemHistoryController {
                         transactionDAO.getTransactionsByItemCode(itemId)
                 )
         );
+    }
+
+    private void centerAllColumns(TableView<TransactionHistory> table) {
+
+        for (TableColumn<?, ?> column : table.getColumns()) {
+
+            column.setCellFactory(col -> new TableCell() {
+
+                @Override
+                protected void updateItem(Object item, boolean empty) {
+
+                    super.updateItem(item, empty);
+
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(item.toString());
+                    }
+
+                    setAlignment(javafx.geometry.Pos.CENTER);
+                }
+            });
+        }
     }
 }

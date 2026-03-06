@@ -13,6 +13,7 @@ import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AddTransactionController {
 
@@ -67,12 +68,20 @@ public class AddTransactionController {
                 "Buy",
                 "Sell"
         ));
-        statusBox.setItems(FXCollections.observableArrayList(
-                "Issued",
-                "Returned",
-                "Scrap",
-                "Deleted"
-        ));
+
+        buySellBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+
+            if ("Buy".equalsIgnoreCase(newVal)) {
+                statusBox.setItems(FXCollections.observableArrayList("In Stock"));
+                statusBox.setValue("In Stock");
+                statusBox.setDisable(true);
+
+            } else {
+                statusBox.setItems(FXCollections.observableArrayList("Issued", "Scrap"));
+                statusBox.setValue("Issued");
+                statusBox.setDisable(false);
+            }
+        });
         setupAutoComplete();
     }
 

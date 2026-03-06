@@ -346,4 +346,26 @@ public class TransactionDAO {
             e.printStackTrace();
         }
     }
+
+    public void updateTransactionStatus(int transactionId, String status) {
+
+        String sql = """
+        UPDATE transactions
+        SET status = ?, returned_datetime = ?
+        WHERE transaction_id = ?
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, status);
+            pstmt.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setInt(3, transactionId);
+
+            pstmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }

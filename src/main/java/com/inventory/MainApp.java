@@ -13,7 +13,6 @@ import java.io.File;
 public class MainApp extends Application {
     @Override
     public void start(Stage stage) throws Exception {
-
         // 🔥 Try auto load MySQL config
         boolean loaded = AppConfig.loadDatabaseConfig();
 
@@ -34,32 +33,6 @@ public class MainApp extends Application {
         stage.setScene(scene);
         stage.show();
     }
-
-//    private void setupDatabase(Stage stage) {
-//
-//        FileChooser fileChooser = new FileChooser();
-//        fileChooser.setTitle("Select or Create Database");
-//        fileChooser.getExtensionFilters().add(
-//                new FileChooser.ExtensionFilter("SQLite DB", "*.db")
-//        );
-//
-//        File file = fileChooser.showSaveDialog(stage);
-//
-//        if (file == null) {
-//            System.exit(0); // force setup
-//        }
-//
-//        String path = file.getAbsolutePath();
-//
-//        if (!path.endsWith(".db")) {
-//            path += ".db";
-//        }
-//
-//        DBConnection.setDatabasePath(path);
-//        DBConnection.initializeDatabase();
-//
-//        AppConfig.saveDatabasePath(path); // 🔥 SAVE FOR FUTURE RUNS
-//    }
 
     public static void main(String[] args) {
         launch();
