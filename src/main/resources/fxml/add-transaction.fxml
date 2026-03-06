@@ -11,38 +11,73 @@
     <Label text="Issue Item"
            style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
-    <GridPane hgap="15" vgap="15">
+    <ScrollPane fitToWidth="true" prefViewportHeight="600">
 
-        <columnConstraints>
-            <ColumnConstraints minWidth="130"/>
-            <ColumnConstraints hgrow="ALWAYS"/>
-        </columnConstraints>
+        <GridPane hgap="12" vgap="10" style="-fx-padding:20">
 
-        <Label text="Item Name *" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="itemNameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            <columnConstraints>
+                <ColumnConstraints percentWidth="35"/>
+                <ColumnConstraints percentWidth="65"/>
+            </columnConstraints>
 
-        <Label text="Item ID *" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextField fx:id="itemIdField"
-                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            <Label text="Buy / Sell:" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="buySellBox" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-        <Label text="Employee ID *" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <TextField fx:id="employeeIdField"
-                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            <Label text="Plant:" GridPane.rowIndex="1"/>
+            <TextField fx:id="plantField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
-        <Label text="Person Name *" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="personNameField"
-                   GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+            <Label text="Department:" GridPane.rowIndex="2"/>
+            <TextField fx:id="departmentField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-        <Label text="Department:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="departmentField"
-                   GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+            <Label text="Location:" GridPane.rowIndex="3"/>
+            <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-        <Label text="Remarks:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <TextArea fx:id="remarksField"
-                  GridPane.rowIndex="5" GridPane.columnIndex="1"
-                  prefRowCount="3"/>
+            <Label text="Employee Code:" GridPane.rowIndex="4"/>
+            <TextField fx:id="employeeCodeField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
 
-    </GridPane>
+            <Label text="Employee Name:" GridPane.rowIndex="5"/>
+            <TextField fx:id="employeeNameField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+            <Label text="IP Address:" GridPane.rowIndex="6"/>
+            <TextField fx:id="ipField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+            <Label text="Item Code:" GridPane.rowIndex="7"/>
+            <TextField fx:id="itemCodeField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+
+            <Label text="Item Name:" GridPane.rowIndex="8"/>
+            <TextField fx:id="itemNameField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+
+            <Label text="Item Make:" GridPane.rowIndex="9"/>
+            <TextField fx:id="itemMakeField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+
+            <Label text="Item Model:" GridPane.rowIndex="10"/>
+            <TextField fx:id="itemModelField" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+
+            <Label text="Item Serial:" GridPane.rowIndex="11"/>
+            <TextField fx:id="itemSerialField" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
+
+            <Label text="IMEI:" GridPane.rowIndex="12"/>
+            <TextField fx:id="imeiField" GridPane.rowIndex="12" GridPane.columnIndex="1"/>
+
+            <Label text="SIM No:" GridPane.rowIndex="13"/>
+            <TextField fx:id="simField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
+
+            <Label text="PO No:" GridPane.rowIndex="14"/>
+            <TextField fx:id="poField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
+
+            <Label text="Party Name:" GridPane.rowIndex="15"/>
+            <TextField fx:id="partyField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
+
+            <Label text="Status:" GridPane.rowIndex="16"/>
+            <ComboBox fx:id="statusBox" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
+
+            <Label text="Remarks:" GridPane.rowIndex="17"/>
+            <TextArea fx:id="remarksField" prefRowCount="3"
+                      GridPane.rowIndex="17" GridPane.columnIndex="1"/>
+
+        </GridPane>
+
+    </ScrollPane>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Cancel" onAction="#handleCancel"/>

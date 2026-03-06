@@ -13,6 +13,7 @@ import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AddTransactionController {
 
@@ -22,6 +23,28 @@ public class AddTransactionController {
     @FXML private TextField personNameField;
     @FXML private TextField departmentField;
     @FXML private TextArea remarksField;
+    @FXML private ComboBox<String> buySellBox;
+    @FXML private TextField plantField;
+    @FXML private TextField locationField;
+
+    @FXML private TextField employeeCodeField;
+    @FXML private TextField employeeNameField;
+
+    @FXML private TextField ipField;
+
+    @FXML private TextField itemCodeField;
+    @FXML private TextField itemMakeField;
+    @FXML private TextField itemModelField;
+    @FXML private TextField itemSerialField;
+
+    @FXML private TextField imeiField;
+    @FXML private TextField simField;
+
+    @FXML private TextField poField;
+    @FXML private TextField partyField;
+
+    @FXML private ComboBox<String> statusBox;
+
 
     private ObservableList<String> masterItemList;
     private Popup suggestionsPopup;
@@ -41,7 +64,24 @@ public class AddTransactionController {
                         .distinct()
                         .toList()
         );
+        buySellBox.setItems(FXCollections.observableArrayList(
+                "Buy",
+                "Sell"
+        ));
 
+        buySellBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+
+            if ("Buy".equalsIgnoreCase(newVal)) {
+                statusBox.setItems(FXCollections.observableArrayList("In Stock"));
+                statusBox.setValue("In Stock");
+                statusBox.setDisable(true);
+
+            } else {
+                statusBox.setItems(FXCollections.observableArrayList("Issued", "Scrap"));
+                statusBox.setValue("Issued");
+                statusBox.setDisable(false);
+            }
+        });
         setupAutoComplete();
     }
 
@@ -50,50 +90,51 @@ public class AddTransactionController {
     @FXML
     private void handleSave() {
 
-        String selectedItemName = itemNameField.getText().trim();
-        String itemId = itemIdField.getText().trim();
-        String employeeId = employeeIdField.getText().trim();
-        String personName = personNameField.getText().trim();
-        String department = departmentField.getText().trim();
-        String remarks = remarksField.getText().trim();
+        String buySell = buySellBox.getValue();
+        String plant = plantField.getText();
+        String department = departmentField.getText();
+        String location = locationField.getText();
 
-        if (selectedItemName.isBlank() || itemId.isBlank()
-                || employeeId.isBlank() || personName.isBlank()) {
-            showError("All required fields must be filled.");
-            return;
-        }
+        String employeeCode = employeeCodeField.getText();
+        String employeeName = employeeNameField.getText();
 
-        // 1️⃣ Find or create item
-        Item item = itemDAO.findById(itemId);
+        String ip = ipField.getText();
 
-        if (item == null) {
-            item = itemDAO.createItemWithId(itemId, selectedItemName);
-            if (item == null) {
-                showError("Failed to create item.");
-                return;
-            }
-        }
+        String itemCode = itemCodeField.getText();
+        String itemName = itemNameField.getText();
+        String itemMake = itemMakeField.getText();
+        String itemModel = itemModelField.getText();
+        String itemSerial = itemSerialField.getText();
 
-        // 2️⃣ Check availability
-        if (transactionDAO.isItemCurrentlyIssued(itemId)) {
-            showError("This specific item is already issued.");
-            return;
-        }
+        String imei = imeiField.getText();
+        String sim = simField.getText();
 
-        // 3️⃣ Save person
-        Person person = personDAO.saveIfNotExists(
-                employeeId,
-                personName,
-                department
+        String po = poField.getText();
+        String party = partyField.getText();
+
+        String status = statusBox.getValue();
+        String remarks = remarksField.getText();
+
+        transactionDAO.createTransaction(
+                buySell,
+                plant,
+                department,
+                location,
+                employeeCode,
+                employeeName,
+                ip,
+                itemCode,
+                itemName,
+                itemMake,
+                itemModel,
+                itemSerial,
+                imei,
+                sim,
+                po,
+                party,
+                status,
+                remarks
         );
-
-        if (person == null) {
-            showError("Failed to save person.");
-            return;
-        }
-
-        // 4️⃣ Issue item
-        transactionDAO.issueItem(itemId, person.getPersonId(), remarks);
 
         closeWindow();
     }

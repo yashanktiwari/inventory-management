@@ -13,14 +13,42 @@
 
     <center>
         <TableView fx:id="itemHistoryTable">
+
             <columns>
+
                 <TableColumn fx:id="serialColumn" text="No." prefWidth="50"/>
-                <TableColumn fx:id="employeeColumn" text="Employee ID" prefWidth="150"/>
-                <TableColumn fx:id="personColumn" text="Person Name" prefWidth="150"/>
-                <TableColumn fx:id="issuedColumn" text="Issued Date" prefWidth="180"/>
-                <TableColumn fx:id="returnedColumn" text="Returned Date" prefWidth="180"/>
+
+                <TableColumn fx:id="buySellColumn" text="Buy/Sell" prefWidth="90"/>
+                <TableColumn fx:id="plantColumn" text="Plant" prefWidth="100"/>
+                <TableColumn fx:id="departmentColumn" text="Department" prefWidth="120"/>
+                <TableColumn fx:id="locationColumn" text="Location" prefWidth="120"/>
+
+                <TableColumn fx:id="employeeIdColumn" text="Employee ID" prefWidth="120"/>
+                <TableColumn fx:id="employeeNameColumn" text="Employee Name" prefWidth="150"/>
+
+                <TableColumn fx:id="ipColumn" text="IP Address" prefWidth="130"/>
+
+                <TableColumn fx:id="itemCodeColumn" text="Item Code" prefWidth="120"/>
+                <TableColumn fx:id="itemNameColumn" text="Item Name" prefWidth="150"/>
+                <TableColumn fx:id="itemMakeColumn" text="Make" prefWidth="120"/>
+                <TableColumn fx:id="itemModelColumn" text="Model" prefWidth="120"/>
+                <TableColumn fx:id="itemSerialColumn" text="Serial No" prefWidth="130"/>
+
+                <TableColumn fx:id="imeiColumn" text="IMEI" prefWidth="130"/>
+                <TableColumn fx:id="simColumn" text="SIM No" prefWidth="120"/>
+
+                <TableColumn fx:id="poColumn" text="PO No" prefWidth="120"/>
+                <TableColumn fx:id="partyColumn" text="Party Name" prefWidth="150"/>
+
+                <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
+
+                <TableColumn fx:id="issuedColumn" text="Issued Date" prefWidth="170"/>
+                <TableColumn fx:id="returnedColumn" text="Returned Date" prefWidth="170"/>
+
                 <TableColumn fx:id="remarksColumn" text="Remarks" prefWidth="200"/>
+
             </columns>
+
         </TableView>
     </center>
 

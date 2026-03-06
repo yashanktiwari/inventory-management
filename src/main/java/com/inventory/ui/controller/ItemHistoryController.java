@@ -17,13 +17,37 @@ import java.time.format.DateTimeFormatter;
 public class ItemHistoryController {
 
     @FXML private Label titleLabel;
+
     @FXML private TableView<TransactionHistory> itemHistoryTable;
+
     @FXML private TableColumn<TransactionHistory, Integer> serialColumn;
-    @FXML private TableColumn<TransactionHistory, String> employeeColumn;
-    @FXML private TableColumn<TransactionHistory, String> personColumn;
+
     @FXML private TableColumn<TransactionHistory, String> issuedColumn;
     @FXML private TableColumn<TransactionHistory, String> returnedColumn;
     @FXML private TableColumn<TransactionHistory, String> remarksColumn;
+    @FXML private TableColumn<TransactionHistory, String> buySellColumn;
+    @FXML private TableColumn<TransactionHistory, String> plantColumn;
+    @FXML private TableColumn<TransactionHistory, String> departmentColumn;
+    @FXML private TableColumn<TransactionHistory, String> locationColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> employeeIdColumn;
+    @FXML private TableColumn<TransactionHistory, String> employeeNameColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> ipColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> itemCodeColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemNameColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemMakeColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemModelColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemSerialColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> imeiColumn;
+    @FXML private TableColumn<TransactionHistory, String> simColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> poColumn;
+    @FXML private TableColumn<TransactionHistory, String> partyColumn;
+
+    @FXML private TableColumn<TransactionHistory, String> statusColumn;
 
     @FXML
     private void handleExportExcel() {
@@ -68,7 +92,7 @@ public class ItemHistoryController {
             DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
 
     public void loadItemHistory(String itemId, String itemName) {
-
+        centerAllColumns(itemHistoryTable);
         titleLabel.setText("History for Item: " + itemId + " (" + itemName + ")");
 
         serialColumn.setCellValueFactory(cellData ->
@@ -77,26 +101,141 @@ public class ItemHistoryController {
                 ).asObject()
         );
 
-        employeeColumn.setCellValueFactory(cellData ->
-                new SimpleStringProperty(cellData.getValue().getEmployeeId())
-        );
+        buySellColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getBuySell()));
 
-        personColumn.setCellValueFactory(cellData ->
-                new SimpleStringProperty(cellData.getValue().getPersonName())
-        );
+        buySellColumn.setCellFactory(column -> new TableCell<TransactionHistory, String>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(javafx.geometry.Pos.CENTER);
+
+                    if ("Buy".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+                    } else if ("Sell".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color:#f8d7da; -fx-text-fill:black;");
+                    }
+                }
+            }
+        });
+
+        plantColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getPlant()));
+
+        departmentColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getDepartment()));
+
+        locationColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getLocation()));
+
+        employeeIdColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getEmployeeId()));
+
+        employeeNameColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getEmployeeName()));
+
+        ipColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getIpAddress()));
+
+        itemCodeColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemCode()));
+
+        itemNameColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemName()));
+
+        itemMakeColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemMake()));
+
+        itemModelColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemModel()));
+
+        itemSerialColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getItemSerial()));
+
+        imeiColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getImeiNo()));
+
+        simColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getSimNo()));
+
+        poColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getPoNo()));
+
+        partyColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getPartyName()));
+
+        statusColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getStatus()));
+
+        statusColumn.setCellFactory(column -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(javafx.geometry.Pos.CENTER);
+
+                    switch (value.toLowerCase()) {
+
+                        case "issued" ->
+                                setStyle("-fx-background-color:#d6eaff; -fx-text-fill:black;");
+
+                        case "returned" ->
+                                setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+
+                        case "scrap" ->
+                                setStyle("-fx-background-color:#e0e0e0; -fx-text-fill:black;");
+
+                        case "in stock" ->
+                                setStyle("-fx-background-color:#fff3cd; -fx-text-fill:black;");
+                    }
+                }
+            }
+        });
 
         issuedColumn.setCellValueFactory(cellData -> {
+
             String raw = cellData.getValue().getIssuedDateTime();
-            LocalDateTime dateTime = LocalDateTime.parse(raw);
-            return new SimpleStringProperty(dateTime.format(formatter));
+
+            if (raw == null) return new SimpleStringProperty("");
+
+            LocalDateTime dateTime =
+                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
+
+            return new SimpleStringProperty(
+                    dateTime.format(formatter)
+            );
         });
 
         returnedColumn.setCellValueFactory(cellData -> {
-            String raw = cellData.getValue().getReturnedDateTime();
-            if (raw == null) return new SimpleStringProperty("Not Returned");
 
-            LocalDateTime dateTime = LocalDateTime.parse(raw);
-            return new SimpleStringProperty(dateTime.format(formatter));
+            String raw = cellData.getValue().getReturnedDateTime();
+
+            if (raw == null)
+                return new SimpleStringProperty("Not Returned");
+
+            LocalDateTime dateTime =
+                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
+
+            return new SimpleStringProperty(
+                    dateTime.format(formatter)
+            );
         });
 
         remarksColumn.setCellValueFactory(cellData ->
@@ -105,8 +244,31 @@ public class ItemHistoryController {
 
         itemHistoryTable.setItems(
                 FXCollections.observableArrayList(
-                        transactionDAO.getTransactionsByItemId(itemId)
+                        transactionDAO.getTransactionsByItemCode(itemId)
                 )
         );
+    }
+
+    private void centerAllColumns(TableView<TransactionHistory> table) {
+
+        for (TableColumn<?, ?> column : table.getColumns()) {
+
+            column.setCellFactory(col -> new TableCell() {
+
+                @Override
+                protected void updateItem(Object item, boolean empty) {
+
+                    super.updateItem(item, empty);
+
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(item.toString());
+                    }
+
+                    setAlignment(javafx.geometry.Pos.CENTER);
+                }
+            });
+        }
     }
 }
