@@ -2,7 +2,9 @@ package com.inventory;
 
 import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
+import com.inventory.ui.controller.DashboardController;
 import javafx.application.Application;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -13,7 +15,8 @@ import java.io.File;
 public class MainApp extends Application {
     @Override
     public void start(Stage stage) throws Exception {
-        // 🔥 Try auto load MySQL config
+
+        // 🔹 Try auto load MySQL config
         boolean loaded = AppConfig.loadDatabaseConfig();
 
         if (loaded) {
@@ -27,10 +30,22 @@ public class MainApp extends Application {
                 getClass().getResource("/fxml/dashboard.fxml")
         );
 
-        Scene scene = new Scene(loader.load(), 800, 500);
+        Parent root = loader.load();   // 🔹 LOAD ONLY ONCE
+
+        DashboardController controller = loader.getController();
+
+        Scene scene = new Scene(root, 1200, 650);
 
         stage.setTitle("Inventory Management System");
         stage.setScene(scene);
+
+        // 🔹 Save column order when app closes
+        stage.setOnCloseRequest(event -> {
+            if (controller != null) {
+                controller.saveColumnOrder();
+            }
+        });
+
         stage.show();
     }
 
