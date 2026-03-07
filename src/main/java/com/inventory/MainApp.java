@@ -47,6 +47,7 @@ public class MainApp extends Application {
             if (controller != null) {
                 controller.saveFilters();
                 controller.saveColumnOrder();
+                controller.shutdownConnectionMonitor();
             }
         });
 

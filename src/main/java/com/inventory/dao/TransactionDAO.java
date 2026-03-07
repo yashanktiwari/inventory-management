@@ -261,6 +261,83 @@ public class TransactionDAO {
         return historyList;
     }
 
+    // Get Transactions by field name
+    public List<TransactionHistory> getTransactionsByField(String fieldName, String value) {
+
+        List<TransactionHistory> historyList = new ArrayList<>();
+
+        String sql = """
+            SELECT *
+            FROM transactions
+            WHERE %s = ?
+            ORDER BY issued_datetime DESC
+            """.formatted(fieldName);
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, value);
+
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                String issued = issuedTs != null ? issuedTs.toString() : null;
+                String returned = returnedTs != null ? returnedTs.toString() : null;
+
+                double itemCount = rs.getDouble("item_count");
+                if (rs.wasNull()) itemCount = 0;
+
+                TransactionHistory history = new TransactionHistory(
+
+                        rs.getInt("transaction_id"),
+
+                        safe(rs.getString("buy_sell")),
+                        safe(rs.getString("plant")),
+                        safe(rs.getString("department")),
+                        safe(rs.getString("location")),
+
+                        safe(rs.getString("employee_id")),
+                        safe(rs.getString("employee_name")),
+
+                        safe(rs.getString("ip_address")),
+
+                        safe(rs.getString("item_code")),
+                        safe(rs.getString("item_name")),
+                        safe(rs.getString("item_make")),
+                        safe(rs.getString("item_model")),
+                        safe(rs.getString("item_serial")),
+
+                        safe(rs.getString("imei_no")),
+                        safe(rs.getString("sim_no")),
+
+                        safe(rs.getString("po_no")),
+                        safe(rs.getString("party_name")),
+
+                        safe(rs.getString("status")),
+
+                        issued,
+                        returned,
+
+                        safe(rs.getString("remarks")),
+
+                        itemCount,
+                        safe(rs.getString("unit"))
+                );
+
+                historyList.add(history);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return historyList;
+    }
+
     // 🔹 Delete Transaction
     public void deleteTransaction(int transactionId) {
 
@@ -295,6 +372,21 @@ public class TransactionDAO {
 
             pstmt.executeUpdate();
 
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateTransactionStatus(int transactionId, String status, String remarks) {
+
+        String sql = "UPDATE transactions SET status = ?, remarks = ? WHERE transaction_id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            stmt.setString(2, remarks);
+            stmt.setInt(3, transactionId);
+            stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }

@@ -129,7 +129,7 @@ public class AddTransactionController {
         String itemCount = itemCountField.getText();
         String unit = unitComboBox.getValue();
 
-        new Thread(() -> transactionDAO.createTransaction(
+        transactionDAO.createTransaction(
                 buySell,
                 plant,
                 department,
@@ -150,7 +150,7 @@ public class AddTransactionController {
                 remarks,
                 itemCount,
                 unit
-        ));
+        );
 
         closeWindow();
     }

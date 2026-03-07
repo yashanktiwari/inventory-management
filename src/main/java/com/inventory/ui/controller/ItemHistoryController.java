@@ -8,11 +8,13 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class ItemHistoryController {
 
@@ -92,6 +94,108 @@ public class ItemHistoryController {
     private final TransactionDAO transactionDAO = new TransactionDAO();
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
+
+    @FXML
+    public void initialize() {
+
+        serialColumn.setCellValueFactory(cellData ->
+                new SimpleIntegerProperty(
+                        itemHistoryTable.getItems().indexOf(cellData.getValue()) + 1
+                ).asObject()
+        );
+
+        buySellColumn.setCellValueFactory(new PropertyValueFactory<>("buySell"));
+        buySellColumn.setCellFactory(column -> new TableCell<TransactionHistory, String>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(javafx.geometry.Pos.CENTER);
+
+                    if ("Buy".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+                    } else if ("Sell".equalsIgnoreCase(value)) {
+                        setStyle("-fx-background-color:#f8d7da; -fx-text-fill:black;");
+                    }
+                }
+            }
+        });
+
+        plantColumn.setCellValueFactory(new PropertyValueFactory<>("plant"));
+        departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
+        locationColumn.setCellValueFactory(new PropertyValueFactory<>("location"));
+
+        employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+        employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
+
+        ipColumn.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));
+
+        itemCodeColumn.setCellValueFactory(new PropertyValueFactory<>("itemCode"));
+        itemNameColumn.setCellValueFactory(new PropertyValueFactory<>("itemName"));
+        itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
+        itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
+        itemSerialColumn.setCellValueFactory(new PropertyValueFactory<>("itemSerial"));
+
+        itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
+        unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));
+
+        imeiColumn.setCellValueFactory(new PropertyValueFactory<>("imeiNo"));
+        simColumn.setCellValueFactory(new PropertyValueFactory<>("simNo"));
+
+        poColumn.setCellValueFactory(new PropertyValueFactory<>("poNo"));
+        partyColumn.setCellValueFactory(new PropertyValueFactory<>("partyName"));
+
+        statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
+        statusColumn.setCellFactory(column -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+
+                    setText(value);
+                    setAlignment(javafx.geometry.Pos.CENTER);
+
+                    switch (value.toLowerCase()) {
+
+                        case "issued" ->
+                                setStyle("-fx-background-color:#d6eaff; -fx-text-fill:black;");
+
+                        case "returned" ->
+                                setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+
+                        case "scrap" ->
+                                setStyle("-fx-background-color:#e0e0e0; -fx-text-fill:black;");
+
+                        case "in stock" ->
+                                setStyle("-fx-background-color:#fff3cd; -fx-text-fill:black;");
+                    }
+                }
+            }
+        });
+
+        issuedColumn.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getIssuedDateTime())
+        );
+        returnedColumn.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getReturnedDateTime())
+        );
+
+        remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
+    }
 
     public void loadItemHistory(String itemId, String itemName) {
         centerAllColumns(itemHistoryTable);
@@ -256,6 +360,18 @@ public class ItemHistoryController {
                 FXCollections.observableArrayList(
                         transactionDAO.getTransactionsByItemCode(itemId)
                 )
+        );
+    }
+
+    public void loadHistory(String field, String value, String title) {
+
+        titleLabel.setText("History for: " + value);
+
+        List<TransactionHistory> historyList =
+                transactionDAO.getTransactionsByField(field, value);
+
+        itemHistoryTable.setItems(
+                FXCollections.observableArrayList(historyList)
         );
     }
 

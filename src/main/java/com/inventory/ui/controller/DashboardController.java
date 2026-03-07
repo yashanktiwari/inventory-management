@@ -44,6 +44,7 @@ import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import com.inventory.util.ExportUtil;
+import javafx.util.Pair;
 import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
@@ -213,6 +214,7 @@ public class DashboardController {
             restoreColumnOrder();
         });
 
+        historyTable.setFixedCellSize(28);
         historyTable.getColumns().addListener(
                 (javafx.collections.ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
                     if (!columnsFrozen) {
@@ -237,19 +239,53 @@ public class DashboardController {
                                 return;
                             }
 
-                            ChoiceDialog<String> dialog =
-                                    new ChoiceDialog<>("Returned", "Returned", "Scrap");
-
+                            Dialog<Pair<String, String>> dialog = new Dialog<>();
                             dialog.setTitle("Update Status");
-                            dialog.setHeaderText("Select new status");
+                            dialog.setHeaderText("Update status and remarks");
 
-                            Optional<String> result = dialog.showAndWait();
+                            ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
+                            dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
 
-                            result.ifPresent(status -> {
+                            ChoiceBox<String> statusChoice = new ChoiceBox<>();
+                            statusChoice.getItems().addAll("Returned", "Scrap");
+
+                            // Set current status from DB
+                            statusChoice.setValue(history.getStatus());
+
+                            TextArea remarksArea = new TextArea();
+
+                            // Pre-fill remarks from DB
+                            remarksArea.setText(history.getRemarks());
+                            remarksArea.setPrefRowCount(3);
+                            remarksArea.setPromptText("Enter remarks");
+
+                            VBox content = new VBox(10,
+                                    new Label("Status"),
+                                    statusChoice,
+                                    new Label("Remarks"),
+                                    remarksArea
+                            );
+
+                            dialog.getDialogPane().setContent(content);
+
+                            dialog.setResultConverter(dialogButton -> {
+                                if (dialogButton == updateButtonType) {
+                                    return new Pair<>(statusChoice.getValue(), remarksArea.getText());
+                                }
+                                return null;
+                            });
+
+                            Optional<Pair<String, String>> result = dialog.showAndWait();
+
+                            result.ifPresent(pair -> {
+
+                                String status = pair.getKey();
+                                String remarks = pair.getValue();
 
                                 transactionDAO.updateTransactionStatus(
                                         history.getTransactionId(),
-                                        status
+                                        status,
+                                        remarks
                                 );
 
                                 loadHistory();
@@ -375,13 +411,274 @@ public class DashboardController {
         });
 
         plantColumn.setCellValueFactory(new PropertyValueFactory<>("plant"));
+        plantColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "plant",
+                            row.getPlant(),
+                            row.getPlant()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
+        departmentColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "department",
+                            row.getDepartment(),
+                            row.getDepartment()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         locationColumn.setCellValueFactory(new PropertyValueFactory<>("location"));
+        locationColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "location",
+                            row.getLocation(),
+                            row.getLocation()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+        employeeIdColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "employee_id",
+                            row.getEmployeeId(),
+                            row.getEmployeeId()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
+        employeeNameColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "employee_name",
+                            row.getEmployeeName(),
+                            row.getEmployeeName()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         ipAddressColumn.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));
+        ipAddressColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "ip_address",
+                            row.getIpAddress(),
+                            row.getIpAddress()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         itemCodeColumn.setCellValueFactory(new PropertyValueFactory<>("itemCode"));
         itemCodeColumn.setCellFactory(column -> new TableCell<>() {
@@ -389,53 +686,365 @@ public class DashboardController {
             private final Hyperlink link = new Hyperlink();
 
             {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
                 link.setOnAction(event -> {
-                    TransactionHistory history =
+
+                    TransactionHistory row =
                             getTableView().getItems().get(getIndex());
 
-                    openItemHistoryPage(
-                            history.getItemCode(),
-                            history.getItemName()
+                    openHistoryPage(
+                            "item_code",
+                            row.getItemCode(),
+                            row.getItemCode()
                     );
                 });
 
-                // change color automatically when row selection changes
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (newRow != null) {
                         link.textFillProperty().bind(
                                 javafx.beans.binding.Bindings.when(newRow.selectedProperty())
                                         .then(javafx.scene.paint.Color.WHITE)
-                                        .otherwise(javafx.scene.paint.Color.web("#0078d7"))
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
                         );
                     }
                 });
             }
 
             @Override
-            protected void updateItem(String itemCode, boolean empty) {
+            protected void updateItem(String ip, boolean empty) {
 
-                super.updateItem(itemCode, empty);
+                super.updateItem(ip, empty);
 
-                if (empty || itemCode == null) {
+                if (empty || ip == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(itemCode);
+                    link.setText(ip);
                     setGraphic(link);
                 }
             }
         });
+
         itemNameColumn.setCellValueFactory(new PropertyValueFactory<>("itemName"));
+        itemNameColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_name",
+                            row.getItemName(),
+                            row.getItemName()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
+        itemMakeColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_make",
+                            row.getItemMake(),
+                            row.getItemMake()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
+        itemModelColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_model",
+                            row.getItemModel(),
+                            row.getItemModel()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemSerialColumn.setCellValueFactory(new PropertyValueFactory<>("itemSerial"));
+        itemSerialColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_serial",
+                            row.getItemSerial(),
+                            row.getItemSerial()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
         unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));
 
         imeiColumn.setCellValueFactory(new PropertyValueFactory<>("imeiNo"));
+        imeiColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "imei_no",
+                            row.getImeiNo(),
+                            row.getImeiNo()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
+
         simColumn.setCellValueFactory(new PropertyValueFactory<>("simNo"));
+        simColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "sim_no",
+                            row.getSimNo(),
+                            row.getSimNo()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         poColumn.setCellValueFactory(new PropertyValueFactory<>("poNo"));
+
         partyColumn.setCellValueFactory(new PropertyValueFactory<>("partyName"));
+        partyColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "party_name",
+                            row.getPartyName(),
+                            row.getPartyName()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusColumn.setCellFactory(column -> new TableCell<>() {
@@ -472,6 +1081,56 @@ public class DashboardController {
         });
 
         remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
+        remarksColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Label textLabel = new Label();
+            private final Label iconLabel = new Label("ⓘ");   // info icon
+            private final Tooltip tooltip = new Tooltip();
+            private final HBox container = new HBox(5);
+
+            {
+                textLabel.setMaxWidth(Double.MAX_VALUE);
+                textLabel.setWrapText(false);
+                textLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+
+                iconLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
+                iconLabel.setVisible(false);
+
+                tooltip.setWrapText(true);
+                tooltip.setMaxWidth(400);
+                tooltip.setStyle("-fx-font-size:14px; -fx-padding:8px;");
+
+                HBox.setHgrow(textLabel, Priority.ALWAYS);
+                container.getChildren().addAll(textLabel, iconLabel);
+                container.setAlignment(Pos.CENTER_LEFT);
+            }
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null || value.isBlank()) {
+                    setGraphic(null);
+                    setTooltip(null);
+                    return;
+                }
+
+                textLabel.setText(value);
+                tooltip.setText(value);
+
+                // show icon only if text is long
+                if (value.length() > 25) {
+                    iconLabel.setVisible(true);
+                    setTooltip(tooltip);
+                } else {
+                    iconLabel.setVisible(false);
+                    setTooltip(null);
+                }
+
+                setGraphic(container);
+            }
+        });
 
         // 🔹 Date Formatting
         issuedColumn.setCellValueFactory(cellData -> {
@@ -974,6 +1633,12 @@ private void loadHistory() {
 
     Platform.runLater(() -> {
         masterData.setAll(data);
+
+        if (tableFilter != null) {
+            tableFilter.executeFilter();
+        }
+
+        historyTable.refresh();
     });
 }
 
@@ -998,6 +1663,28 @@ private void loadHistory() {
             );
             stage.setScene(scene);
             stage.setResizable(true);
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void openHistoryPage(String field, String value, String title) {
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/item-history.fxml")
+            );
+
+            Parent root = loader.load();
+
+            ItemHistoryController controller = loader.getController();
+            controller.loadHistory(field, value, title);
+
+            Stage stage = new Stage();
+            stage.setTitle("Transaction History");
+            stage.setScene(new Scene(root, 1200, 650));
             stage.show();
 
         } catch (Exception e) {
@@ -1099,7 +1786,11 @@ private void loadHistory() {
 
     private void startConnectionMonitor() {
 
-        connectionScheduler = Executors.newSingleThreadScheduledExecutor();
+        connectionScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setDaemon(true);
+            return t;
+        });
 
         connectionScheduler.scheduleAtFixedRate(() -> {
 
