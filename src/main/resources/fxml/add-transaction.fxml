@@ -21,7 +21,7 @@
             </columnConstraints>
 
             <Label text="Buy / Sell:" GridPane.rowIndex="0"/>
-            <ComboBox fx:id="buySellBox" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            <ComboBox fx:id="buySellBox" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
             <Label text="Plant:" GridPane.rowIndex="1"/>
             <TextField fx:id="plantField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
@@ -56,24 +56,35 @@
             <Label text="Item Serial:" GridPane.rowIndex="11"/>
             <TextField fx:id="itemSerialField" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
 
-            <Label text="IMEI:" GridPane.rowIndex="12"/>
-            <TextField fx:id="imeiField" GridPane.rowIndex="12" GridPane.columnIndex="1"/>
+            <!-- NEW QUANTITY ROW -->
 
-            <Label text="SIM No:" GridPane.rowIndex="13"/>
-            <TextField fx:id="simField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
+            <Label text="Quantity:" GridPane.rowIndex="12"/>
 
-            <Label text="PO No:" GridPane.rowIndex="14"/>
-            <TextField fx:id="poField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
+            <HBox spacing="10" GridPane.rowIndex="12" GridPane.columnIndex="1">
+                <TextField fx:id="itemCountField" prefWidth="120"/>
+                <ComboBox fx:id="unitComboBox" maxWidth="Infinity"/>
+            </HBox>
 
-            <Label text="Party Name:" GridPane.rowIndex="15"/>
-            <TextField fx:id="partyField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
+            <!-- SHIFTED ROWS -->
 
-            <Label text="Status:" GridPane.rowIndex="16"/>
-            <ComboBox fx:id="statusBox" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
+            <Label text="IMEI:" GridPane.rowIndex="13"/>
+            <TextField fx:id="imeiField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
 
-            <Label text="Remarks:" GridPane.rowIndex="17"/>
+            <Label text="SIM No:" GridPane.rowIndex="14"/>
+            <TextField fx:id="simField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
+
+            <Label text="PO No:" GridPane.rowIndex="15"/>
+            <TextField fx:id="poField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
+
+            <Label text="Party Name:" GridPane.rowIndex="16"/>
+            <TextField fx:id="partyField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
+
+            <Label text="Status:" GridPane.rowIndex="17"/>
+            <ComboBox fx:id="statusBox" GridPane.rowIndex="17" GridPane.columnIndex="1" maxWidth="Infinity"/>
+
+            <Label text="Remarks:" GridPane.rowIndex="18"/>
             <TextArea fx:id="remarksField" prefRowCount="3"
-                      GridPane.rowIndex="17" GridPane.columnIndex="1"/>
+                      GridPane.rowIndex="18" GridPane.columnIndex="1"/>
 
         </GridPane>
 

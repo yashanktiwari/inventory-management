@@ -57,10 +57,34 @@ public class DBConnection {
             throw new SQLException("Database not configured.");
         }
 
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + databaseName
-                + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+//        String url = "jdbc:mysql://" + host + ":" + port + "/" + databaseName
+//                + "?useSSL=false"
+//                + "&allowPublicKeyRetrieval=true"
+//                + "&serverTimezone=UTC"
+//                + "&connectTimeout=2000"
+//                + "&socketTimeout=2000"
+//                + "&autoReconnect=true";
 
-        return DriverManager.getConnection(url, username, password);
+        String url = "jdbc:mysql://" + host + ":" + port + "/" + databaseName
+                + "?useSSL=false"
+                + "&allowPublicKeyRetrieval=true"
+                + "&serverTimezone=UTC"
+                + "&connectTimeout=2000"
+                + "&socketTimeout=2000";
+
+        try {
+            return DriverManager.getConnection(url, username, password);
+        } catch (SQLException e) {
+
+            // retry once if MySQL restarted
+            try {
+                Thread.sleep(500);
+                return DriverManager.getConnection(url, username, password);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw e;
+            }
+        }
     }
 
     // 🔥 Create DB if not exists
@@ -119,6 +143,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     item_model VARCHAR(255),
     item_serial VARCHAR(255),
 
+    item_count DOUBLE,
+    unit VARCHAR(50),
+
     imei_no VARCHAR(100),
     sim_no VARCHAR(100),
 
@@ -137,6 +164,13 @@ CREATE TABLE IF NOT EXISTS transactions (
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
             stmt.execute(createTransactionsTable);
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN item_count DOUBLE");
+            } catch (SQLException ignored) {}
+
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN unit VARCHAR(50)");
+            } catch (SQLException ignored) {}
 
             System.out.println("MySQL database initialized successfully.");
 
