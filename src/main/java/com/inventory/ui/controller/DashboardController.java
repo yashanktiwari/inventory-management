@@ -528,18 +528,6 @@ public class DashboardController {
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
 
-//            tableFilter.getColumnFilters().forEach(cf -> {
-//
-//                cf.getFilterValues().forEach(value -> {
-//
-//                    value.selectedProperty().addListener((obs, oldVal, newVal) -> {
-//                        captureFilters();
-//                    });
-//
-//                });
-//
-//            });
-
             Platform.runLater(() -> {
                 restoreFilters();
             });
