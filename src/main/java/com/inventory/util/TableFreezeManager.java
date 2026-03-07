@@ -28,14 +28,10 @@ public class TableFreezeManager<T> {
     }
 
     public SplitPane freezeColumns(int count) {
-//        count = Math.max(0, Math.min(count, originalTable.getColumns().size()));
-
         if (originalColumns != null) {
             throw new IllegalStateException("Columns already frozen");
         }
-//        if (frozenTable != null || scrollTable != null) {
-//            throw new IllegalStateException("Columns already frozen");
-//        }
+
         int totalColumns = originalTable.getColumns().size();
 
         if (count <= 0 || count >= totalColumns) {
@@ -112,18 +108,6 @@ public class TableFreezeManager<T> {
         return pane;
     }
 
-//    public void restoreOriginalTable() {
-//
-//        if (frozenTable == null || scrollTable == null || originalColumns == null) return;
-//
-//        frozenTable.getColumns().clear();
-//        scrollTable.getColumns().clear();
-//
-//        originalTable.getColumns().setAll(originalColumns);
-//
-//        originalColumns = null;
-//    }
-
     public void restoreOriginalTable() {
 
         if (originalColumns == null) return;
@@ -177,14 +161,6 @@ public class TableFreezeManager<T> {
         });
     }
 
-//    private double calculateFrozenWidth(int count) {
-//        double totalWidth = 0;
-//        for (int i = 0; i < count && i < frozenTable.getColumns().size(); i++) {
-//            totalWidth += frozenTable.getColumns().get(i).getWidth();
-//        }
-//        return Math.min(totalWidth / originalTable.getWidth(), 0.4);
-//    }
-
     private double calculateFrozenWidth(int count) {
 
         double frozenWidth = 0;
@@ -198,32 +174,6 @@ public class TableFreezeManager<T> {
 
         return Math.min(frozenWidth / tableWidth, 0.5);
     }
-
-//    @SuppressWarnings("unchecked")
-//    private TableColumn<T, ?> cloneColumn(TableColumn<T, ?> col) {
-//
-//        TableColumn<T, Object> clone = new TableColumn<>(col.getText());
-//
-//        clone.setId(col.getId());
-//
-//        clone.setCellValueFactory(
-//                (Callback<TableColumn.CellDataFeatures<T, Object>, ObservableValue<Object>>)
-//                        (Callback<?, ?>) col.getCellValueFactory()
-//        );
-//
-//        clone.setCellFactory(
-//                (Callback<TableColumn<T, Object>, TableCell<T, Object>>)
-//                        (Callback<?, ?>) col.getCellFactory()
-//        );
-//
-//        clone.setPrefWidth(col.getPrefWidth());
-//
-//        clone.setStyle(col.getStyle());
-//        clone.setSortable(col.isSortable());
-//        clone.setReorderable(false);
-//
-//        return clone;
-//    }
 
     private TableColumn<T, ?> cloneColumn(TableColumn<T, ?> col) {
 

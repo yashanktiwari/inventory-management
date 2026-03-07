@@ -57,14 +57,6 @@ public class DBConnection {
             throw new SQLException("Database not configured.");
         }
 
-//        String url = "jdbc:mysql://" + host + ":" + port + "/" + databaseName
-//                + "?useSSL=false"
-//                + "&allowPublicKeyRetrieval=true"
-//                + "&serverTimezone=UTC"
-//                + "&connectTimeout=2000"
-//                + "&socketTimeout=2000"
-//                + "&autoReconnect=true";
-
         String url = "jdbc:mysql://" + host + ":" + port + "/" + databaseName
                 + "?useSSL=false"
                 + "&allowPublicKeyRetrieval=true"

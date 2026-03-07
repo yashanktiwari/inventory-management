@@ -337,11 +337,6 @@ public class DashboardController {
 
 
         // 🔹 Serial Column
-//        serialColumn.setCellValueFactory(cellData ->
-//                new SimpleIntegerProperty(
-//                        historyTable.getItems().indexOf(cellData.getValue()) + 1
-//                ).asObject()
-//        );
         serialColumn.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(Integer item, boolean empty) {
@@ -614,7 +609,6 @@ public class DashboardController {
             restoreDatabase.setDisable(disabled);
             resetFiltersButton.setDisable(disabled);
         });
-//        Platform.runLater(this::updateConnectionStatus);
     }
 
 
@@ -893,12 +887,6 @@ public class DashboardController {
                 SplitPane pane = freezeManager.freezeColumns(count);
                 VBox.setVgrow(pane, Priority.ALWAYS);
 
-//                VBox centerBox = (VBox) rootPane.getCenter();
-//
-//                int tableIndex = centerBox.getChildren().indexOf(historyTable);
-//
-//                centerBox.getChildren().set(tableIndex, pane);
-
                 VBox centerBox = (VBox) rootPane.getCenter();
 
                 int tableIndex = centerBox.getChildren().indexOf(historyTable);
@@ -934,33 +922,6 @@ public class DashboardController {
                 alert.show();
 
             }
-
-//            try {
-//
-//                int count = Integer.parseInt(input);
-//
-//                SplitPane pane = freezeManager.freezeColumns(count);
-//                VBox.setVgrow(pane, Priority.ALWAYS);
-//
-//                VBox centerBox = (VBox) rootPane.getCenter();
-//
-//                int tableIndex = centerBox.getChildren().indexOf(historyTable);
-//
-//                centerBox.getChildren().set(tableIndex, pane);
-//
-//                columnsFrozen = true;
-//                exportExcelButton.setDisable(columnsFrozen);
-//                exportPDFButton.setDisable(columnsFrozen);
-//                freezeColumnsMenuItem.setDisable(true);
-//                unfreezeColumnsMenuItem.setDisable(false);
-//
-//            } catch (Exception e) {
-//
-//                Alert alert = new Alert(Alert.AlertType.ERROR);
-//                alert.setContentText("Invalid number of columns.");
-//                alert.show();
-//            }
-
         });
     }
 
@@ -1002,55 +963,6 @@ public class DashboardController {
             prefs.remove("filter_" + columnId);
         });
     }
-
-//    @FXML
-//    private void handleResetFilters() throws BackingStoreException {
-//        if (tableFilter == null) return;
-////        tableFilter.getColumnFilters().forEach(columnFilter -> {
-////            columnFilter.selectAllValues();   // select all values
-////        });
-////        tableFilter.executeFilter();
-//
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            columnFilter.selectAllValues();
-//        });
-//
-//        tableFilter.executeFilter();
-//
-//        Arrays.stream(prefs.keys())
-//                .filter(key -> key.startsWith("filter_"))
-//                .forEach(prefs::remove);
-//
-//        // remove saved preferences
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            String columnId = columnFilter.getTableColumn().getId();
-//            if (columnId == null) return;
-//            prefs.remove("filter_" + columnId);
-//        });
-//    }
-
-//    private void loadHistory() {
-//
-//        // 🔒 If no database selected, show empty table
-//        if (!DBConnection.isDatabaseSet()) {
-//            historyTable.setItems(FXCollections.observableArrayList());
-//            return;
-//        }
-//
-//        masterData = FXCollections.observableArrayList(
-//                transactionDAO.getAllTransactions()
-//        );
-//
-//        filteredData = new FilteredList<>(masterData, p -> true);
-//
-//        SortedList<TransactionHistory> sortedData =
-//                new SortedList<>(filteredData);
-//
-//        sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
-//
-////        historyTable.setItems(sortedData);
-//        Platform.runLater(() -> historyTable.setItems(sortedData));
-//    }
 
 private void loadHistory() {
 
@@ -1184,71 +1096,6 @@ private void loadHistory() {
         alert.setContentText("Developed by Yashank Tiwari\nVersion 1.0");
         alert.showAndWait();
     }
-
-    // For live database connection status
-//    private void updateConnectionStatus() {
-//
-//        Thread thread = new Thread(() -> {
-////            boolean connected = false;
-////            try (var conn = DBConnection.getConnection()) {
-////                connected = conn != null && conn.isValid(2);
-////            } catch (Exception ignored) {
-////                connected = false;
-////            }
-//
-//            boolean connected = isDatabaseReachable();
-//            boolean finalConnected = connected;
-//            Platform.runLater(() -> {
-//                if (finalConnected) {
-//                    statusDot.setStyle("-fx-fill: #2ecc71;");
-//                    statusLabel.setText("Database connected");
-//
-////                    if (historyTable.getItems().isEmpty()) {
-////                        Platform.runLater(this::loadHistory);
-////                    }
-//
-//                    if(finalConnected && !lastConnectionState) {
-//                        loadHistory();
-//                    }
-//
-//                } else {
-//                    statusDot.setStyle("-fx-fill: #e74c3c;"); // red
-//                    statusLabel.setText("Not Connected");
-//                }
-//                lastConnectionState = finalConnected;
-//
-//                boolean disabled = !finalConnected;
-//                historyTable.setDisable(disabled);
-//                addTransactionButton.setDisable(disabled);
-//                exportExcelButton.setDisable(disabled || columnsFrozen);
-//                exportPDFButton.setDisable(disabled || columnsFrozen);
-//                searchField.setDisable(disabled);
-//                freezeColumnsMenuItem.setDisable(disabled);
-//                unfreezeColumnsMenuItem.setDisable(disabled);
-//                setupDatabase.setDisable(disabled);
-//                backupDatabase.setDisable(disabled);
-//                restoreDatabase.setDisable(disabled);
-//                resetFiltersButton.setDisable(disabled);
-//                refreshButton.setDisable(false);
-//            });
-//        });
-//        thread.setDaemon(true);
-//        thread.start();
-//    }
-
-//    private void startConnectionMonitor() {
-//
-//        javafx.animation.Timeline timeline =
-//                new javafx.animation.Timeline(
-//                        new javafx.animation.KeyFrame(
-//                                javafx.util.Duration.seconds(3),
-//                                event -> updateConnectionStatus()
-//                        )
-//                );
-//
-//        timeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
-//        timeline.play();
-//    }
 
     private void startConnectionMonitor() {
 
@@ -1714,9 +1561,7 @@ private void loadHistory() {
     }
 
     private boolean isDatabaseReachable() {
-
         try (java.net.Socket socket = new java.net.Socket()) {
-
             socket.connect(
                     new java.net.InetSocketAddress(
                             DBConnection.getHost(),
@@ -1724,18 +1569,13 @@ private void loadHistory() {
                     ),
                     1000 // 1 second timeout
             );
-
             return true;
-
         } catch (Exception e) {
-
             return false;
-
         }
     }
 
     public void shutdownConnectionMonitor() {
-
         if (connectionScheduler != null && !connectionScheduler.isShutdown()) {
             connectionScheduler.shutdownNow();
         }
