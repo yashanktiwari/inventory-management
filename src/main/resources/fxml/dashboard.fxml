@@ -11,13 +11,13 @@
         <VBox>
             <MenuBar>
                 <Menu text="File">
-                    <MenuItem text="Setup Database"
+                    <MenuItem fx:id="setupDatabase" text="Setup Database"
                               onAction="#handleSetupDatabase"/>
                     <SeparatorMenuItem/>
-                    <MenuItem text="Backup Database"
+                    <MenuItem fx:id="backupDatabase" text="Backup Database"
                               onAction="#handleBackupDatabase"/>
                     <SeparatorMenuItem/>
-                    <MenuItem text="Restore Database"
+                    <MenuItem fx:id="restoreDatabase" text="Restore Database"
                               onAction="#handleRestoreDatabase"/>
                     <SeparatorMenuItem/>
                     <MenuItem text="Exit"
@@ -79,6 +79,9 @@
                         <TableColumn fx:id="itemMakeColumn" text="Item Make" prefWidth="120"/>
                         <TableColumn fx:id="itemModelColumn" text="Item Model" prefWidth="120"/>
                         <TableColumn fx:id="itemSerialColumn" text="Item Serial No." prefWidth="150"/>
+
+                        <TableColumn fx:id="itemCountColumn" text="Qty" prefWidth="90"/>
+                        <TableColumn fx:id="unitColumn" text="Unit" prefWidth="80"/>
 
                         <TableColumn fx:id="imeiColumn" text="IMEI No." prefWidth="120"/>
                         <TableColumn fx:id="simColumn" text="SIM No." prefWidth="120"/>

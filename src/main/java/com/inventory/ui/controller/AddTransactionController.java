@@ -44,6 +44,8 @@ public class AddTransactionController {
     @FXML private TextField partyField;
 
     @FXML private ComboBox<String> statusBox;
+    @FXML private TextField itemCountField;
+    @FXML private ComboBox<String> unitComboBox;
 
 
     private ObservableList<String> masterItemList;
@@ -56,6 +58,7 @@ public class AddTransactionController {
 
     @FXML
     public void initialize() {
+
 
         masterItemList = FXCollections.observableArrayList(
                 itemDAO.getAllItems()
@@ -82,6 +85,14 @@ public class AddTransactionController {
                 statusBox.setDisable(false);
             }
         });
+
+        unitComboBox.getItems().addAll(
+                "Piece",
+                "Meter",
+                "Box",
+                "Kg"
+        );
+        unitComboBox.setValue("Piece");
         setupAutoComplete();
     }
 
@@ -115,7 +126,10 @@ public class AddTransactionController {
         String status = statusBox.getValue();
         String remarks = remarksField.getText();
 
-        transactionDAO.createTransaction(
+        String itemCount = itemCountField.getText();
+        String unit = unitComboBox.getValue();
+
+        new Thread(() -> transactionDAO.createTransaction(
                 buySell,
                 plant,
                 department,
@@ -133,8 +147,10 @@ public class AddTransactionController {
                 po,
                 party,
                 status,
-                remarks
-        );
+                remarks,
+                itemCount,
+                unit
+        ));
 
         closeWindow();
     }

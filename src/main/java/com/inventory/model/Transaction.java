@@ -25,10 +25,12 @@ public class Transaction {
     private String partyName;
 
     private String status;
+    private Double itemCount;
+    private String unit;
 
     public Transaction() {}
 
-    public Transaction(String buySell, String plant, String department, String location, String employeeId, String employeeName, String ipAddress, String itemCode, String itemName, String itemMake, String itemModel, String itemSerial, String imeiNo, String simNo, String poNo, String partyName, String status) {
+    public Transaction(String buySell, String plant, String department, String location, String employeeId, String employeeName, String ipAddress, String itemCode, String itemName, String itemMake, String itemModel, String itemSerial, String imeiNo, String simNo, String poNo, String partyName, String status, Double itemCount, String unit) {
         this.buySell = buySell;
         this.plant = plant;
         this.department = department;
@@ -46,6 +48,24 @@ public class Transaction {
         this.poNo = poNo;
         this.partyName = partyName;
         this.status = status;
+        this.itemCount = itemCount;
+        this.unit = unit;
+    }
+
+    public Double getItemCount() {
+        return itemCount;
+    }
+
+    public void setItemCount(Double itemCount) {
+        this.itemCount = itemCount;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
     }
 
     public String getBuySell() {

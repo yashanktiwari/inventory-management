@@ -33,6 +33,9 @@ public class TransactionHistory {
 
     private String remarks;
 
+    private Double itemCount;
+    private String unit;
+
     public TransactionHistory(
             int transactionId,
             String buySell,
@@ -54,7 +57,9 @@ public class TransactionHistory {
             String status,
             String issuedDateTime,
             String returnedDateTime,
-            String remarks
+            String remarks,
+            Double itemCount,
+            String unit
     ) {
 
         this.transactionId = transactionId;
@@ -87,6 +92,9 @@ public class TransactionHistory {
         this.returnedDateTime = returnedDateTime;
 
         this.remarks = remarks;
+
+        this.itemCount = itemCount;
+        this.unit = unit;
     }
 
     public int getTransactionId() { return transactionId; }
@@ -119,4 +127,7 @@ public class TransactionHistory {
     public String getReturnedDateTime() { return returnedDateTime; }
 
     public String getRemarks() { return remarks; }
+
+    public Double getItemCount() { return itemCount; }
+    public String getUnit() { return unit; }
 }

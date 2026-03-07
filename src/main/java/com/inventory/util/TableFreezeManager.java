@@ -28,7 +28,16 @@ public class TableFreezeManager<T> {
     }
 
     public SplitPane freezeColumns(int count) {
-        count = Math.max(0, Math.min(count, originalTable.getColumns().size()));
+        if (originalColumns != null) {
+            throw new IllegalStateException("Columns already frozen");
+        }
+
+        int totalColumns = originalTable.getColumns().size();
+
+        if (count <= 0 || count >= totalColumns) {
+            throw new IllegalArgumentException("Invalid freeze column count");
+        }
+
         frozenTable = new TableView<>();
         scrollTable = new TableView<>();
 
@@ -101,13 +110,12 @@ public class TableFreezeManager<T> {
 
     public void restoreOriginalTable() {
 
-        if (frozenTable == null || scrollTable == null || originalColumns == null) return;
-
-        frozenTable.getColumns().clear();
-        scrollTable.getColumns().clear();
+        if (originalColumns == null) return;
 
         originalTable.getColumns().setAll(originalColumns);
 
+        frozenTable = null;
+        scrollTable = null;
         originalColumns = null;
     }
 
@@ -154,17 +162,26 @@ public class TableFreezeManager<T> {
     }
 
     private double calculateFrozenWidth(int count) {
-        double totalWidth = 0;
+
+        double frozenWidth = 0;
+
         for (int i = 0; i < count && i < frozenTable.getColumns().size(); i++) {
-            totalWidth += frozenTable.getColumns().get(i).getWidth();
+            frozenWidth += frozenTable.getColumns().get(i).getPrefWidth();
         }
-        return Math.min(totalWidth / originalTable.getWidth(), 0.4);
+
+        double tableWidth = originalTable.getWidth();
+        if (tableWidth <= 0) return 0.25;
+
+        return Math.min(frozenWidth / tableWidth, 0.5);
     }
 
-    @SuppressWarnings("unchecked")
     private TableColumn<T, ?> cloneColumn(TableColumn<T, ?> col) {
 
         TableColumn<T, Object> clone = new TableColumn<>(col.getText());
+
+        clone.setId(col.getId());
+        clone.setComparator((java.util.Comparator<Object>) col.getComparator());
+        clone.setResizable(col.isResizable());
 
         clone.setCellValueFactory(
                 (Callback<TableColumn.CellDataFeatures<T, Object>, ObservableValue<Object>>)

@@ -34,6 +34,9 @@
                 <TableColumn fx:id="itemModelColumn" text="Model" prefWidth="120"/>
                 <TableColumn fx:id="itemSerialColumn" text="Serial No" prefWidth="130"/>
 
+                <TableColumn fx:id="itemCountColumn" text="Qty" prefWidth="90"/>
+                <TableColumn fx:id="unitColumn" text="Unit" prefWidth="80"/>
+
                 <TableColumn fx:id="imeiColumn" text="IMEI" prefWidth="130"/>
                 <TableColumn fx:id="simColumn" text="SIM No" prefWidth="120"/>
 

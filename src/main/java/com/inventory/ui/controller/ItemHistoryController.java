@@ -40,6 +40,8 @@ public class ItemHistoryController {
     @FXML private TableColumn<TransactionHistory, String> itemMakeColumn;
     @FXML private TableColumn<TransactionHistory, String> itemModelColumn;
     @FXML private TableColumn<TransactionHistory, String> itemSerialColumn;
+    @FXML private TableColumn<TransactionHistory, Double> itemCountColumn;
+    @FXML private TableColumn<TransactionHistory, String> unitColumn;
 
     @FXML private TableColumn<TransactionHistory, String> imeiColumn;
     @FXML private TableColumn<TransactionHistory, String> simColumn;
@@ -160,6 +162,14 @@ public class ItemHistoryController {
 
         itemSerialColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getItemSerial()));
+
+        itemCountColumn.setCellValueFactory(c ->
+                new javafx.beans.property.SimpleDoubleProperty(
+                        c.getValue().getItemCount()
+                ).asObject());
+
+        unitColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getUnit()));
 
         imeiColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getImeiNo()));

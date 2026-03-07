@@ -22,3 +22,21 @@
     -fx-fixed-cell-size: 24px;
     -fx-pref-height: 170px;
 }
+
+.table-row-cell:selected {
+    -fx-text-fill: white;
+}
+
+.hyperlink {
+    -fx-text-fill: #0078d7;
+}
+
+.hyperlink:hover {
+    -fx-text-fill: #005fa3;
+    -fx-underline: true;
+}
+
+/* 🔥 Fix hyperlink color when row is selected */
+.table-row-cell:selected .hyperlink {
+    -fx-text-fill: white;
+}

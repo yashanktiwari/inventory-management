@@ -2,8 +2,8 @@ package com.inventory.ui.controller;
 
 import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
+import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
-import com.inventory.model.Transaction;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.AlertUtil;
 import com.inventory.util.TableFreezeManager;
@@ -17,7 +17,6 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -35,6 +34,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -42,7 +44,6 @@ import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import com.inventory.util.ExportUtil;
-import org.controlsfx.control.table.ColumnFilter;
 import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
@@ -98,6 +99,12 @@ public class DashboardController {
 
     @FXML
     private TableColumn<TransactionHistory, String> itemSerialColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, Double> itemCountColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> unitColumn;
 
     // 🔹 SIM / IMEI
     @FXML
@@ -166,10 +173,20 @@ public class DashboardController {
     @FXML
     private MenuItem unfreezeColumnsMenuItem;
 
+    @FXML
+    private MenuItem setupDatabase;
+
+    @FXML
+    private MenuItem backupDatabase;
+
+    @FXML
+    private MenuItem restoreDatabase;
+
 
     private ObservableList<TransactionHistory> masterData;
     private FilteredList<TransactionHistory> filteredData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
+    private ScheduledExecutorService connectionScheduler;
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
     private String mysqldumpPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe";
@@ -179,7 +196,7 @@ public class DashboardController {
             Preferences.userNodeForPackage(DashboardController.class);
     private boolean columnsFrozen = false;
     private Node originalCenter;
-
+    private boolean lastConnectionState = false;
     private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
     private TableFreezeManager<TransactionHistory> freezeManager;
     private BorderPane rootPane;
@@ -320,11 +337,17 @@ public class DashboardController {
 
 
         // 🔹 Serial Column
-        serialColumn.setCellValueFactory(cellData ->
-                new SimpleIntegerProperty(
-                        historyTable.getItems().indexOf(cellData.getValue()) + 1
-                ).asObject()
-        );
+        serialColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(String.valueOf(getIndex() + 1));
+                }
+            }
+        });
 
 
         // 🔹 Bind Columns to New Model
@@ -367,7 +390,6 @@ public class DashboardController {
 
             {
                 link.setOnAction(event -> {
-
                     TransactionHistory history =
                             getTableView().getItems().get(getIndex());
 
@@ -375,6 +397,17 @@ public class DashboardController {
                             history.getItemCode(),
                             history.getItemName()
                     );
+                });
+
+                // change color automatically when row selection changes
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#0078d7"))
+                        );
+                    }
                 });
             }
 
@@ -395,6 +428,8 @@ public class DashboardController {
         itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
         itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
         itemSerialColumn.setCellValueFactory(new PropertyValueFactory<>("itemSerial"));
+        itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
+        unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));
 
         imeiColumn.setCellValueFactory(new PropertyValueFactory<>("imeiNo"));
         simColumn.setCellValueFactory(new PropertyValueFactory<>("simNo"));
@@ -523,8 +558,19 @@ public class DashboardController {
             });
         });
 
-        updateConnectionStatus();
+//        updateConnectionStatus();
+
+        masterData = FXCollections.observableArrayList();
+        filteredData = new FilteredList<>(masterData, p -> true);
+
+        SortedList<TransactionHistory> sortedData =
+                new SortedList<>(filteredData);
+
+        sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
+
+        historyTable.setItems(sortedData);
         loadHistory();
+
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
 
@@ -548,12 +594,28 @@ public class DashboardController {
             });
         });
         startConnectionMonitor();
+        ConnectionState.connectedProperty().addListener((obs, oldVal, connected) -> {
+            boolean disabled = !connected;
+
+            historyTable.setDisable(disabled);
+            addTransactionButton.setDisable(disabled);
+            exportExcelButton.setDisable(disabled || columnsFrozen);
+            exportPDFButton.setDisable(disabled || columnsFrozen);
+            searchField.setDisable(disabled);
+            freezeColumnsMenuItem.setDisable(disabled);
+            unfreezeColumnsMenuItem.setDisable(disabled);
+            setupDatabase.setDisable(disabled);
+            backupDatabase.setDisable(disabled);
+            restoreDatabase.setDisable(disabled);
+            resetFiltersButton.setDisable(disabled);
+        });
     }
 
 
     @FXML
     private void handleRefresh() {
-        loadHistory();
+        captureFilters();
+        runDbTask(this::loadHistory);
     }
 
     @FXML
@@ -565,7 +627,9 @@ public class DashboardController {
             );
 
             Scene scene = new Scene(loader.load(), 400, 250);
-
+            scene.getRoot().disableProperty().bind(
+                    ConnectionState.connectedProperty().not()
+            );
             Stage stage = new Stage();
             stage.setTitle("Add Item");
             stage.setScene(scene);
@@ -588,7 +652,9 @@ public class DashboardController {
             );
 
             Scene scene = new Scene(loader.load(), 700, 650);
-
+            scene.getRoot().disableProperty().bind(
+                    ConnectionState.connectedProperty().not()
+            );
             Stage stage = new Stage();
             stage.setTitle("Add Transaction");
             stage.setScene(scene);
@@ -812,6 +878,12 @@ public class DashboardController {
 
                 int count = Integer.parseInt(input);
 
+                int totalColumns = historyTable.getColumns().size();
+
+                if (count <= 0 || count >= totalColumns) {
+                    throw new IllegalArgumentException();
+                }
+                captureFilters();
                 SplitPane pane = freezeManager.freezeColumns(count);
                 VBox.setVgrow(pane, Priority.ALWAYS);
 
@@ -819,21 +891,37 @@ public class DashboardController {
 
                 int tableIndex = centerBox.getChildren().indexOf(historyTable);
 
+                if (tableIndex == -1) {
+                    tableIndex = centerBox.getChildren().size() - 1;
+                }
+
                 centerBox.getChildren().set(tableIndex, pane);
+
+                Platform.runLater(() -> {
+                    tableFilter = TableFilter.forTableView(historyTable).apply();
+                    restoreFilters();
+                });
 
                 columnsFrozen = true;
                 exportExcelButton.setDisable(columnsFrozen);
                 exportPDFButton.setDisable(columnsFrozen);
+                addTransactionButton.setDisable(columnsFrozen);
                 freezeColumnsMenuItem.setDisable(true);
                 unfreezeColumnsMenuItem.setDisable(false);
 
-            } catch (Exception e) {
+            } catch (NumberFormatException e) {
+
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Please enter a valid number.");
+                alert.show();
+
+            } catch (IllegalArgumentException e) {
 
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setContentText("Invalid number of columns.");
                 alert.show();
-            }
 
+            }
         });
     }
 
@@ -853,6 +941,11 @@ public class DashboardController {
         exportPDFButton.setDisable(columnsFrozen);
         freezeColumnsMenuItem.setDisable(false);
         unfreezeColumnsMenuItem.setDisable(true);
+
+        Platform.runLater(() -> {
+            tableFilter = TableFilter.forTableView(historyTable).apply();
+            restoreFilters();   // reload saved filters if any
+        });
     }
 
     @FXML
@@ -862,6 +955,7 @@ public class DashboardController {
             columnFilter.selectAllValues();   // select all values
         });
         tableFilter.executeFilter();
+        historyTable.refresh();
         // remove saved preferences
         tableFilter.getColumnFilters().forEach(columnFilter -> {
             String columnId = columnFilter.getTableColumn().getId();
@@ -870,27 +964,18 @@ public class DashboardController {
         });
     }
 
-    private void loadHistory() {
+private void loadHistory() {
 
-        // 🔒 If no database selected, show empty table
-        if (!DBConnection.isDatabaseSet()) {
-            historyTable.setItems(FXCollections.observableArrayList());
-            return;
-        }
-
-        masterData = FXCollections.observableArrayList(
-                transactionDAO.getAllTransactions()
-        );
-
-        filteredData = new FilteredList<>(masterData, p -> true);
-
-        SortedList<TransactionHistory> sortedData =
-                new SortedList<>(filteredData);
-
-        sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
-
-        historyTable.setItems(sortedData);
+    if (!DBConnection.isDatabaseSet()) {
+        return;
     }
+
+    List<TransactionHistory> data = transactionDAO.getAllTransactions();
+
+    Platform.runLater(() -> {
+        masterData.setAll(data);
+    });
+}
 
     private void openItemHistoryPage(String itemId, String itemName) {
 
@@ -908,7 +993,9 @@ public class DashboardController {
             stage.setTitle("Item History");
 
             Scene scene = new Scene(root, 1200, 650); // fixed window size
-
+            scene.getRoot().disableProperty().bind(
+                    ConnectionState.connectedProperty().not()
+            );
             stage.setScene(scene);
             stage.setResizable(true);
             stage.show();
@@ -994,7 +1081,12 @@ public class DashboardController {
     }
 
     public void handleExit() {
+
+        shutdownConnectionMonitor();
+
+        Platform.exit();
         System.exit(0);
+
     }
 
     public void handleAbout() {
@@ -1005,46 +1097,53 @@ public class DashboardController {
         alert.showAndWait();
     }
 
-    // For live database connection status
-    private void updateConnectionStatus() {
-
-        boolean connected = false;
-
-        try (var conn = DBConnection.getConnection()) {
-            connected = conn != null && conn.isValid(2);
-        } catch (Exception ignored) {
-            connected = false;
-        }
-
-        if (connected) {
-            statusDot.setStyle("-fx-fill: #2ecc71;"); // green
-            statusLabel.setText("Database connected");
-        } else {
-            statusDot.setStyle("-fx-fill: #e74c3c;"); // red
-            statusLabel.setText("Not Connected");
-        }
-
-        boolean disabled = !connected;
-        historyTable.setDisable(disabled);
-        addTransactionButton.setDisable(disabled);
-        exportExcelButton.setDisable(disabled || columnsFrozen);
-        exportPDFButton.setDisable(disabled || columnsFrozen);
-        searchField.setDisable(disabled);
-        refreshButton.setDisable(false);
-    }
-
     private void startConnectionMonitor() {
 
-        javafx.animation.Timeline timeline =
-                new javafx.animation.Timeline(
-                        new javafx.animation.KeyFrame(
-                                javafx.util.Duration.seconds(5),
-                                event -> updateConnectionStatus()
-                        )
-                );
+        connectionScheduler = Executors.newSingleThreadScheduledExecutor();
 
-        timeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
-        timeline.play();
+        connectionScheduler.scheduleAtFixedRate(() -> {
+
+            boolean connected = isDatabaseReachable();
+            ConnectionState.setConnected(connected);
+
+            Platform.runLater(() -> {
+
+                if (connected) {
+
+                    statusDot.setStyle("-fx-fill: #2ecc71;");
+                    statusLabel.setText("Database connected");
+
+                    if (connected && !lastConnectionState) {
+                        loadHistory();
+                    }
+
+                } else {
+
+                    statusDot.setStyle("-fx-fill: #e74c3c;");
+                    statusLabel.setText("Not Connected");
+
+                }
+
+                lastConnectionState = connected;
+
+                boolean disabled = !connected;
+
+                historyTable.setDisable(disabled);
+                addTransactionButton.setDisable(disabled);
+                exportExcelButton.setDisable(disabled || columnsFrozen);
+                exportPDFButton.setDisable(disabled || columnsFrozen);
+                searchField.setDisable(disabled);
+                freezeColumnsMenuItem.setDisable(disabled);
+                unfreezeColumnsMenuItem.setDisable(disabled);
+                setupDatabase.setDisable(disabled);
+                backupDatabase.setDisable(disabled);
+                restoreDatabase.setDisable(disabled);
+                resetFiltersButton.setDisable(disabled);
+                refreshButton.setDisable(false);
+
+            });
+
+        }, 0, 2, TimeUnit.SECONDS); // check every 2 seconds
     }
 
     private void createBackup(String filePath) {
@@ -1444,5 +1543,42 @@ public class DashboardController {
 
             prefs.put("filter_" + columnId, String.join("|", selected));
         });
+    }
+
+    private void runDbTask(Runnable task) {
+
+        Thread thread = new Thread(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                Platform.runLater(() ->
+                        AlertUtil.showError("Database Error", e.getMessage()));
+            }
+        });
+
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private boolean isDatabaseReachable() {
+        try (java.net.Socket socket = new java.net.Socket()) {
+            socket.connect(
+                    new java.net.InetSocketAddress(
+                            DBConnection.getHost(),
+                            Integer.parseInt(DBConnection.getPort())
+                    ),
+                    1000 // 1 second timeout
+            );
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void shutdownConnectionMonitor() {
+        if (connectionScheduler != null && !connectionScheduler.isShutdown()) {
+            connectionScheduler.shutdownNow();
+        }
+
     }
 }
