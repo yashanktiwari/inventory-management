@@ -150,6 +150,12 @@ public class DashboardController {
     @FXML
     private Button refreshButton;
 
+    @FXML
+    private MenuItem freezeColumnsMenuItem;
+
+    @FXML
+    private MenuItem unfreezeColumnsMenuItem;
+
     private ObservableList<TransactionHistory> masterData;
     private FilteredList<TransactionHistory> filteredData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
@@ -160,6 +166,7 @@ public class DashboardController {
     private static final String RESTORE_PASSWORD = "admin123";
     private final Preferences prefs =
             Preferences.userNodeForPackage(DashboardController.class);
+    private boolean columnsFrozen = false;
     private Node originalCenter;
 
     private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
@@ -168,16 +175,21 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
+        freezeManager = new TableFreezeManager<>(historyTable);
+
         Platform.runLater(() -> {
             rootPane = (BorderPane) historyTable.getScene().getRoot();
             originalCenter = rootPane.getCenter();
+            restoreColumnOrder();
         });
 
-        freezeManager = new TableFreezeManager<>(historyTable);
-        Platform.runLater(this::restoreColumnOrder);
-        historyTable.getColumns().addListener((javafx.collections.ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
-            saveColumnOrder();
-        });
+        historyTable.getColumns().addListener(
+                (javafx.collections.ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
+                    if (!columnsFrozen) {
+                        saveColumnOrder();
+                    }
+                }
+        );
         centerAllColumns(historyTable);
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
@@ -765,10 +777,19 @@ public class DashboardController {
                 int count = Integer.parseInt(input);
 
                 SplitPane pane = freezeManager.freezeColumns(count);
-
                 VBox.setVgrow(pane, Priority.ALWAYS);
 
-                rootPane.setCenter(pane);
+                VBox centerBox = (VBox) rootPane.getCenter();
+
+                int tableIndex = centerBox.getChildren().indexOf(historyTable);
+
+                centerBox.getChildren().set(tableIndex, pane);
+
+                columnsFrozen = true;
+                exportExcelButton.setDisable(columnsFrozen);
+                exportPDFButton.setDisable(columnsFrozen);
+                freezeColumnsMenuItem.setDisable(true);
+                unfreezeColumnsMenuItem.setDisable(false);
 
             } catch (Exception e) {
 
@@ -782,11 +803,21 @@ public class DashboardController {
 
     @FXML
     private void handleUnfreezeColumns() {
+
         freezeManager.restoreOriginalTable();
 
-        if (originalCenter != null) {
-            rootPane.setCenter(originalCenter);
-        }
+        VBox centerBox = (VBox) rootPane.getCenter();
+
+        int paneIndex = centerBox.getChildren().size() - 1;
+
+        centerBox.getChildren().set(paneIndex, historyTable);
+
+        columnsFrozen = false;
+        exportExcelButton.setDisable(columnsFrozen);
+        exportPDFButton.setDisable(columnsFrozen);
+        freezeColumnsMenuItem.setDisable(false);
+        unfreezeColumnsMenuItem.setDisable(true);
+
     }
 
     private void loadHistory() {
@@ -946,8 +977,8 @@ public class DashboardController {
         boolean disabled = !connected;
         historyTable.setDisable(disabled);
         addTransactionButton.setDisable(disabled);
-        exportExcelButton.setDisable(disabled);
-        exportPDFButton.setDisable(disabled);
+        exportExcelButton.setDisable(disabled || columnsFrozen);
+        exportPDFButton.setDisable(disabled || columnsFrozen);
         searchField.setDisable(disabled);
         refreshButton.setDisable(false);
     }
@@ -1271,7 +1302,11 @@ public class DashboardController {
         }
     }
 
-    private void saveColumnOrder() {
+    public void saveColumnOrder() {
+
+        if (columnsFrozen) {
+            freezeManager.restoreOriginalTable();
+        }
 
         StringBuilder order = new StringBuilder();
 
@@ -1284,81 +1319,4 @@ public class DashboardController {
 
         prefs.put(COLUMN_ORDER_KEY, order.toString());
     }
-
-//    @FXML
-//    private void handleFreezeColumns() {
-//
-//        TextInputDialog dialog = new TextInputDialog("2");
-//        dialog.setTitle("Freeze Columns");
-//        dialog.setHeaderText("Freeze first N columns");
-//        dialog.setContentText("Enter number of columns to freeze:");
-//
-//        Optional<String> result = dialog.showAndWait();
-//
-//        result.ifPresent(input -> {
-//
-//            try {
-//
-//                int count = Integer.parseInt(input);
-//
-//                if (count <= 0 || count >= historyTable.getColumns().size()) {
-//                    AlertUtil.showError("Error", "Invalid column count.");
-//                    return;
-//                }
-//
-//                freezeColumns(count);
-//
-//            } catch (NumberFormatException e) {
-//                AlertUtil.showError("Error", "Please enter a valid number.");
-//            }
-//
-//        });
-//    }
-
-//    private void freezeColumns(int count) {
-//        TableView<TransactionHistory> frozenTable = new TableView<>();
-//        TableView<TransactionHistory> scrollTable = new TableView<>();
-//
-//        frozenTable.setItems(historyTable.getItems());
-//        scrollTable.setItems(historyTable.getItems());
-//
-//        frozenTable.getColumns().addAll(
-//                historyTable.getColumns().subList(0, count)
-//        );
-//
-//        scrollTable.getColumns().addAll(
-//                historyTable.getColumns().subList(count, historyTable.getColumns().size())
-//        );
-//
-//        frozenTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-//        scrollTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-//
-//        // 🔹 Sync vertical scroll
-//        syncVerticalScroll(frozenTable, scrollTable);
-//
-//        SplitPane splitPane = new SplitPane(frozenTable, scrollTable);
-//        splitPane.setDividerPositions(0.25);
-//
-//        BorderPane root = (BorderPane) historyTable.getParent().getParent();
-//        root.setCenter(splitPane);
-//    }
-//
-//    private void syncVerticalScroll(TableView<?> frozenTable, TableView<?> scrollTable) {
-//
-//        frozenTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
-//
-//            ScrollBar frozenBar =
-//                    (ScrollBar) frozenTable.lookup(".scroll-bar:vertical");
-//
-//            ScrollBar scrollBar =
-//                    (ScrollBar) scrollTable.lookup(".scroll-bar:vertical");
-//
-//            if (frozenBar != null && scrollBar != null) {
-//
-//                frozenBar.valueProperty().bindBidirectional(
-//                        scrollBar.valueProperty()
-//                );
-//            }
-//        });
-//    }
 }

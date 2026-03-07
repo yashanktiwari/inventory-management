@@ -22,12 +22,17 @@
                     <SeparatorMenuItem/>
                     <MenuItem text="Exit"
                               onAction="#handleExit"/>
-                    <SeparatorMenuItem/>
-                    <MenuItem text="Freeze Columns"
+                </Menu>
+
+                <Menu text="View">
+                    <MenuItem fx:id="freezeColumnsMenuItem"
+                              text="Freeze Columns"
                               onAction="#handleFreezeColumns"/>
                     <SeparatorMenuItem/>
-                    <MenuItem text="Freeze Columns"
-                              onAction="#handleUnfreezeColumns"/>
+                    <MenuItem fx:id="unfreezeColumnsMenuItem"
+                              text="Unfreeze Columns"
+                              onAction="#handleUnfreezeColumns"
+                              disable="true"/>
                 </Menu>
 
                 <Menu text="About">
