@@ -109,6 +109,7 @@
             <Button fx:id="addTransactionButton" text="Add Transaction" onAction="#handleAddTransaction"/>
             <Button fx:id="exportExcelButton" text="Export Excel" onAction="#handleExportExcel"/>
             <Button fx:id="exportPDFButton" text="Export PDF" onAction="#handleExportPDF"/>
+            <Button fx:id="resetFiltersButton" text="Reset Filters" onAction="#handleResetFilters"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 

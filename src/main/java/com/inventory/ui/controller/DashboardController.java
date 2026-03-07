@@ -32,8 +32,9 @@ import java.io.InputStreamReader;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
+import java.util.*;
 import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -41,6 +42,7 @@ import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import com.inventory.util.ExportUtil;
+import org.controlsfx.control.table.ColumnFilter;
 import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
@@ -156,6 +158,9 @@ public class DashboardController {
     private Button refreshButton;
 
     @FXML
+    private Button resetFiltersButton;
+
+    @FXML
     private MenuItem freezeColumnsMenuItem;
 
     @FXML
@@ -179,6 +184,7 @@ public class DashboardController {
     private TableFreezeManager<TransactionHistory> freezeManager;
     private BorderPane rootPane;
     private TableFilter<TransactionHistory> tableFilter;
+    private final Map<String, Set<String>> activeFilters = new HashMap<>();
 
     @FXML
     public void initialize() {
@@ -521,11 +527,23 @@ public class DashboardController {
         loadHistory();
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
+
+//            tableFilter.getColumnFilters().forEach(cf -> {
+//
+//                cf.getFilterValues().forEach(value -> {
+//
+//                    value.selectedProperty().addListener((obs, oldVal, newVal) -> {
+//                        captureFilters();
+//                    });
+//
+//                });
+//
+//            });
+
             Platform.runLater(() -> {
-                Platform.runLater(() -> {
-                    restoreFilters();
-                });
+                restoreFilters();
             });
+
             historyTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
                 if (newScene == null) return;
                 newScene.getWindow().setOnShown(e -> {
@@ -847,7 +865,21 @@ public class DashboardController {
         exportPDFButton.setDisable(columnsFrozen);
         freezeColumnsMenuItem.setDisable(false);
         unfreezeColumnsMenuItem.setDisable(true);
+    }
 
+    @FXML
+    private void handleResetFilters() {
+        if (tableFilter == null) return;
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+            columnFilter.selectAllValues();   // select all values
+        });
+        tableFilter.executeFilter();
+        // remove saved preferences
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+            String columnId = columnFilter.getTableColumn().getId();
+            if (columnId == null) return;
+            prefs.remove("filter_" + columnId);
+        });
     }
 
     private void loadHistory() {
@@ -870,9 +902,6 @@ public class DashboardController {
         sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
 
         historyTable.setItems(sortedData);
-        if (tableFilter != null) {
-            tableFilter.executeFilter();
-        }
     }
 
     private void openItemHistoryPage(String itemId, String itemName) {
@@ -1361,29 +1390,28 @@ public class DashboardController {
 
             String columnId = columnFilter.getTableColumn().getId();
             if (columnId == null) return;
+
             if (columnId.equals("serialColumn")
                     || columnId.equals("actionColumn")
                     || columnId.equals("deleteColumn")) {
                 return;
             }
 
-            var selected = columnFilter.getFilterValues();
+            var selected = columnFilter.getFilterValues().stream()
+                    .filter(fv -> fv.selectedProperty().get())
+                    .map(fv -> fv.getValue().toString())
+                    .toList();
 
-            // If no filter applied → skip saving
-            if (selected == null || selected.isEmpty()) {
+            var all = columnFilter.getFilterValues().stream()
+                    .map(fv -> fv.getValue().toString())
+                    .toList();
+
+            // If everything is selected → remove preference (means no filter)
+            if (selected.size() == all.size()) {
                 prefs.remove("filter_" + columnId);
-                return;
+            } else {
+                prefs.put("filter_" + columnId, String.join("|", selected));
             }
-
-            String values = selected.stream()
-                    .map(Object::toString)
-                    .reduce((a,b)->a+"|"+b)
-                    .orElse("");
-
-            prefs.put("filter_" + columnId, values);
-
-            System.out.println("Saving filter: " + columnId + " -> " + values);
-
         });
     }
 
@@ -1399,14 +1427,34 @@ public class DashboardController {
             String saved = prefs.get("filter_" + columnId, null);
             if (saved == null) return;
 
-            System.out.println("Restoring filter: " + columnId + " -> " + saved);
+            var allowed = new HashSet<>(Arrays.asList(saved.split("\\|")));
 
-            for (String val : saved.split("\\|")) {
-                columnFilter.selectValue(val);
-            }
-
+            columnFilter.getFilterValues().forEach(fv -> {
+                String value = fv.getValue().toString();
+                fv.selectedProperty().set(allowed.contains(value));
+            });
         });
 
         tableFilter.executeFilter();
+    }
+
+    private void captureFilters() {
+
+        activeFilters.clear();
+
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+
+            String columnId = columnFilter.getTableColumn().getId();
+            if (columnId == null) return;
+
+            Set<String> selected = columnFilter.getFilterValues().stream()
+                    .filter(v -> v.selectedProperty().get())
+                    .map(v -> v.getValue().toString())
+                    .collect(Collectors.toSet());
+
+            activeFilters.put(columnId, selected);
+
+            prefs.put("filter_" + columnId, String.join("|", selected));
+        });
     }
 }
