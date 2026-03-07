@@ -54,6 +54,9 @@ public class DashboardController {
     @FXML
     private TableColumn<TransactionHistory, Integer> serialColumn;
 
+    @FXML
+    private VBox tableContainer;
+
     // 🔹 Transaction Info
     @FXML
     private TableColumn<TransactionHistory, String> buySellColumn;
@@ -175,6 +178,7 @@ public class DashboardController {
     private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
     private TableFreezeManager<TransactionHistory> freezeManager;
     private BorderPane rootPane;
+    private TableFilter<TransactionHistory> tableFilter;
 
     @FXML
     public void initialize() {
@@ -515,22 +519,25 @@ public class DashboardController {
 
         updateConnectionStatus();
         loadHistory();
-        TableFilter<TransactionHistory> filter = TableFilter.forTableView(historyTable).apply();
-
         Platform.runLater(() -> {
-            historyTable.getScene().getRoot().lookupAll(".filter-panel").forEach(panel -> {
-                panel.lookupAll(".list-view").forEach(node -> {
-                    if (node instanceof ListView<?> list) {
+            tableFilter = TableFilter.forTableView(historyTable).apply();
+            Platform.runLater(() -> {
+                Platform.runLater(() -> {
+                    restoreFilters();
+                });
+            });
+            historyTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene == null) return;
+                newScene.getWindow().setOnShown(e -> {
 
-                        int size = list.getItems().size();
-
-                        // shrink when few items, limit when many
-                        int visibleRows = Math.min(size, 8);
-
-                        list.setFixedCellSize(24);
-                        list.setPrefHeight(visibleRows * 24 + 2);
-                        list.setMaxHeight(8 * 24 + 2);
-                    }
+                    newScene.getRoot().lookupAll(".list-view").forEach(node -> {
+                        if (node instanceof ListView<?> list) {
+                            int size = list.getItems().size();
+                            int visibleRows = Math.min(size, 7);
+                            list.setFixedCellSize(24);
+                            list.setPrefHeight(visibleRows * 24 + 4);
+                        }
+                    });
                 });
             });
         });
@@ -863,6 +870,9 @@ public class DashboardController {
         sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
 
         historyTable.setItems(sortedData);
+        if (tableFilter != null) {
+            tableFilter.executeFilter();
+        }
     }
 
     private void openItemHistoryPage(String itemId, String itemName) {
@@ -1341,5 +1351,62 @@ public class DashboardController {
         }
 
         prefs.put(COLUMN_ORDER_KEY, order.toString());
+    }
+
+    public void saveFilters() {
+
+        if (tableFilter == null) return;
+
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+
+            String columnId = columnFilter.getTableColumn().getId();
+            if (columnId == null) return;
+            if (columnId.equals("serialColumn")
+                    || columnId.equals("actionColumn")
+                    || columnId.equals("deleteColumn")) {
+                return;
+            }
+
+            var selected = columnFilter.getFilterValues();
+
+            // If no filter applied → skip saving
+            if (selected == null || selected.isEmpty()) {
+                prefs.remove("filter_" + columnId);
+                return;
+            }
+
+            String values = selected.stream()
+                    .map(Object::toString)
+                    .reduce((a,b)->a+"|"+b)
+                    .orElse("");
+
+            prefs.put("filter_" + columnId, values);
+
+            System.out.println("Saving filter: " + columnId + " -> " + values);
+
+        });
+    }
+
+    private void restoreFilters() {
+
+        if (tableFilter == null) return;
+
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+
+            String columnId = columnFilter.getTableColumn().getId();
+            if (columnId == null) return;
+
+            String saved = prefs.get("filter_" + columnId, null);
+            if (saved == null) return;
+
+            System.out.println("Restoring filter: " + columnId + " -> " + saved);
+
+            for (String val : saved.split("\\|")) {
+                columnFilter.selectValue(val);
+            }
+
+        });
+
+        tableFilter.executeFilter();
     }
 }

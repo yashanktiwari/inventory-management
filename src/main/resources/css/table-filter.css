@@ -1,0 +1,24 @@
+.filter-panel {
+    -fx-max-height: 280px;
+    -fx-padding: 8px;
+}
+
+.filter-panel .scroll-pane {
+    -fx-max-height: 250px;
+}
+
+.filter-panel .list-view {
+    -fx-fixed-cell-size: 24px;
+    -fx-pref-height: 170px;
+    -fx-max-height: 200px;
+}
+
+.context-menu .list-view {
+    -fx-fixed-cell-size: 24px;
+    -fx-pref-height: 170px;
+}
+
+.controlsfx-filter-popup .list-view {
+    -fx-fixed-cell-size: 24px;
+    -fx-pref-height: 170px;
+}

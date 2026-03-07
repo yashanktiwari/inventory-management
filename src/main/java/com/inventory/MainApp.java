@@ -36,18 +36,16 @@ public class MainApp extends Application {
 
         Scene scene = new Scene(root, 1200, 650);
 
-//        scene.getRoot().setStyle("""
-//.filter-panel .list-view {
-//    -fx-max-height: 200px;
-//    -fx-pref-height: -1;
-//}
-//""");
+        scene.getStylesheets().add(
+                getClass().getResource("/css/table-filter.css").toExternalForm()
+        );
         stage.setTitle("Inventory Management System");
         stage.setScene(scene);
 
         // 🔹 Save column order when app closes
         stage.setOnCloseRequest(event -> {
             if (controller != null) {
+                controller.saveFilters();
                 controller.saveColumnOrder();
             }
         });
