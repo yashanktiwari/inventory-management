@@ -30,6 +30,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.controlsfx</groupId>
+            <artifactId>controlsfx</artifactId>
+            <version>11.2.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <version>8.3.0</version>
@@ -55,6 +61,10 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.inventory.MainApp</mainClass>
+                    <options>
+                        <option>--add-opens</option>
+                        <option>javafx.controls/javafx.scene.control.skin=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
             <plugin>

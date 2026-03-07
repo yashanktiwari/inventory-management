@@ -55,48 +55,50 @@
                            promptText="Search"
                            prefWidth="450"/>
             </HBox>
-            <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
-                <columnResizePolicy>
-                    <TableView fx:constant="UNCONSTRAINED_RESIZE_POLICY"/>
-                </columnResizePolicy>
-                <columns>
+            <VBox fx:id="tableContainer" VBox.vgrow="ALWAYS" spacing="0">
+                <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
+                    <columnResizePolicy>
+                        <TableView fx:constant="UNCONSTRAINED_RESIZE_POLICY"/>
+                    </columnResizePolicy>
+                    <columns>
 
-                    <TableColumn fx:id="serialColumn" text="No." prefWidth="50"/>
+                        <TableColumn fx:id="serialColumn" text="No." prefWidth="50"/>
 
-                    <TableColumn fx:id="buySellColumn" text="Buy / Sell" prefWidth="100"/>
-                    <TableColumn fx:id="plantColumn" text="Plant" prefWidth="100"/>
-                    <TableColumn fx:id="departmentColumn" text="Department" prefWidth="120"/>
-                    <TableColumn fx:id="locationColumn" text="Location" prefWidth="120"/>
+                        <TableColumn fx:id="buySellColumn" text="Buy / Sell" prefWidth="100"/>
+                        <TableColumn fx:id="plantColumn" text="Plant" prefWidth="100"/>
+                        <TableColumn fx:id="departmentColumn" text="Department" prefWidth="120"/>
+                        <TableColumn fx:id="locationColumn" text="Location" prefWidth="120"/>
 
-                    <TableColumn fx:id="employeeIdColumn" text="Emp. Code" prefWidth="120"/>
-                    <TableColumn fx:id="employeeNameColumn" text="Emp. Name" prefWidth="150"/>
+                        <TableColumn fx:id="employeeIdColumn" text="Emp. Code" prefWidth="120"/>
+                        <TableColumn fx:id="employeeNameColumn" text="Emp. Name" prefWidth="150"/>
 
-                    <TableColumn fx:id="ipAddressColumn" text="IP Address" prefWidth="120"/>
+                        <TableColumn fx:id="ipAddressColumn" text="IP Address" prefWidth="120"/>
 
-                    <TableColumn fx:id="itemCodeColumn" text="Item Code" prefWidth="120"/>
-                    <TableColumn fx:id="itemNameColumn" text="Item Name" prefWidth="150"/>
-                    <TableColumn fx:id="itemMakeColumn" text="Item Make" prefWidth="120"/>
-                    <TableColumn fx:id="itemModelColumn" text="Item Model" prefWidth="120"/>
-                    <TableColumn fx:id="itemSerialColumn" text="Item Serial No." prefWidth="150"/>
+                        <TableColumn fx:id="itemCodeColumn" text="Item Code" prefWidth="120"/>
+                        <TableColumn fx:id="itemNameColumn" text="Item Name" prefWidth="150"/>
+                        <TableColumn fx:id="itemMakeColumn" text="Item Make" prefWidth="120"/>
+                        <TableColumn fx:id="itemModelColumn" text="Item Model" prefWidth="120"/>
+                        <TableColumn fx:id="itemSerialColumn" text="Item Serial No." prefWidth="150"/>
 
-                    <TableColumn fx:id="imeiColumn" text="IMEI No." prefWidth="120"/>
-                    <TableColumn fx:id="simColumn" text="SIM No." prefWidth="120"/>
+                        <TableColumn fx:id="imeiColumn" text="IMEI No." prefWidth="120"/>
+                        <TableColumn fx:id="simColumn" text="SIM No." prefWidth="120"/>
 
-                    <TableColumn fx:id="poColumn" text="PO No." prefWidth="120"/>
-                    <TableColumn fx:id="partyColumn" text="Party Name" prefWidth="150"/>
+                        <TableColumn fx:id="poColumn" text="PO No." prefWidth="120"/>
+                        <TableColumn fx:id="partyColumn" text="Party Name" prefWidth="150"/>
 
-                    <TableColumn fx:id="statusColumn" text="Status" prefWidth="150"/>
+                        <TableColumn fx:id="statusColumn" text="Status" prefWidth="150"/>
 
-                    <TableColumn fx:id="issuedColumn" text="Issued Date" prefWidth="180"/>
-                    <TableColumn fx:id="returnedColumn" text="Return/Scrap Date" prefWidth="180"/>
+                        <TableColumn fx:id="issuedColumn" text="Issued Date" prefWidth="180"/>
+                        <TableColumn fx:id="returnedColumn" text="Return/Scrap Date" prefWidth="180"/>
 
-                    <TableColumn fx:id="remarksColumn" text="Remarks" prefWidth="150"/>
+                        <TableColumn fx:id="remarksColumn" text="Remarks" prefWidth="150"/>
 
-                    <TableColumn fx:id="actionColumn" text="Update Status" prefWidth="140"/>
-                    <TableColumn fx:id="deleteColumn" text="Delete" prefWidth="100"/>
+                        <TableColumn fx:id="actionColumn" text="Update Status" prefWidth="140"/>
+                        <TableColumn fx:id="deleteColumn" text="Delete" prefWidth="100"/>
 
-                </columns>
-            </TableView>
+                    </columns>
+                </TableView>
+            </VBox>
         </VBox>
     </center>
 
@@ -107,6 +109,7 @@
             <Button fx:id="addTransactionButton" text="Add Transaction" onAction="#handleAddTransaction"/>
             <Button fx:id="exportExcelButton" text="Export Excel" onAction="#handleExportExcel"/>
             <Button fx:id="exportPDFButton" text="Export PDF" onAction="#handleExportPDF"/>
+            <Button fx:id="resetFiltersButton" text="Reset Filters" onAction="#handleResetFilters"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 
