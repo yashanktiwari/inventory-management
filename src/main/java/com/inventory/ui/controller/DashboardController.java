@@ -3,6 +3,7 @@ package com.inventory.ui.controller;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
+import com.inventory.model.Transaction;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.AlertUtil;
 import com.inventory.util.TableFreezeManager;
@@ -40,6 +41,7 @@ import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import com.inventory.util.ExportUtil;
+import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
 
@@ -156,6 +158,7 @@ public class DashboardController {
     @FXML
     private MenuItem unfreezeColumnsMenuItem;
 
+
     private ObservableList<TransactionHistory> masterData;
     private FilteredList<TransactionHistory> filteredData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
@@ -189,6 +192,7 @@ public class DashboardController {
                         saveColumnOrder();
                     }
                 }
+
         );
         centerAllColumns(historyTable);
 
@@ -511,6 +515,25 @@ public class DashboardController {
 
         updateConnectionStatus();
         loadHistory();
+        TableFilter<TransactionHistory> filter = TableFilter.forTableView(historyTable).apply();
+
+        Platform.runLater(() -> {
+            historyTable.getScene().getRoot().lookupAll(".filter-panel").forEach(panel -> {
+                panel.lookupAll(".list-view").forEach(node -> {
+                    if (node instanceof ListView<?> list) {
+
+                        int size = list.getItems().size();
+
+                        // shrink when few items, limit when many
+                        int visibleRows = Math.min(size, 8);
+
+                        list.setFixedCellSize(24);
+                        list.setPrefHeight(visibleRows * 24 + 2);
+                        list.setMaxHeight(8 * 24 + 2);
+                    }
+                });
+            });
+        });
         startConnectionMonitor();
     }
 
