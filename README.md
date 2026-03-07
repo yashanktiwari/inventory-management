@@ -12,6 +12,13 @@
 11. Backup db
 12. Restore db
 13. Item history page
+14. Column reordering and persistence
+15. Freezing N number of columns (Scrolling simultaneously)
+16. Filtering for columns
+17. Persistence of filters
+18. Reset all filters button
+19. Item count and unit column
+20. DB connection indicator
 
 ## To run the application:
 - mvn clean javafx:run
