@@ -6,7 +6,7 @@ import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.*;
-//import com.inventory.util.TableFreezeManager;
+import com.inventory.util.TableFreezeManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
@@ -32,7 +32,6 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 import java.util.concurrent.Executors;
@@ -143,14 +142,12 @@ public class DashboardController {
     @FXML
     private TableColumn<TransactionHistory, Void> deleteColumn;
 
-
     // 🔹 Connection Status
     @FXML
     private javafx.scene.shape.Circle statusDot;
 
     @FXML
     private Label statusLabel;
-
 
     // 🔹 Buttons
     @FXML
@@ -188,7 +185,6 @@ public class DashboardController {
 
 
     private ObservableList<TransactionHistory> masterData;
-    private FilteredList<TransactionHistory> filteredData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
     private ScheduledExecutorService connectionScheduler;
     private final DateTimeFormatter formatter =
@@ -203,9 +199,9 @@ public class DashboardController {
     private boolean lastConnectionState = false;
     private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
     private TableFreezeManager<TransactionHistory> freezeManager;
-    private TableColumnFreezer<TransactionHistory> columnFreezer;
     private BorderPane rootPane;
     private TableFilter<TransactionHistory> tableFilter;
+    private TableFilter<TransactionHistory> frozenTableFilter;
     private final Map<String, Set<String>> activeFilters = new HashMap<>();
     private FilteredList<TransactionHistory> filterPipeline;
 
@@ -233,109 +229,109 @@ public class DashboardController {
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
 
-                    private final Button updateBtn = new Button("Update");
+            private final Button updateBtn = new Button("Update");
 
-                    {
-                        updateBtn.setOnAction(event -> {
+            {
+                updateBtn.setOnAction(event -> {
 
-                            TransactionHistory history =
-                                    getTableView().getItems().get(getIndex());
+                    TransactionHistory history =
+                            getTableView().getItems().get(getIndex());
 
-                            if (!"Sell".equalsIgnoreCase(history.getBuySell())) {
-                                return;
-                            }
-
-                            Dialog<Pair<String, String>> dialog = new Dialog<>();
-                            dialog.setTitle("Update Status");
-                            dialog.setHeaderText("Update status and remarks");
-
-                            ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
-                            dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
-
-                            ChoiceBox<String> statusChoice = new ChoiceBox<>();
-                            statusChoice.getItems().addAll("Returned", "Scrap");
-
-                            // Set current status from DB
-                            statusChoice.setValue(history.getStatus());
-
-                            TextArea remarksArea = new TextArea();
-
-                            // Pre-fill remarks from DB
-                            remarksArea.setText(history.getRemarks());
-                            remarksArea.setPrefRowCount(3);
-                            remarksArea.setPromptText("Enter remarks");
-
-                            VBox content = new VBox(10,
-                                    new Label("Status"),
-                                    statusChoice,
-                                    new Label("Remarks"),
-                                    remarksArea
-                            );
-
-                            dialog.getDialogPane().setContent(content);
-
-                            dialog.setResultConverter(dialogButton -> {
-                                if (dialogButton == updateButtonType) {
-                                    return new Pair<>(statusChoice.getValue(), remarksArea.getText());
-                                }
-                                return null;
-                            });
-
-                            Optional<Pair<String, String>> result = dialog.showAndWait();
-
-                            result.ifPresent(pair -> {
-
-                                String status = pair.getKey();
-                                String remarks = pair.getValue();
-
-                                transactionDAO.updateTransactionStatus(
-                                        history.getTransactionId(),
-                                        status,
-                                        remarks
-                                );
-
-                                loadHistory();
-                            });
-                        });
+                    if (!"Sell".equalsIgnoreCase(history.getBuySell())) {
+                        return;
                     }
 
-                    @Override
-                    protected void updateItem(Void item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty) {
-                            setGraphic(null);
-                            return;
-                        }
-                        TransactionHistory history =
-                                getTableView().getItems().get(getIndex());
+                    Dialog<Pair<String, String>> dialog = new Dialog<>();
+                    dialog.setTitle("Update Status");
+                    dialog.setHeaderText("Update status and remarks");
 
-                        String buySell = history.getBuySell();
-                        String status = history.getStatus();
-                        // BUY → always disabled
-                        if ("Buy".equalsIgnoreCase(buySell)) {
-                            updateBtn.setDisable(true);
-                            updateBtn.setText("In Stock");
+                    ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
+                    dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
 
+                    ChoiceBox<String> statusChoice = new ChoiceBox<>();
+                    statusChoice.getItems().addAll("Returned", "Scrap");
+
+                    // Set current status from DB
+                    statusChoice.setValue(history.getStatus());
+
+                    TextArea remarksArea = new TextArea();
+
+                    // Pre-fill remarks from DB
+                    remarksArea.setText(history.getRemarks());
+                    remarksArea.setPrefRowCount(3);
+                    remarksArea.setPromptText("Enter remarks");
+
+                    VBox content = new VBox(10,
+                            new Label("Status"),
+                            statusChoice,
+                            new Label("Remarks"),
+                            remarksArea
+                    );
+
+                    dialog.getDialogPane().setContent(content);
+
+                    dialog.setResultConverter(dialogButton -> {
+                        if (dialogButton == updateButtonType) {
+                            return new Pair<>(statusChoice.getValue(), remarksArea.getText());
                         }
-                        // SELL → depends on status
-                        else if ("Sell".equalsIgnoreCase(buySell)) {
-                            if ("Issued".equalsIgnoreCase(status)) {
-                                updateBtn.setDisable(false);
-                                updateBtn.setText("Issued");
-                            } else if ("Returned".equalsIgnoreCase(status)) {
-                                updateBtn.setDisable(true);
-                                updateBtn.setText("Returned");
-                            } else if ("Scrap".equalsIgnoreCase(status) || "Scrapped".equalsIgnoreCase(status)) {
-                                updateBtn.setDisable(true);
-                                updateBtn.setText("Scrapped");
-                            } else {
-                                updateBtn.setDisable(true);
-                                updateBtn.setText(status);
-                            }
-                        }
-                        setGraphic(updateBtn);
-                    }
+                        return null;
+                    });
+
+                    Optional<Pair<String, String>> result = dialog.showAndWait();
+
+                    result.ifPresent(pair -> {
+
+                        String status = pair.getKey();
+                        String remarks = pair.getValue();
+
+                        transactionDAO.updateTransactionStatus(
+                                history.getTransactionId(),
+                                status,
+                                remarks
+                        );
+
+                        loadHistory();
+                    });
                 });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
+                TransactionHistory history =
+                        getTableView().getItems().get(getIndex());
+
+                String buySell = history.getBuySell();
+                String status = history.getStatus();
+                // BUY → always disabled
+                if ("Buy".equalsIgnoreCase(buySell)) {
+                    updateBtn.setDisable(true);
+                    updateBtn.setText("In Stock");
+
+                }
+                // SELL → depends on status
+                else if ("Sell".equalsIgnoreCase(buySell)) {
+                    if ("Issued".equalsIgnoreCase(status)) {
+                        updateBtn.setDisable(false);
+                        updateBtn.setText("Issued");
+                    } else if ("Returned".equalsIgnoreCase(status)) {
+                        updateBtn.setDisable(true);
+                        updateBtn.setText("Returned");
+                    } else if ("Scrap".equalsIgnoreCase(status) || "Scrapped".equalsIgnoreCase(status)) {
+                        updateBtn.setDisable(true);
+                        updateBtn.setText("Scrapped");
+                    } else {
+                        updateBtn.setDisable(true);
+                        updateBtn.setText(status);
+                    }
+                }
+                setGraphic(updateBtn);
+            }
+        });
 
         deleteColumn.setCellFactory(param -> new TableCell<>() {
             private final Button deleteButton = new Button("Delete");
@@ -1206,8 +1202,8 @@ public class DashboardController {
 
         // 🔹 Search
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
-            if (filteredData == null) return;
-            filteredData.setPredicate(history -> {
+            if (filterPipeline == null) return;
+            filterPipeline.setPredicate(history -> {
                 if (newValue == null || newValue.isBlank()) {
                     return true;
                 }
@@ -1250,16 +1246,6 @@ public class DashboardController {
             });
         });
 
-//        masterData = FXCollections.observableArrayList();
-//        filteredData = new FilteredList<>(masterData, p -> true);
-//
-//        SortedList<TransactionHistory> sortedData =
-//                new SortedList<>(filteredData);
-//
-//        sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
-//
-//        historyTable.setItems(sortedData);
-
         masterData = FXCollections.observableArrayList();
 
         filterPipeline = new FilteredList<>(masterData, p -> true);
@@ -1270,7 +1256,6 @@ public class DashboardController {
         sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
 
         historyTable.setItems(sortedData);
-        columnFreezer = new TableColumnFreezer<>(historyTable);
 
         loadHistory();
 
@@ -1568,443 +1553,167 @@ public class DashboardController {
         });
     }
 
-//    @FXML
-//    private void handleFreezeColumns() {
-//
-//        TextInputDialog dialog = new TextInputDialog("2");
-//        dialog.setTitle("Freeze Columns");
-//        dialog.setHeaderText("Freeze first N columns");
-//
-//        dialog.showAndWait().ifPresent(input -> {
-//
-//            try {
-//
-//                int count = Integer.parseInt(input);
-//
-//                int totalColumns = historyTable.getColumns().size();
-//
-//                if (count <= 0 || count >= totalColumns) {
-//                    throw new IllegalArgumentException();
-//                }
-//                logTableState("BEFORE FREEZE");
-//                captureFilters();
-//                SplitPane pane = freezeManager.freezeColumns(count);
-//                VBox.setVgrow(pane, Priority.ALWAYS);
-//
-//                VBox centerBox = (VBox) rootPane.getCenter();
-//
-//                int tableIndex = centerBox.getChildren().indexOf(historyTable);
-//
-//                if (tableIndex == -1) {
-//                    tableIndex = centerBox.getChildren().size() - 1;
-//                }
-//
-//                centerBox.getChildren().set(tableIndex, pane);
-//                logTableState("AFTER FREEZE BEFORE FILTER REBUILD");
-////                Platform.runLater(() -> {
-////                    tableFilter = TableFilter.forTableView(historyTable).apply();
-////                    restoreFilters();
-////                });
-//                Platform.runLater(this::rebuildTableFilter);
-//
-//
-//                columnsFrozen = true;
-//                exportExcelButton.setDisable(columnsFrozen);
-//                exportPDFButton.setDisable(columnsFrozen);
-//                addTransactionButton.setDisable(columnsFrozen);
-//                freezeColumnsMenuItem.setDisable(true);
-//                unfreezeColumnsMenuItem.setDisable(false);
-//
-//            } catch (NumberFormatException e) {
-//
-//                Alert alert = new Alert(Alert.AlertType.ERROR);
-//                alert.setContentText("Please enter a valid number.");
-//                alert.show();
-//
-//            } catch (IllegalArgumentException e) {
-//
-//                Alert alert = new Alert(Alert.AlertType.ERROR);
-//                alert.setContentText("Invalid number of columns.");
-//                alert.show();
-//
-//            }
-//        });
-//    }
-
-//@FXML
-//private void handleFreezeColumns() {
-//
-//    TextInputDialog dialog = new TextInputDialog("2");
-//    dialog.setTitle("Freeze Columns");
-//    dialog.setHeaderText("Freeze first N columns");
-//
-//    dialog.showAndWait().ifPresent(input -> {
-//
-//        try {
-//
-//            int count = Integer.parseInt(input);
-//
-//            if (count <= 0 || count >= historyTable.getColumns().size()) {
-//                throw new IllegalArgumentException();
-//            }
-//
-//            columnFreezer.freezeColumns(count);
-//
-//            columnsFrozen = true;
-//
-//            exportExcelButton.setDisable(true);
-//            exportPDFButton.setDisable(true);
-//            freezeColumnsMenuItem.setDisable(true);
-//            unfreezeColumnsMenuItem.setDisable(false);
-//
-//        } catch (Exception e) {
-//
-//            Alert alert = new Alert(Alert.AlertType.ERROR);
-//            alert.setContentText("Invalid column count.");
-//            alert.show();
-//        }
-//    });
-//}
-
-@FXML
-private void handleFreezeColumns() {
-
-    TextInputDialog dialog = new TextInputDialog("2");
-    dialog.setTitle("Freeze Columns");
-    dialog.setHeaderText("Freeze first N columns");
-
-    dialog.showAndWait().ifPresent(input -> {
-
-        try {
-
-            int count = Integer.parseInt(input);
-
-            SplitPane pane = freezeManager.freezeColumns(count);
-
-            VBox centerBox = (VBox) rootPane.getCenter();
-
-            int tableIndex = centerBox.getChildren().indexOf(historyTable);
-
-            centerBox.getChildren().set(tableIndex, pane);
-
-            columnsFrozen = true;
-
-            exportExcelButton.setDisable(true);
-            exportPDFButton.setDisable(true);
-
-            freezeColumnsMenuItem.setDisable(true);
-            unfreezeColumnsMenuItem.setDisable(false);
-
-        } catch (Exception e) {
-
-            new Alert(Alert.AlertType.ERROR, "Invalid column count").show();
-        }
-    });
-}
-
-//    @FXML
-//    private void handleUnfreezeColumns() {
-//        logTableState("BEFORE UNFREEZE");
-//        captureFilters();
-//        freezeManager.restoreOriginalTable();
-//
-//        VBox centerBox = (VBox) rootPane.getCenter();
-//
-//        int paneIndex = centerBox.getChildren().size() - 1;
-//
-//        centerBox.getChildren().set(paneIndex, historyTable);
-//
-//        columnsFrozen = false;
-//        exportExcelButton.setDisable(columnsFrozen);
-//        exportPDFButton.setDisable(columnsFrozen);
-//        freezeColumnsMenuItem.setDisable(false);
-//        unfreezeColumnsMenuItem.setDisable(true);
-//        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
-////        Platform.runLater(() -> {
-////            tableFilter = TableFilter.forTableView(historyTable).apply();
-////            restoreFilters();   // reload saved filters if any
-////        });
-//        Platform.runLater(this::rebuildTableFilter);
-//    }
-
-//@FXML
-//private void handleUnfreezeColumns() {
-//
-//    columnFreezer.unfreezeColumns();
-//
-//    columnsFrozen = false;
-//
-//    exportExcelButton.setDisable(false);
-//    exportPDFButton.setDisable(false);
-//
-//    freezeColumnsMenuItem.setDisable(false);
-//    unfreezeColumnsMenuItem.setDisable(true);
-//
-//    historyTable.refresh();
-//}
-
-@FXML
-private void handleUnfreezeColumns() {
-
-    freezeManager.restoreOriginalTable();
-
-    VBox centerBox = (VBox) rootPane.getCenter();
-
-    int paneIndex = centerBox.getChildren().size() - 1;
-
-    centerBox.getChildren().set(paneIndex, historyTable);
-
-    columnsFrozen = false;
-
-    exportExcelButton.setDisable(false);
-    exportPDFButton.setDisable(false);
-
-    freezeColumnsMenuItem.setDisable(false);
-    unfreezeColumnsMenuItem.setDisable(true);
-}
-
-//    @FXML
-//    private void handleResetFilters() {
-//        if (tableFilter == null) return;
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            columnFilter.selectAllValues();   // select all values
-//        });
-//        tableFilter.executeFilter();
-//        historyTable.refresh();
-//        // remove saved preferences
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            String columnId = columnFilter.getTableColumn().getId();
-//            if (columnId == null) return;
-//            prefs.remove("filter_" + columnId);
-//        });
-//    }
-
-//    @FXML
-//    private void handleResetFilters() {
-//        if (tableFilter == null) return;
-//        tableFilter.getColumnFilters().forEach(columnFilter ->
-//                columnFilter.selectAllValues()
-//        );
-//        tableFilter.executeFilter();
-//        activeFilters.clear();
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            String columnId = columnFilter.getTableColumn().getId();
-//            if (columnId != null) {
-//                prefs.remove("filter_" + columnId);
-//            }
-//        });
-//        loadHistory();   // 🔥 critical
-//    }
-
-//    @FXML
-//    private void handleResetFilters() {
-//
-//        if (tableFilter == null) return;
-//
-//        filteredData.setPredicate(p -> true);
-//
-//        tableFilter.getColumnFilters().forEach(columnFilter ->
-//                columnFilter.selectAllValues());
-//
-//        tableFilter.executeFilter();
-//
-//        activeFilters.clear();
-//
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            String columnId = columnFilter.getTableColumn().getId();
-//            if (columnId != null) {
-//                prefs.remove("filter_" + columnId);
-//            }
-//        });
-//
-//        loadHistory();
-//    }
-
-//    @FXML
-//    private void handleResetFilters() {
-//
-//        if (tableFilter == null) return;
-//
-//        tableFilter.getColumnFilters().forEach(cf -> cf.selectAllValues());
-//
-//        tableFilter.executeFilter();
-//
-//        historyTable.refresh();
-//
-//        activeFilters.clear();
-//
-//        tableFilter.getColumnFilters().forEach(columnFilter -> {
-//            String columnId = columnFilter.getTableColumn().getId();
-//            if (columnId != null) {
-//                prefs.remove("filter_" + columnId);
-//            }
-//        });
-//    }
-
-//    @FXML
-//    private void handleResetFilters() {
-//
-//        if (tableFilter == null) return;
-//
-//        tableFilter.getColumnFilters().forEach(cf ->
-//                cf.selectAllValues());
-//
-//        tableFilter.executeFilter();
-//
-//        historyTable.refresh();
-//
-//        activeFilters.clear();
-//
-//        tableFilter.getColumnFilters().forEach(cf -> {
-//            String columnId = cf.getTableColumn().getId();
-//            if (columnId != null) {
-//                prefs.remove("filter_" + columnId);
-//            }
-//        });
-//    }
-
     @FXML
-    private void handleResetFilters() throws BackingStoreException {
+    private void handleFreezeColumns() {
 
-        if (tableFilter == null) return;
+        TextInputDialog dialog = new TextInputDialog("2");
+        dialog.setTitle("Freeze Columns");
+        dialog.setHeaderText("Freeze first N columns");
 
-        tableFilter.getColumnFilters().forEach(cf ->
-                cf.selectAllValues());
+        dialog.showAndWait().ifPresent(input -> {
 
-        tableFilter.executeFilter();
+            try {
 
-        prefs.clear();
+                int count = Integer.parseInt(input);
+
+                int totalColumns = historyTable.getColumns().size();
+
+                if (count <= 0 || count >= totalColumns) {
+                    throw new IllegalArgumentException();
+                }
+                logTableState("BEFORE FREEZE");
+                captureFilters();
+
+                if(tableFilter != null) {
+                    tableFilter.getColumnFilters().forEach(cf -> cf.selectAllValues());
+                    tableFilter.executeFilter();
+                }
+
+                // Reset filterPipeline to show all data temporarily
+                filterPipeline.setPredicate(p -> true);
+                SplitPane pane = freezeManager.freezeColumns(count);
+                VBox.setVgrow(pane, Priority.ALWAYS);
+
+                VBox centerBox = (VBox) rootPane.getCenter();
+
+                int tableIndex = centerBox.getChildren().indexOf(historyTable);
+
+                if (tableIndex == -1) {
+                    tableIndex = centerBox.getChildren().size() - 1;
+                }
+
+                centerBox.getChildren().set(tableIndex, pane);
+                Platform.runLater(this::rebuildTableFilter);
+
+
+                columnsFrozen = true;
+                exportExcelButton.setDisable(true);
+                exportPDFButton.setDisable(true);
+                addTransactionButton.setDisable(true);
+                freezeColumnsMenuItem.setDisable(true);
+                unfreezeColumnsMenuItem.setDisable(false);
+
+            } catch (NumberFormatException e) {
+
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Please enter a valid number.");
+                alert.show();
+
+            } catch (IllegalArgumentException e) {
+
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Invalid number of columns.");
+                alert.show();
+
+            }
+        });
     }
 
-//    private void rebuildFilters() {
-//        if (tableFilter != null) {
-//            tableFilter = null;
-//        }
-//        Platform.runLater(() -> {
-//            tableFilter = TableFilter.forTableView(historyTable).apply();
-//            restoreFilters();
-//        });
-//    }
+    @FXML
+    private void handleUnfreezeColumns() {
+        logTableState("BEFORE UNFREEZE");
+        captureFilters();
+        freezeManager.restoreOriginalTable();
 
-//    private void rebuildFilters() {
-//
-//        if (tableFilter != null) {
-//            tableFilter = null;
-//        }
-//
-//        Platform.runLater(() -> {
-//
-//            historyTable.refresh();
-//
-//            tableFilter = TableFilter.forTableView(historyTable).apply();
-//
-//            restoreFilters();
-//        });
-//    }
+        VBox centerBox = (VBox) rootPane.getCenter();
 
-//    private void rebuildFilters() {
-//
-//        Platform.runLater(() -> {
-//
-//            // reset predicate so full dataset is visible
-//            filteredData.setPredicate(p -> true);
-//
-//            historyTable.setItems(masterData);
-//
-//            historyTable.refresh();
-//
-//            tableFilter = TableFilter.forTableView(historyTable).apply();
-//
-//            restoreFilters();
-//
-//            // restore filtered + sorted pipeline
-//            SortedList<TransactionHistory> sortedData =
-//                    new SortedList<>(filteredData);
-//
-//            sortedData.comparatorProperty()
-//                    .bind(historyTable.comparatorProperty());
-//
-//            historyTable.setItems(sortedData);
-//        });
-//    }
+        int paneIndex = centerBox.getChildren().size() - 1;
 
-//    private void rebuildFilter() {
-//
-//        if (tableFilter != null) {
-//            saveFilters();   // persist current selections
-//        }
-//
-//        historyTable.refresh();
-//
-//        tableFilter = TableFilter.forTableView(historyTable).apply();
-//
-//        restoreFilters();
-//
-//        tableFilter.executeFilter();
-//    }
+        centerBox.getChildren().set(paneIndex, historyTable);
 
-//    private void rebuildFilter() {
-//
-//        if (tableFilter != null) {
-//            captureFilters();   // save current filter state
-//        }
-//
-//        historyTable.refresh();
-//
-////        tableFilter = TableFilter.forTableView(historyTable).apply();
-//
-//        restoreFilters();
-//
-//        tableFilter.executeFilter();
-//    }
+        columnsFrozen = false;
+        exportExcelButton.setDisable(columnsFrozen);
+        exportPDFButton.setDisable(columnsFrozen);
+        freezeColumnsMenuItem.setDisable(false);
+        unfreezeColumnsMenuItem.setDisable(true);
+        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
+        Platform.runLater(this::rebuildTableFilter);
+    }
 
-//private void rebuildTableFilter() {
-//    logTableState("BEFORE REBUILD");
-//    historyTable.refresh();
-//
-//    tableFilter = TableFilter.forTableView(historyTable).apply();
-//
-//    restoreFilters();
-//
-//    tableFilter.executeFilter();
-//    logTableState("AFTER REBUILD");
-//}
+    @FXML
+    private void handleResetFilters() {
+        if (tableFilter == null) return;
 
-//private void rebuildTableFilter() {
-//
-//    logTableState("BEFORE REBUILD");
-//
-//    // temporarily show full dataset
-//    filterPipeline.setPredicate(p -> true);
-//
-//    historyTable.refresh();
-//
-//    tableFilter = TableFilter.forTableView(historyTable).apply();
-//
-//    // restore previous filters
-//    restoreFilters();
-//
-//    tableFilter.executeFilter();
-//
-//    logTableState("AFTER REBUILD");
-//}
+        // Reset table filter
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+            columnFilter.selectAllValues();
+        });
+        tableFilter.executeFilter();
 
-private void rebuildTableFilter() {
+        if(columnsFrozen) {
+            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+            if(scrollTable != null && frozenTable != null) {
+                Platform.runLater(() -> {
+                    frozenTable.setItems(scrollTable.getItems());
+                });
+            }
+        }
 
-    logTableState("BEFORE REBUILD");
+        historyTable.refresh();
 
-//    tableFilter = TableFilter.forTableView(historyTable).apply();
-    TableView<TransactionHistory> targetTable =
-            columnsFrozen ? freezeManager.getScrollTable() : historyTable;
+        // Remove saved preferences
+        tableFilter.getColumnFilters().forEach(columnFilter -> {
+                String columnId = columnFilter.getTableColumn().getId();
+                if (columnId == null) return;
+                prefs.remove("filter_" + columnId);
+            });
+    }
 
-    tableFilter = TableFilter.forTableView(targetTable).apply();
+    private void rebuildFilters() {
+        if (tableFilter != null) {
+            tableFilter = null;
+        }
+        Platform.runLater(() -> {
+            tableFilter = TableFilter.forTableView(historyTable).apply();
+            restoreFilters();
+        });
+    }
 
-    restoreFilters();
+    private void rebuildTableFilter() {
+        logTableState("BEFORE REBUILD");
 
-    tableFilter.executeFilter();
+        if (columnsFrozen) {
+            // Apply TableFilter only to scroll table
+            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
 
-    logTableState("AFTER REBUILD");
-}
+            if (scrollTable != null && frozenTable != null) {
+                // Apply filter to scroll table (right side with more columns)
+                tableFilter = TableFilter.forTableView(scrollTable).apply();
+
+                frozenTable.setItems(scrollTable.getItems());
+
+                // Restore saved filter state to both
+                restoreFilters();
+
+                // Execute filters on both tables
+                tableFilter.executeFilter();
+
+                Platform.runLater(() -> {
+                    frozenTable.setItems(scrollTable.getItems());
+                });
+            }
+        } else {
+            // Normal mode - single table
+            historyTable.refresh();
+            tableFilter = TableFilter.forTableView(historyTable).apply();
+            restoreFilters();
+            tableFilter.executeFilter();
+        }
+
+        logTableState("AFTER REBUILD");
+    }
 
     private void loadHistory() {
         if (!DBConnection.isDatabaseSet()) {
@@ -2521,10 +2230,6 @@ private void rebuildTableFilter() {
     }
 
     public void saveColumnOrder() {
-
-//        if (columnsFrozen) {
-//            freezeManager.restoreOriginalTable();
-//        }
 
         StringBuilder order = new StringBuilder();
 
