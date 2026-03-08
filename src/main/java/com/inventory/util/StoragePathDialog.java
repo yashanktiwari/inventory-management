@@ -2,6 +2,7 @@ package com.inventory.util;
 
 import com.inventory.database.AppConfig;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -24,13 +25,21 @@ public class StoragePathDialog {
         stage.initOwner(owner);
         stage.initModality(Modality.WINDOW_MODAL);
 
+        Label icon = new Label("📂");
+        icon.setStyle("-fx-font-size: 24;");
+
         Label info = new Label(
                 "Please select the folder where transaction attachments will be stored.\n" +
                         "This folder may be on a server or local drive."
         );
+        info.setWrapText(true);
+
+        HBox header = new HBox(10, icon, info);
+        header.setAlignment(Pos.CENTER_LEFT);
 
         TextField pathField = new TextField();
         pathField.setPrefWidth(350);
+        pathField.setPromptText("Select attachment storage folder");
 
         String existingPath = AppConfig.getAttachmentPath();
         if (existingPath != null && !existingPath.isBlank()) {
@@ -38,6 +47,7 @@ public class StoragePathDialog {
         }
 
         Button browseBtn = new Button("Browse");
+        browseBtn.setMinWidth(90);
 
         browseBtn.setOnAction(e -> {
 
@@ -52,8 +62,10 @@ public class StoragePathDialog {
         });
 
         HBox pathBox = new HBox(10, pathField, browseBtn);
+        HBox.setHgrow(pathField, Priority.ALWAYS);
 
         Button testBtn = new Button("Test Connection");
+
         Label resultLabel = new Label();
 
         testBtn.setOnAction(e -> {
@@ -66,49 +78,65 @@ public class StoragePathDialog {
 
                 if (Files.exists(p) && Files.isDirectory(p) && Files.isWritable(p)) {
 
-                    resultLabel.setText("Connection successful");
+                    resultLabel.setText("✓ Connection successful");
                     resultLabel.setStyle("-fx-text-fill: green;");
 
                 } else {
 
-                    resultLabel.setText("Folder not accessible");
+                    resultLabel.setText("✗ Folder not accessible");
                     resultLabel.setStyle("-fx-text-fill: red;");
 
                 }
 
             } catch (Exception ex) {
 
-                resultLabel.setText("Invalid path");
+                resultLabel.setText("✗ Invalid path");
                 resultLabel.setStyle("-fx-text-fill: red;");
 
             }
-
         });
 
         Button saveBtn = new Button("Save & Continue");
 
+        saveBtn.setStyle(
+                "-fx-background-color:#0078D7;" +
+                        "-fx-text-fill:white;" +
+                        "-fx-font-weight:bold;"
+        );
+
         saveBtn.setOnAction(e -> {
+
             String newPath = pathField.getText();
+
             try {
+
                 Path newDir = Path.of(newPath);
+
                 if (!Files.exists(newDir)) {
                     Files.createDirectories(newDir);
                 }
+
                 if (!Files.isWritable(newDir)) {
                     resultLabel.setText("Folder not writable");
+                    resultLabel.setStyle("-fx-text-fill:red;");
                     return;
                 }
-                Path newTransactions =
-                        newDir.resolve("transactions");
+
+                Path newTransactions = newDir.resolve("transactions");
                 Files.createDirectories(newTransactions);
+
                 String oldPath = AppConfig.getAttachmentPath();
+
                 if (oldPath != null && !oldPath.equals(newPath)) {
+
                     if (!verifyPassword()) {
                         return;
                     }
-                    Path oldTransactions =
-                            Path.of(oldPath, "transactions");
+
+                    Path oldTransactions = Path.of(oldPath, "transactions");
+
                     if (Files.exists(oldTransactions)) {
+
                         migrateAttachments(
                                 stage,
                                 oldTransactions,
@@ -117,27 +145,34 @@ public class StoragePathDialog {
                         );
                     }
                 }
+
                 AppConfig.saveAttachmentPath(newPath);
+
                 stage.close();
+
             } catch (Exception ex) {
+
                 resultLabel.setText("Unable to access path");
                 resultLabel.setStyle("-fx-text-fill:red;");
             }
-
         });
 
+        HBox actions = new HBox(10, testBtn, saveBtn);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+
         VBox root = new VBox(15,
-                info,
+                header,
                 pathBox,
-                testBtn,
                 resultLabel,
-                saveBtn
+                actions
         );
 
         root.setPadding(new Insets(20));
 
-        stage.setScene(new Scene(root));
-        stage.setWidth(500);
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.setWidth(520);
+
         stage.showAndWait();
     }
 

@@ -52,6 +52,7 @@ public class ItemHistoryController {
     @FXML private TableColumn<TransactionHistory, String> partyColumn;
 
     @FXML private TableColumn<TransactionHistory, String> statusColumn;
+    @FXML private TableColumn<TransactionHistory, String> auditColumn;
 
     @FXML
     private void handleExportExcel() {
@@ -188,180 +189,191 @@ public class ItemHistoryController {
         });
 
         issuedColumn.setCellValueFactory(cell ->
-                new SimpleStringProperty(cell.getValue().getIssuedDateTime())
+                new SimpleStringProperty(cell.getValue().getIssuedDateTime().format(formatter))
         );
-        returnedColumn.setCellValueFactory(cell ->
-                new SimpleStringProperty(cell.getValue().getReturnedDateTime())
-        );
-
-        remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
-    }
-
-    public void loadItemHistory(String itemId, String itemName) {
-        centerAllColumns(itemHistoryTable);
-        titleLabel.setText("History for Item: " + itemId + " (" + itemName + ")");
-
-        serialColumn.setCellValueFactory(cellData ->
-                new SimpleIntegerProperty(
-                        itemHistoryTable.getItems().indexOf(cellData.getValue()) + 1
-                ).asObject()
-        );
-
-        buySellColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getBuySell()));
-
-        buySellColumn.setCellFactory(column -> new TableCell<TransactionHistory, String>() {
-
-            @Override
-            protected void updateItem(String value, boolean empty) {
-
-                super.updateItem(value, empty);
-
-                if (empty || value == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-
-                    setText(value);
-                    setAlignment(javafx.geometry.Pos.CENTER);
-
-                    if ("Buy".equalsIgnoreCase(value)) {
-                        setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
-                    } else if ("Sell".equalsIgnoreCase(value)) {
-                        setStyle("-fx-background-color:#f8d7da; -fx-text-fill:black;");
-                    }
-                }
-            }
-        });
-
-        plantColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getPlant()));
-
-        departmentColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getDepartment()));
-
-        locationColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getLocation()));
-
-        employeeIdColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getEmployeeId()));
-
-        employeeNameColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getEmployeeName()));
-
-        ipColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getIpAddress()));
-
-        itemCodeColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getItemCode()));
-
-        itemNameColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getItemName()));
-
-        itemMakeColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getItemMake()));
-
-        itemModelColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getItemModel()));
-
-        itemSerialColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getItemSerial()));
-
-        itemCountColumn.setCellValueFactory(c ->
-                new javafx.beans.property.SimpleDoubleProperty(
-                        c.getValue().getItemCount()
-                ).asObject());
-
-        unitColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getUnit()));
-
-        imeiColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getImeiNo()));
-
-        simColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getSimNo()));
-
-        poColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getPoNo()));
-
-        partyColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getPartyName()));
-
-        statusColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getStatus()));
-
-        statusColumn.setCellFactory(column -> new TableCell<>() {
-
-            @Override
-            protected void updateItem(String value, boolean empty) {
-
-                super.updateItem(value, empty);
-
-                if (empty || value == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-
-                    setText(value);
-                    setAlignment(javafx.geometry.Pos.CENTER);
-
-                    switch (value.toLowerCase()) {
-
-                        case "issued" ->
-                                setStyle("-fx-background-color:#d6eaff; -fx-text-fill:black;");
-
-                        case "returned" ->
-                                setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
-
-                        case "scrap" ->
-                                setStyle("-fx-background-color:#e0e0e0; -fx-text-fill:black;");
-
-                        case "in stock" ->
-                                setStyle("-fx-background-color:#fff3cd; -fx-text-fill:black;");
-                    }
-                }
-            }
-        });
-
-        issuedColumn.setCellValueFactory(cellData -> {
-
-            String raw = cellData.getValue().getIssuedDateTime();
-
-            if (raw == null) return new SimpleStringProperty("");
-
-            LocalDateTime dateTime =
-                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
-
-            return new SimpleStringProperty(
-                    dateTime.format(formatter)
-            );
-        });
-
         returnedColumn.setCellValueFactory(cellData -> {
 
-            String raw = cellData.getValue().getReturnedDateTime();
+            LocalDateTime returned = cellData.getValue().getReturnedDateTime();
 
-            if (raw == null)
+            if (returned == null) {
                 return new SimpleStringProperty("Not Returned");
+            }
 
-            LocalDateTime dateTime =
-                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
-
-            return new SimpleStringProperty(
-                    dateTime.format(formatter)
-            );
+            return new SimpleStringProperty(returned.format(formatter));
         });
 
-        remarksColumn.setCellValueFactory(cellData ->
-                new SimpleStringProperty(cellData.getValue().getRemarks())
-        );
-
-        itemHistoryTable.setItems(
-                FXCollections.observableArrayList(
-                        transactionDAO.getTransactionsByItemCode(itemId)
-                )
-        );
+        remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
+        auditColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(
+                        data.getValue().getLastModifiedBy()
+                ));
     }
+
+//    public void loadItemHistory(String itemId, String itemName) {
+//        centerAllColumns(itemHistoryTable);
+//        titleLabel.setText("History for Item: " + itemId + " (" + itemName + ")");
+//
+//        serialColumn.setCellValueFactory(cellData ->
+//                new SimpleIntegerProperty(
+//                        itemHistoryTable.getItems().indexOf(cellData.getValue()) + 1
+//                ).asObject()
+//        );
+//
+//        buySellColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getBuySell()));
+//
+//        buySellColumn.setCellFactory(column -> new TableCell<TransactionHistory, String>() {
+//
+//            @Override
+//            protected void updateItem(String value, boolean empty) {
+//
+//                super.updateItem(value, empty);
+//
+//                if (empty || value == null) {
+//                    setText(null);
+//                    setStyle("");
+//                } else {
+//
+//                    setText(value);
+//                    setAlignment(javafx.geometry.Pos.CENTER);
+//
+//                    if ("Buy".equalsIgnoreCase(value)) {
+//                        setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+//                    } else if ("Sell".equalsIgnoreCase(value)) {
+//                        setStyle("-fx-background-color:#f8d7da; -fx-text-fill:black;");
+//                    }
+//                }
+//            }
+//        });
+//
+//        plantColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getPlant()));
+//
+//        departmentColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getDepartment()));
+//
+//        locationColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getLocation()));
+//
+//        employeeIdColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getEmployeeId()));
+//
+//        employeeNameColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getEmployeeName()));
+//
+//        ipColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getIpAddress()));
+//
+//        itemCodeColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getItemCode()));
+//
+//        itemNameColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getItemName()));
+//
+//        itemMakeColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getItemMake()));
+//
+//        itemModelColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getItemModel()));
+//
+//        itemSerialColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getItemSerial()));
+//
+//        itemCountColumn.setCellValueFactory(c ->
+//                new javafx.beans.property.SimpleDoubleProperty(
+//                        c.getValue().getItemCount()
+//                ).asObject());
+//
+//        unitColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getUnit()));
+//
+//        imeiColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getImeiNo()));
+//
+//        simColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getSimNo()));
+//
+//        poColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getPoNo()));
+//
+//        partyColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getPartyName()));
+//
+//        statusColumn.setCellValueFactory(c ->
+//                new SimpleStringProperty(c.getValue().getStatus()));
+//
+//        statusColumn.setCellFactory(column -> new TableCell<>() {
+//
+//            @Override
+//            protected void updateItem(String value, boolean empty) {
+//
+//                super.updateItem(value, empty);
+//
+//                if (empty || value == null) {
+//                    setText(null);
+//                    setStyle("");
+//                } else {
+//
+//                    setText(value);
+//                    setAlignment(javafx.geometry.Pos.CENTER);
+//
+//                    switch (value.toLowerCase()) {
+//
+//                        case "issued" ->
+//                                setStyle("-fx-background-color:#d6eaff; -fx-text-fill:black;");
+//
+//                        case "returned" ->
+//                                setStyle("-fx-background-color:#d4edda; -fx-text-fill:black;");
+//
+//                        case "scrap" ->
+//                                setStyle("-fx-background-color:#e0e0e0; -fx-text-fill:black;");
+//
+//                        case "in stock" ->
+//                                setStyle("-fx-background-color:#fff3cd; -fx-text-fill:black;");
+//                    }
+//                }
+//            }
+//        });
+//
+//        issuedColumn.setCellValueFactory(cellData -> {
+//
+//            String raw = cellData.getValue().getIssuedDateTime();
+//
+//            if (raw == null) return new SimpleStringProperty("");
+//
+//            LocalDateTime dateTime =
+//                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
+//
+//            return new SimpleStringProperty(
+//                    dateTime.format(formatter)
+//            );
+//        });
+//
+//        returnedColumn.setCellValueFactory(cellData -> {
+//
+//            String raw = cellData.getValue().getReturnedDateTime();
+//
+//            if (raw == null)
+//                return new SimpleStringProperty("Not Returned");
+//
+//            LocalDateTime dateTime =
+//                    java.sql.Timestamp.valueOf(raw).toLocalDateTime();
+//
+//            return new SimpleStringProperty(
+//                    dateTime.format(formatter)
+//            );
+//        });
+//
+//        remarksColumn.setCellValueFactory(cellData ->
+//                new SimpleStringProperty(cellData.getValue().getRemarks())
+//        );
+//
+//        itemHistoryTable.setItems(
+//                FXCollections.observableArrayList(
+//                        transactionDAO.getTransactionsByItemCode(itemId)
+//                )
+//        );
+//    }
 
     public void loadHistory(String field, String value, String title) {
 

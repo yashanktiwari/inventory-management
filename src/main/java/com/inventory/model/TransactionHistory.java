@@ -1,5 +1,8 @@
 package com.inventory.model;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 public class TransactionHistory {
 
     private int transactionId;
@@ -28,8 +31,11 @@ public class TransactionHistory {
 
     private String status;
 
-    private String issuedDateTime;
-    private String returnedDateTime;
+//    private String issuedDateTime;
+//    private String returnedDateTime;
+
+    private LocalDateTime issuedDateTime;
+    private LocalDateTime returnedDateTime;
 
     private String remarks;
 
@@ -37,6 +43,9 @@ public class TransactionHistory {
     private String unit;
 
     private String attachmentFile;
+
+    private String lastModifiedBy;
+    private List<AuditEntry> auditEntries;
 
     public TransactionHistory(
             int transactionId,
@@ -57,12 +66,14 @@ public class TransactionHistory {
             String poNo,
             String partyName,
             String status,
-            String issuedDateTime,
-            String returnedDateTime,
+            LocalDateTime issuedDateTime,
+            LocalDateTime returnedDateTime,
             String remarks,
             Double itemCount,
             String unit,
-            String attachmentFile
+            String attachmentFile,
+            String lastModifiedBy,
+            List<AuditEntry> auditEntries
     ) {
 
         this.transactionId = transactionId;
@@ -100,6 +111,9 @@ public class TransactionHistory {
         this.unit = unit;
 
         this.attachmentFile = attachmentFile;
+
+        this.lastModifiedBy = lastModifiedBy;
+        this.auditEntries = auditEntries;
     }
 
     public int getTransactionId() { return transactionId; }
@@ -128,8 +142,8 @@ public class TransactionHistory {
 
     public String getStatus() { return status; }
 
-    public String getIssuedDateTime() { return issuedDateTime; }
-    public String getReturnedDateTime() { return returnedDateTime; }
+    public LocalDateTime getIssuedDateTime() { return issuedDateTime; }
+    public LocalDateTime getReturnedDateTime() { return returnedDateTime; }
 
     public String getRemarks() { return remarks; }
 
@@ -137,4 +151,7 @@ public class TransactionHistory {
     public String getUnit() { return unit; }
 
     public String getAttachmentFile() { return attachmentFile; }
+
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public List<AuditEntry> getAuditEntries() { return auditEntries; }
 }

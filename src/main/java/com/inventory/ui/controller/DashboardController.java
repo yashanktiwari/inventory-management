@@ -4,6 +4,7 @@ import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
 import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
+import com.inventory.model.AuditEntry;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.*;
 import com.inventory.util.TableFreezeManager;
@@ -43,6 +44,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.util.Duration;
 import javafx.util.Pair;
 import org.controlsfx.control.table.TableFilter;
 
@@ -141,6 +143,9 @@ public class DashboardController {
 
     @FXML
     private TableColumn<TransactionHistory, Void> deleteColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> auditColumn;
 
     // 🔹 Connection Status
     @FXML
@@ -334,28 +339,79 @@ public class DashboardController {
         });
 
         deleteColumn.setCellFactory(param -> new TableCell<>() {
+
             private final Button deleteButton = new Button("Delete");
+
             {
                 deleteButton.setStyle(
                         "-fx-background-color: #ff4d4d;" +
                                 "-fx-text-fill: white;" +
                                 "-fx-font-weight: bold;"
                 );
+
                 deleteButton.setOnAction(event -> {
+
                     TransactionHistory data =
                             getTableView().getItems().get(getIndex());
-                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                    alert.setTitle("Confirm Delete");
-                    alert.setHeaderText("Delete Transaction?");
-                    alert.setContentText("Are you sure you want to delete this record?");
 
-                    alert.showAndWait().ifPresent(response -> {
-                        if (response == ButtonType.OK) {
-                            transactionDAO.deleteTransaction(
-                                    data.getTransactionId()
-                            );
-                            loadHistory();
+                    // 🔐 Password dialog
+                    Dialog<String> dialog = new Dialog<>();
+                    dialog.setTitle("Authorization Required");
+                    dialog.setHeaderText("Enter admin password to delete");
+
+                    PasswordField passwordField = new PasswordField();
+                    passwordField.setPromptText("Password");
+                    passwordField.setPrefWidth(250);
+
+                    Label icon = new Label("🔒");
+                    icon.setStyle("-fx-font-size: 18;");
+
+                    HBox container = new HBox(10, icon, passwordField);
+                    container.setStyle("-fx-padding: 15; -fx-alignment: CENTER_LEFT;");
+
+                    dialog.getDialogPane().setContent(container);
+
+                    ButtonType verifyButton =
+                            new ButtonType("Verify", ButtonBar.ButtonData.OK_DONE);
+
+                    dialog.getDialogPane().getButtonTypes().addAll(
+                            verifyButton,
+                            ButtonType.CANCEL
+                    );
+
+// Make Verify button blue
+                    Button verifyBtn = (Button) dialog.getDialogPane().lookupButton(verifyButton);
+                    verifyBtn.setStyle(
+                            "-fx-background-color: #0078D7;" +
+                                    "-fx-text-fill: white;" +
+                                    "-fx-font-weight: bold;"
+                    );
+
+                    dialog.setResultConverter(dialogButton -> {
+                        if (dialogButton == verifyButton) {
+                            return passwordField.getText();
                         }
+                        return null;
+                    });
+
+                    dialog.showAndWait().ifPresent(password -> {
+
+                        if (!Objects.equals(password, "admin123")) {
+                            AlertUtil.showError("Access Denied", "Incorrect password.");
+                            return;
+                        }
+
+                        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                        alert.setTitle("Confirm Delete");
+                        alert.setHeaderText("Delete Transaction?");
+                        alert.setContentText("Are you sure you want to delete this record?");
+
+                        alert.showAndWait().ifPresent(response -> {
+                            if (response == ButtonType.OK) {
+                                transactionDAO.deleteTransaction(data.getTransactionId());
+                                loadHistory();
+                            }
+                        });
                     });
                 });
             }
@@ -1144,22 +1200,184 @@ public class DashboardController {
             }
         });
 
-        // 🔹 Date Formatting
-        issuedColumn.setCellValueFactory(cellData -> {
+        auditColumn.setCellValueFactory(data ->
+                 new SimpleStringProperty(
+                        data.getValue().getLastModifiedBy()
+                ));
+//        auditColumn.setCellFactory(col -> new TableCell<>() {
+//
+//            private final Tooltip tooltip = new Tooltip();
+//
+//            @Override
+//            protected void updateItem(String user, boolean empty) {
+//
+//                super.updateItem(user, empty);
+//
+//                if (empty || user == null) {
+//                    setText(null);
+//                    setTooltip(null);
+//                    return;
+//                }
+//
+//                setText(user + " ⓘ");
+//
+//                TransactionHistory transaction =
+//                        getTableView().getItems().get(getIndex());
+//
+//                if (transaction.getAuditEntries() == null) {
+//                    return;
+//                }
+//
+//                StringBuilder auditText = new StringBuilder();
+//
+//                Map<String, List<AuditEntry>> grouped = new LinkedHashMap<>();
+//
+//                // Group entries by user + timestamp
+//                for (AuditEntry entry : transaction.getAuditEntries()) {
+//
+//                    String key = entry.getModifiedBy() + "|" + entry.getModifiedAt();
+//
+//                    grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
+//                }
+//
+//                // Build tooltip text
+//                for (List<AuditEntry> group : grouped.values()) {
+//
+//                    AuditEntry first = group.get(0);
+//
+//                    auditText.append(first.getModifiedBy())
+//                            .append(" | ")
+//                            .append(first.getModifiedAt().format(formatter))
+//                            .append("\n");
+//
+//                    for (AuditEntry e : group) {
+//
+//                        auditText.append(e.getFieldName())
+//                                .append(" : ")
+//                                .append(e.getOldValue())
+//                                .append(" → ")
+//                                .append(e.getNewValue())
+//                                .append("\n");
+//                    }
+//
+//                    auditText.append("\n");
+//                }
+//
+//                tooltip.setText(auditText.toString());
+//                tooltip.setWrapText(true);
+//                tooltip.setMaxWidth(500);
+//                tooltip.setStyle("-fx-font-size: 14px;");
+//
+//                setTooltip(tooltip);
+//            }
+//        });
 
-            String raw = cellData.getValue().getIssuedDateTime();
+        auditColumn.setCellFactory(col -> new TableCell<>() {
 
-            if (raw == null) {
-                return new SimpleStringProperty("");
+            private final Tooltip tooltip = new Tooltip();
+
+            @Override
+            protected void updateItem(String user, boolean empty) {
+
+                super.updateItem(user, empty);
+
+                if (empty || user == null) {
+                    setText(null);
+                    setTooltip(null);
+                    return;
+                }
+
+                setText(user + " ⓘ");
+
+                TransactionHistory transaction =
+                        getTableView().getItems().get(getIndex());
+
+                if (transaction.getAuditEntries() == null) {
+                    return;
+                }
+
+                VBox container = new VBox(12);
+                container.setStyle("-fx-padding: 10;");
+
+                Map<String, List<AuditEntry>> grouped = new LinkedHashMap<>();
+
+                // Group entries by user + timestamp
+                for (AuditEntry entry : transaction.getAuditEntries()) {
+
+                    String key = entry.getModifiedBy() + "|" + entry.getModifiedAt();
+
+                    grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
+                }
+
+                for (List<AuditEntry> group : grouped.values()) {
+
+                    AuditEntry first = group.get(0);
+
+                    VBox block = new VBox(4);
+                    block.setStyle("-fx-padding: 4 0 8 0;");
+
+                    Label header = new Label(
+                            first.getModifiedBy() + " | " +
+                                    first.getModifiedAt().format(formatter)
+                    );
+
+                    header.setStyle(
+                            "-fx-font-weight: bold;" +
+                                    "-fx-font-size: 14px;"
+                    );
+
+                    block.getChildren().add(header);
+
+                    for (AuditEntry e : group) {
+
+                        Label line = new Label(
+                                e.getFieldName() +
+                                        " : " +
+                                        e.getOldValue() +
+                                        " → " +
+                                        e.getNewValue()
+                        );
+
+                        line.setStyle("-fx-font-size: 13px;");
+
+                        block.getChildren().add(line);
+                    }
+
+                    container.getChildren().add(block);
+                    Separator separator = new Separator();
+                    separator.setStyle(
+                            "-fx-background-color: #bbbbbb;" +
+                                    "-fx-opacity: 0.6;"
+                    );separator.setStyle(
+                            "-fx-background-color: #bbbbbb;" +
+                                    "-fx-opacity: 0.6;"
+                    );
+                    container.getChildren().add(separator);
+                }
+
+                if (!container.getChildren().isEmpty()) {
+                    container.getChildren().remove(container.getChildren().size() - 1);
+                }
+
+                tooltip.setGraphic(container);
+                tooltip.setWrapText(true);
+                tooltip.setMaxWidth(500);
+
+                tooltip.setShowDelay(Duration.millis(100));
+                tooltip.setShowDuration(Duration.INDEFINITE);
+                tooltip.setHideDelay(Duration.millis(100));
+
+                setTooltip(tooltip);
             }
-
-            LocalDateTime dateTime =
-                    Timestamp.valueOf(raw).toLocalDateTime();
-
-            return new SimpleStringProperty(
-                    dateTime.format(formatter)
-            );
         });
+
+        // 🔹 Date Formatting
+        issuedColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(
+                        data.getValue().getIssuedDateTime() == null
+                                ? ""
+                                : data.getValue().getIssuedDateTime().format(formatter)
+                ));
 
         returnedColumn.setCellValueFactory(cellData -> {
             TransactionHistory history = cellData.getValue();
@@ -1167,14 +1385,11 @@ public class DashboardController {
             if ("Buy".equalsIgnoreCase(history.getBuySell())) {
                 return new SimpleStringProperty("--");
             }
-            String raw = history.getReturnedDateTime();
+            LocalDateTime dateTime = history.getReturnedDateTime();
             // If Sell but not yet returned
-            if (raw == null) {
+            if (dateTime == null) {
                 return new SimpleStringProperty("Not Returned");
             }
-            LocalDateTime dateTime =
-                    Timestamp.valueOf(raw).toLocalDateTime();
-
             return new SimpleStringProperty(
                     dateTime.format(formatter)
             );
@@ -1423,8 +1638,11 @@ public class DashboardController {
 
         dialog.getDialogPane().getButtonTypes().addAll(createBtn, ButtonType.CANCEL);
 
-        // Make dialog wider
-        dialog.getDialogPane().setPrefWidth(500);
+        dialog.getDialogPane().setPrefWidth(520);
+
+        // Icon
+        Label icon = new Label("💾");
+        icon.setStyle("-fx-font-size: 20;");
 
         TextField pathField = new TextField();
         pathField.setPromptText("Select folder to generate backup file");
@@ -1434,6 +1652,7 @@ public class DashboardController {
         browseBtn.setMinWidth(90);
 
         browseBtn.setOnAction(e -> {
+
             DirectoryChooser directoryChooser = new DirectoryChooser();
             directoryChooser.setTitle("Select Backup Folder");
 
@@ -1455,16 +1674,29 @@ public class DashboardController {
             }
         });
 
-        // Layout container
         HBox pathBox = new HBox(10);
         pathBox.getChildren().addAll(pathField, browseBtn);
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
+        HBox content = new HBox(12);
+        content.getChildren().addAll(icon, pathBox);
+        content.setAlignment(Pos.CENTER_LEFT);
+
         VBox container = new VBox(15);
         container.setPadding(new Insets(15));
-        container.getChildren().add(pathBox);
+        container.getChildren().add(content);
 
         dialog.getDialogPane().setContent(container);
+
+        // Style create button
+        Button createButton =
+                (Button) dialog.getDialogPane().lookupButton(createBtn);
+
+        createButton.setStyle(
+                "-fx-background-color: #0078D7;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;"
+        );
 
         dialog.setResultConverter(btn -> {
             if (btn == createBtn) {
@@ -1503,8 +1735,11 @@ public class DashboardController {
                 new ButtonType("Restore Backup", ButtonBar.ButtonData.OK_DONE);
 
         dialog.getDialogPane().getButtonTypes().addAll(restoreBtn, ButtonType.CANCEL);
+        dialog.getDialogPane().setPrefWidth(520);
 
-        dialog.getDialogPane().setPrefWidth(500);
+        // Icon
+        Label icon = new Label("♻");
+        icon.setStyle("-fx-font-size: 20;");
 
         TextField pathField = new TextField();
         pathField.setPromptText("Select backup (.sql) file");
@@ -1514,8 +1749,10 @@ public class DashboardController {
         browseBtn.setMinWidth(90);
 
         browseBtn.setOnAction(e -> {
+
             FileChooser fc = new FileChooser();
             fc.setTitle("Select Backup File");
+
             fc.getExtensionFilters().add(
                     new FileChooser.ExtensionFilter("SQL Files", "*.sql")
             );
@@ -1531,15 +1768,27 @@ public class DashboardController {
         pathBox.getChildren().addAll(pathField, browseBtn);
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
+        HBox content = new HBox(12);
+        content.getChildren().addAll(icon, pathBox);
+        content.setAlignment(Pos.CENTER_LEFT);
+
         VBox container = new VBox(15);
         container.setPadding(new Insets(15));
-        container.getChildren().add(pathBox);
+        container.getChildren().add(content);
 
         dialog.getDialogPane().setContent(container);
 
-        // Disable restore button if no file selected
-        Node restoreButton = dialog.getDialogPane().lookupButton(restoreBtn);
+        // Restore button
+        Button restoreButton =
+                (Button) dialog.getDialogPane().lookupButton(restoreBtn);
+
         restoreButton.setDisable(true);
+
+        restoreButton.setStyle(
+                "-fx-background-color: #d9534f;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;"
+        );
 
         pathField.textProperty().addListener((obs, oldVal, newVal) -> {
             restoreButton.setDisable(newVal == null || newVal.isBlank());
@@ -1572,9 +1821,50 @@ public class DashboardController {
     @FXML
     private void handleFreezeColumns() {
 
-        TextInputDialog dialog = new TextInputDialog("2");
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Freeze Columns");
         dialog.setHeaderText("Freeze first N columns");
+        dialog.getDialogPane().setPrefWidth(420);
+
+        ButtonType freezeBtn =
+                new ButtonType("Freeze", ButtonBar.ButtonData.OK_DONE);
+
+        dialog.getDialogPane().getButtonTypes().addAll(freezeBtn, ButtonType.CANCEL);
+
+        Label icon = new Label("📌");
+        icon.setStyle("-fx-font-size: 20;");
+
+        TextField inputField = new TextField("2");
+        inputField.setPromptText("Number of columns");
+        inputField.setPrefWidth(200);
+
+        HBox content = new HBox(12);
+        content.getChildren().addAll(icon, inputField);
+        content.setAlignment(Pos.CENTER_LEFT);
+
+        VBox container = new VBox(15);
+        container.setPadding(new Insets(15));
+        container.getChildren().add(content);
+
+        dialog.getDialogPane().setContent(container);
+
+        Button freezeButton =
+                (Button) dialog.getDialogPane().lookupButton(freezeBtn);
+
+        freezeButton.setStyle(
+                "-fx-background-color: #0078D7;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;"
+        );
+
+        inputField.requestFocus();
+
+        dialog.setResultConverter(btn -> {
+            if (btn == freezeBtn) {
+                return inputField.getText();
+            }
+            return null;
+        });
 
         dialog.showAndWait().ifPresent(input -> {
 
@@ -1587,15 +1877,17 @@ public class DashboardController {
                 if (count <= 0 || count >= totalColumns) {
                     throw new IllegalArgumentException();
                 }
+
                 captureFilters();
 
-                if(tableFilter != null) {
+                if (tableFilter != null) {
                     tableFilter.getColumnFilters().forEach(cf -> cf.selectAllValues());
                     tableFilter.executeFilter();
                 }
 
                 // Reset filterPipeline to show all data temporarily
                 filterPipeline.setPredicate(p -> true);
+
                 SplitPane pane = freezeManager.freezeColumns(count);
                 VBox.setVgrow(pane, Priority.ALWAYS);
 
@@ -1608,14 +1900,16 @@ public class DashboardController {
                 }
 
                 centerBox.getChildren().set(tableIndex, pane);
-                Platform.runLater(this::rebuildTableFilter);
 
+                Platform.runLater(this::rebuildTableFilter);
 
                 columnsFrozen = true;
                 updateUIState(ConnectionState.isConnected());
+
                 exportExcelButton.setDisable(true);
                 exportPDFButton.setDisable(true);
                 addTransactionButton.setDisable(true);
+
                 freezeColumnsMenuItem.setDisable(true);
                 unfreezeColumnsMenuItem.setDisable(false);
 
@@ -1630,7 +1924,6 @@ public class DashboardController {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setContentText("Invalid number of columns.");
                 alert.show();
-
             }
         });
     }
@@ -1747,33 +2040,33 @@ public class DashboardController {
         });
     }
 
-    private void openItemHistoryPage(String itemId, String itemName) {
-
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/fxml/item-history.fxml")
-            );
-
-            Parent root = loader.load();
-
-            ItemHistoryController controller = loader.getController();
-            controller.loadItemHistory(itemId, itemName);
-
-            Stage stage = new Stage();
-            stage.setTitle("Item History");
-
-            Scene scene = new Scene(root, 1200, 650); // fixed window size
-            scene.getRoot().disableProperty().bind(
-                    ConnectionState.connectedProperty().not()
-            );
-            stage.setScene(scene);
-            stage.setResizable(true);
-            stage.show();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+//    private void openItemHistoryPage(String itemId, String itemName) {
+//
+//        try {
+//            FXMLLoader loader = new FXMLLoader(
+//                    getClass().getResource("/fxml/item-history.fxml")
+//            );
+//
+//            Parent root = loader.load();
+//
+//            ItemHistoryController controller = loader.getController();
+//            controller.loadItemHistory(itemId, itemName);
+//
+//            Stage stage = new Stage();
+//            stage.setTitle("Item History");
+//
+//            Scene scene = new Scene(root, 1200, 650); // fixed window size
+//            scene.getRoot().disableProperty().bind(
+//                    ConnectionState.connectedProperty().not()
+//            );
+//            stage.setScene(scene);
+//            stage.setResizable(true);
+//            stage.show();
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     private void openHistoryPage(String field, String value, String title) {
         try {
@@ -1802,9 +2095,16 @@ public class DashboardController {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Setup Database");
         dialog.setHeaderText("Enter Server Details");
+        dialog.getDialogPane().setPrefWidth(450);
 
-        ButtonType connectBtn = new ButtonType("Use Database", ButtonBar.ButtonData.OK_DONE);
+        ButtonType connectBtn =
+                new ButtonType("Use Database", ButtonBar.ButtonData.OK_DONE);
+
         dialog.getDialogPane().getButtonTypes().addAll(connectBtn, ButtonType.CANCEL);
+
+        // 🔹 Icon
+        Label icon = new Label("🗄");
+        icon.setStyle("-fx-font-size: 20;");
 
         // 🔹 Form Fields
         TextField hostField = new TextField("localhost");
@@ -1812,6 +2112,12 @@ public class DashboardController {
         TextField dbNameField = new TextField();
         TextField userField = new TextField("root");
         PasswordField passField = new PasswordField();
+
+        hostField.setPrefWidth(220);
+        portField.setPrefWidth(220);
+        dbNameField.setPrefWidth(220);
+        userField.setPrefWidth(220);
+        passField.setPrefWidth(220);
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -1832,7 +2138,27 @@ public class DashboardController {
         grid.add(new Label("Password:"), 0, 4);
         grid.add(passField, 1, 4);
 
-        dialog.getDialogPane().setContent(grid);
+        HBox content = new HBox(12);
+        content.setAlignment(Pos.TOP_LEFT);
+        content.getChildren().addAll(icon, grid);
+
+        VBox container = new VBox(15);
+        container.setPadding(new Insets(15));
+        container.getChildren().add(content);
+
+        dialog.getDialogPane().setContent(container);
+
+        // 🔹 Style connect button
+        Button connectButton =
+                (Button) dialog.getDialogPane().lookupButton(connectBtn);
+
+        connectButton.setStyle(
+                "-fx-background-color: #0078D7;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;"
+        );
+
+        hostField.requestFocus();
 
         dialog.showAndWait().ifPresent(response -> {
 
@@ -1882,10 +2208,36 @@ public class DashboardController {
     }
 
     public void handleAbout() {
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About");
-        alert.setHeaderText("Inventory Management System");
-        alert.setContentText("Developed by Yashank Tiwari\nVersion 1.0");
+        alert.setHeaderText(null);
+        alert.setGraphic(null);
+
+        Label icon = new Label("📦");
+        icon.setStyle("-fx-font-size: 36;");
+
+        Label appName = new Label("Inventory Management System");
+        appName.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+        Label version = new Label("Version 1.0");
+        version.setStyle("-fx-font-size: 13px;");
+
+        Label author = new Label("Developed by Yashank Tiwari");
+        author.setStyle("-fx-font-size: 13px;");
+
+        Label copyright = new Label("© 2026 Yashank Tiwari. All rights reserved.");
+        copyright.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+
+        VBox textBox = new VBox(6, appName, version, author, copyright);
+        textBox.setAlignment(Pos.CENTER_LEFT);
+
+        HBox content = new HBox(20, icon, textBox);
+        content.setAlignment(Pos.CENTER_LEFT);
+        content.setPadding(new Insets(22, 28, 22, 28));
+
+        alert.getDialogPane().setContent(content);
+
         alert.showAndWait();
     }
 
@@ -2131,17 +2483,42 @@ public class DashboardController {
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Authorization Required");
         dialog.setHeaderText("Enter Restore Password");
+        dialog.getDialogPane().setPrefWidth(420);
 
-        ButtonType loginBtn = new ButtonType("Verify", ButtonBar.ButtonData.OK_DONE);
+        ButtonType loginBtn =
+                new ButtonType("Verify", ButtonBar.ButtonData.OK_DONE);
+
         dialog.getDialogPane().getButtonTypes().addAll(loginBtn, ButtonType.CANCEL);
+
+        // Icon
+        Label icon = new Label("🔒");
+        icon.setStyle("-fx-font-size: 20;");
 
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Password");
+        passwordField.setPrefWidth(250);
 
-        VBox container = new VBox(10, passwordField);
+        HBox content = new HBox(12);
+        content.getChildren().addAll(icon, passwordField);
+        content.setAlignment(Pos.CENTER_LEFT);
+
+        VBox container = new VBox(15);
         container.setPadding(new Insets(15));
+        container.getChildren().add(content);
 
         dialog.getDialogPane().setContent(container);
+
+        // Style verify button
+        Button verifyButton =
+                (Button) dialog.getDialogPane().lookupButton(loginBtn);
+
+        verifyButton.setStyle(
+                "-fx-background-color: #0078D7;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;"
+        );
+
+        passwordField.requestFocus();
 
         dialog.setResultConverter(btn -> {
             if (btn == loginBtn) {
