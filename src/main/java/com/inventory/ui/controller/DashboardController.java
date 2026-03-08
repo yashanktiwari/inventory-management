@@ -1286,36 +1286,6 @@ public class DashboardController {
         startConnectionMonitor();
         ConnectionState.connectedProperty().addListener((obs, oldVal, connected) -> {
             updateUIState(connected);
-//            boolean disabled = !connected;
-//
-//            if(disabled) {
-//                addTransactionButton.setDisable(true);
-//                exportExcelButton.setDisable(true);
-//                exportPDFButton.setDisable(true);
-//                freezeColumnsMenuItem.setDisable(true);
-//                unfreezeColumnsMenuItem.setDisable(true);
-//            } else {
-//                if(columnsFrozen) {
-//                    addTransactionButton.setDisable(true);
-//                    exportExcelButton.setDisable(true);
-//                    exportPDFButton.setDisable(true);
-//                    freezeColumnsMenuItem.setDisable(true);
-//                    unfreezeColumnsMenuItem.setDisable(false);
-//                } else {
-//                    addTransactionButton.setDisable(false);
-//                    exportExcelButton.setDisable(false);
-//                    exportPDFButton.setDisable(false);
-//                    freezeColumnsMenuItem.setDisable(false);
-//                    unfreezeColumnsMenuItem.setDisable(true);
-//                }
-//            }
-//
-//            historyTable.setDisable(disabled);
-//            searchField.setDisable(disabled);
-//            setupDatabase.setDisable(disabled);
-//            backupDatabase.setDisable(disabled);
-//            restoreDatabase.setDisable(disabled);
-//            resetFiltersButton.setDisable(disabled);
         });
 
         updateUIState(ConnectionState.isConnected());
@@ -1936,20 +1906,6 @@ public class DashboardController {
                 }
 
                 lastConnectionState = connected;
-
-//                boolean disabled = !connected;
-//
-//                historyTable.setDisable(disabled);
-//                addTransactionButton.setDisable(disabled);
-//                exportExcelButton.setDisable(disabled || columnsFrozen);
-//                exportPDFButton.setDisable(disabled || columnsFrozen);
-//                searchField.setDisable(disabled);
-//                freezeColumnsMenuItem.setDisable(disabled);
-//                unfreezeColumnsMenuItem.setDisable(disabled);
-//                setupDatabase.setDisable(disabled);
-//                backupDatabase.setDisable(disabled);
-//                restoreDatabase.setDisable(disabled);
-//                resetFiltersButton.setDisable(disabled);
                 updateUIState(connected);
                 refreshButton.setDisable(false);
 
@@ -2365,8 +2321,6 @@ public class DashboardController {
                     .collect(Collectors.toSet());
 
             activeFilters.put(columnId, selected);
-//            System.out.println("Capturing filters for column: " + columnId);
-//            System.out.println("Selected values: " + selected);
 
             prefs.put("filter_" + columnId, String.join("|", selected));
         });
@@ -2492,50 +2446,5 @@ public class DashboardController {
         if(rootPane != null) {
             rootPane.getCenter().setDisable(!connected);
         }
-        // 🔹 Handle tables
-//        if (columnsFrozen) {
-//
-//            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
-//            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
-//
-//            if (frozenTable != null) {
-//                frozenTable.setDisable(!connected);
-//            }
-//
-//            if (scrollTable != null) {
-//                scrollTable.setDisable(!connected);
-//            }
-//
-//        } else {
-//
-//            historyTable.setDisable(!connected);
-//
-//        }
-    }
-
-    private void logTableState(String stage) {
-
-        System.out.println("\n========== " + stage + " ==========");
-
-        System.out.println("MasterData size: " + masterData.size());
-
-        System.out.println("TableView items size: " + historyTable.getItems().size());
-
-        if (tableFilter != null) {
-            tableFilter.getColumnFilters().forEach(cf -> {
-
-                String col = cf.getTableColumn().getId();
-
-                var values = cf.getFilterValues().stream()
-                        .map(v -> v.getValue().toString())
-                        .toList();
-
-                System.out.println("Column: " + col);
-                System.out.println("Available values: " + values);
-
-            });
-        }
-
-        System.out.println("====================================\n");
     }
 }
