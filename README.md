@@ -19,6 +19,21 @@
 18. Reset all filters button
 19. Item count and unit column
 20. DB connection indicator
+21. Hyperlink for multiple columns
+22. Remark update at returning
+23. Remark tooltip shows whole value
+24. File attachment (but filters are not working so fix them)
+25. Storage path change allowed with password
+26. Sorting and filtering supported in freeze columns in the right column
+27. UpdatedBy
+28. Audit trail in tool tip
+29. Validation in add transaction
+30. Password delete allowed
+31. Better UI dialogs
+32. Admin password change functionality
+33. Shift + Scroll = Horizontal scroll
+
+
 
 ## To run the application:
 - mvn clean javafx:run
