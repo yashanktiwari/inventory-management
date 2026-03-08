@@ -1281,22 +1281,44 @@ public class DashboardController {
                 });
             });
         });
+        unfreezeColumnsMenuItem.setDisable(true);
+
         startConnectionMonitor();
         ConnectionState.connectedProperty().addListener((obs, oldVal, connected) -> {
-            boolean disabled = !connected;
-
-            historyTable.setDisable(disabled);
-            addTransactionButton.setDisable(disabled);
-            exportExcelButton.setDisable(disabled || columnsFrozen);
-            exportPDFButton.setDisable(disabled || columnsFrozen);
-            searchField.setDisable(disabled);
-            freezeColumnsMenuItem.setDisable(disabled);
-            unfreezeColumnsMenuItem.setDisable(disabled);
-            setupDatabase.setDisable(disabled);
-            backupDatabase.setDisable(disabled);
-            restoreDatabase.setDisable(disabled);
-            resetFiltersButton.setDisable(disabled);
+            updateUIState(connected);
+//            boolean disabled = !connected;
+//
+//            if(disabled) {
+//                addTransactionButton.setDisable(true);
+//                exportExcelButton.setDisable(true);
+//                exportPDFButton.setDisable(true);
+//                freezeColumnsMenuItem.setDisable(true);
+//                unfreezeColumnsMenuItem.setDisable(true);
+//            } else {
+//                if(columnsFrozen) {
+//                    addTransactionButton.setDisable(true);
+//                    exportExcelButton.setDisable(true);
+//                    exportPDFButton.setDisable(true);
+//                    freezeColumnsMenuItem.setDisable(true);
+//                    unfreezeColumnsMenuItem.setDisable(false);
+//                } else {
+//                    addTransactionButton.setDisable(false);
+//                    exportExcelButton.setDisable(false);
+//                    exportPDFButton.setDisable(false);
+//                    freezeColumnsMenuItem.setDisable(false);
+//                    unfreezeColumnsMenuItem.setDisable(true);
+//                }
+//            }
+//
+//            historyTable.setDisable(disabled);
+//            searchField.setDisable(disabled);
+//            setupDatabase.setDisable(disabled);
+//            backupDatabase.setDisable(disabled);
+//            restoreDatabase.setDisable(disabled);
+//            resetFiltersButton.setDisable(disabled);
         });
+
+        updateUIState(ConnectionState.isConnected());
     }
 
 
@@ -1571,7 +1593,7 @@ public class DashboardController {
                 if (count <= 0 || count >= totalColumns) {
                     throw new IllegalArgumentException();
                 }
-                logTableState("BEFORE FREEZE");
+//                logTableState("BEFORE FREEZE");
                 captureFilters();
 
                 if(tableFilter != null) {
@@ -1597,6 +1619,7 @@ public class DashboardController {
 
 
                 columnsFrozen = true;
+                updateUIState(ConnectionState.isConnected());
                 exportExcelButton.setDisable(true);
                 exportPDFButton.setDisable(true);
                 addTransactionButton.setDisable(true);
@@ -1621,7 +1644,7 @@ public class DashboardController {
 
     @FXML
     private void handleUnfreezeColumns() {
-        logTableState("BEFORE UNFREEZE");
+//        logTableState("BEFORE UNFREEZE");
         captureFilters();
         freezeManager.restoreOriginalTable();
 
@@ -1632,11 +1655,13 @@ public class DashboardController {
         centerBox.getChildren().set(paneIndex, historyTable);
 
         columnsFrozen = false;
-        exportExcelButton.setDisable(columnsFrozen);
-        exportPDFButton.setDisable(columnsFrozen);
+        updateUIState(ConnectionState.isConnected());
+        addTransactionButton.setDisable(false);
+        exportExcelButton.setDisable(false);
+        exportPDFButton.setDisable(false);
         freezeColumnsMenuItem.setDisable(false);
         unfreezeColumnsMenuItem.setDisable(true);
-        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
+//        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
         Platform.runLater(this::rebuildTableFilter);
     }
 
@@ -1681,7 +1706,7 @@ public class DashboardController {
     }
 
     private void rebuildTableFilter() {
-        logTableState("BEFORE REBUILD");
+//        logTableState("BEFORE REBUILD");
 
         if (columnsFrozen) {
             // Apply TableFilter only to scroll table
@@ -1689,17 +1714,25 @@ public class DashboardController {
             TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
 
             if (scrollTable != null && frozenTable != null) {
-                // Apply filter to scroll table (right side with more columns)
+                // Apply filter to scroll table only
                 tableFilter = TableFilter.forTableView(scrollTable).apply();
 
                 frozenTable.setItems(scrollTable.getItems());
 
-                // Restore saved filter state to both
+                // Add listener to sync frozen table when scroll table change (due to sorting)
+                scrollTable.itemsProperty().addListener((obs, oldItems, newItems) -> {
+                    if(newItems != null) {
+                        frozenTable.setItems(newItems);
+                    }
+                });
+
+                // Restore saved filter state
                 restoreFilters();
 
-                // Execute filters on both tables
+                // Execute filters
                 tableFilter.executeFilter();
 
+                // Sync frozen table items after filter executes
                 Platform.runLater(() -> {
                     frozenTable.setItems(scrollTable.getItems());
                 });
@@ -1712,7 +1745,7 @@ public class DashboardController {
             tableFilter.executeFilter();
         }
 
-        logTableState("AFTER REBUILD");
+//        logTableState("AFTER REBUILD");
     }
 
     private void loadHistory() {
@@ -1904,19 +1937,20 @@ public class DashboardController {
 
                 lastConnectionState = connected;
 
-                boolean disabled = !connected;
-
-                historyTable.setDisable(disabled);
-                addTransactionButton.setDisable(disabled);
-                exportExcelButton.setDisable(disabled || columnsFrozen);
-                exportPDFButton.setDisable(disabled || columnsFrozen);
-                searchField.setDisable(disabled);
-                freezeColumnsMenuItem.setDisable(disabled);
-                unfreezeColumnsMenuItem.setDisable(disabled);
-                setupDatabase.setDisable(disabled);
-                backupDatabase.setDisable(disabled);
-                restoreDatabase.setDisable(disabled);
-                resetFiltersButton.setDisable(disabled);
+//                boolean disabled = !connected;
+//
+//                historyTable.setDisable(disabled);
+//                addTransactionButton.setDisable(disabled);
+//                exportExcelButton.setDisable(disabled || columnsFrozen);
+//                exportPDFButton.setDisable(disabled || columnsFrozen);
+//                searchField.setDisable(disabled);
+//                freezeColumnsMenuItem.setDisable(disabled);
+//                unfreezeColumnsMenuItem.setDisable(disabled);
+//                setupDatabase.setDisable(disabled);
+//                backupDatabase.setDisable(disabled);
+//                restoreDatabase.setDisable(disabled);
+//                resetFiltersButton.setDisable(disabled);
+                updateUIState(connected);
                 refreshButton.setDisable(false);
 
             });
@@ -2331,8 +2365,8 @@ public class DashboardController {
                     .collect(Collectors.toSet());
 
             activeFilters.put(columnId, selected);
-            System.out.println("Capturing filters for column: " + columnId);
-            System.out.println("Selected values: " + selected);
+//            System.out.println("Capturing filters for column: " + columnId);
+//            System.out.println("Selected values: " + selected);
 
             prefs.put("filter_" + columnId, String.join("|", selected));
         });
@@ -2436,6 +2470,47 @@ public class DashboardController {
             return;
         }
         java.awt.Desktop.getDesktop().open(file);
+    }
+
+    private void updateUIState(boolean connected) {
+
+        boolean frozen = columnsFrozen;
+
+        addTransactionButton.setDisable(!connected || frozen);
+        exportExcelButton.setDisable(!connected || frozen);
+        exportPDFButton.setDisable(!connected || frozen);
+
+        freezeColumnsMenuItem.setDisable(!connected || frozen);
+        unfreezeColumnsMenuItem.setDisable(!connected || !frozen);
+
+        searchField.setDisable(!connected);
+        setupDatabase.setDisable(!connected);
+        backupDatabase.setDisable(!connected);
+        restoreDatabase.setDisable(!connected);
+        resetFiltersButton.setDisable(!connected);
+
+        if(rootPane != null) {
+            rootPane.getCenter().setDisable(!connected);
+        }
+        // 🔹 Handle tables
+//        if (columnsFrozen) {
+//
+//            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+//            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+//
+//            if (frozenTable != null) {
+//                frozenTable.setDisable(!connected);
+//            }
+//
+//            if (scrollTable != null) {
+//                scrollTable.setDisable(!connected);
+//            }
+//
+//        } else {
+//
+//            historyTable.setDisable(!connected);
+//
+//        }
     }
 
     private void logTableState(String stage) {
