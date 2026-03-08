@@ -10,6 +10,7 @@ import com.inventory.util.*;
 import com.inventory.util.TableFreezeManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -41,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
@@ -177,6 +179,9 @@ public class DashboardController {
     private MenuItem unfreezeColumnsMenuItem;
 
     @FXML
+    private MenuItem changeAdminPasswordMenuItem;
+
+    @FXML
     private MenuItem setupDatabase;
 
     @FXML
@@ -194,9 +199,8 @@ public class DashboardController {
     private ScheduledExecutorService connectionScheduler;
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
-    private String mysqldumpPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe";
-    private String mysqlPath = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
-    private static final String RESTORE_PASSWORD = "admin123";
+    private String mysqldumpPath;
+    private String mysqlPath;
     private final Preferences prefs =
             Preferences.userNodeForPackage(DashboardController.class);
     private boolean columnsFrozen = false;
@@ -212,8 +216,10 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
-        freezeManager = new TableFreezeManager<>(historyTable);
+        mysqldumpPath = AppConfig.getMysqlDumpPath();
+        mysqlPath = AppConfig.getMysqlPath();
 
+        freezeManager = new TableFreezeManager<>(historyTable);
 
         Platform.runLater(() -> {
             rootPane = (BorderPane) historyTable.getScene().getRoot();
@@ -379,7 +385,7 @@ public class DashboardController {
                             ButtonType.CANCEL
                     );
 
-// Make Verify button blue
+                    // Make Verify button blue
                     Button verifyBtn = (Button) dialog.getDialogPane().lookupButton(verifyButton);
                     verifyBtn.setStyle(
                             "-fx-background-color: #0078D7;" +
@@ -396,7 +402,7 @@ public class DashboardController {
 
                     dialog.showAndWait().ifPresent(password -> {
 
-                        if (!Objects.equals(password, "admin123")) {
+                        if (!Objects.equals(PasswordUtil.hashPassword(password), AppConfig.getAdminPasswordHash())) {
                             AlertUtil.showError("Access Denied", "Incorrect password.");
                             return;
                         }
@@ -1919,6 +1925,91 @@ public class DashboardController {
         );
     }
 
+    @FXML
+    public void handleChangeAdminPassword() {
+
+        Stage stage = new Stage();
+        stage.setTitle("Change Admin Password");
+
+        Label description = new Label(
+                "Update the administrator password used to access restricted settings."
+        );
+        description.setWrapText(true);
+
+        PasswordField currentPass = new PasswordField();
+        currentPass.setPromptText("Current Password");
+
+        PasswordField newPass = new PasswordField();
+        newPass.setPromptText("New Password");
+
+        PasswordField confirmPass = new PasswordField();
+        confirmPass.setPromptText("Confirm New Password");
+
+        GridPane form = new GridPane();
+        form.setHgap(10);
+        form.setVgap(10);
+
+        form.add(new Label("Current Password"), 0, 0);
+        form.add(currentPass, 1, 0);
+
+        form.add(new Label("New Password"), 0, 1);
+        form.add(newPass, 1, 1);
+
+        form.add(new Label("Confirm Password"), 0, 2);
+        form.add(confirmPass, 1, 2);
+
+        Button cancelBtn = new Button("Cancel");
+        Button saveBtn = new Button("Save Password");
+
+        cancelBtn.setOnAction(e -> stage.close());
+
+        saveBtn.setDefaultButton(true);
+
+        saveBtn.setOnAction(e -> {
+
+            String storedHash = AppConfig.getAdminPasswordHash();
+            String current = currentPass.getText();
+            String newPassword = newPass.getText();
+            String confirm = confirmPass.getText();
+
+            if (!PasswordUtil.hashPassword(current).equals(storedHash)) {
+                AlertUtil.showError("Error", "Current password is incorrect.");
+                return;
+            }
+
+            if (newPassword.isEmpty()) {
+                AlertUtil.showError("Error", "New password cannot be empty.");
+                return;
+            }
+
+            if (!newPassword.equals(confirm)) {
+                AlertUtil.showError("Error", "Passwords do not match.");
+                return;
+            }
+
+            AppConfig.saveAdminPassword(newPassword);
+
+            AlertUtil.showInfo(
+                    "Password Changed",
+                    "Admin password updated successfully."
+            );
+
+            stage.close();
+        });
+
+        HBox buttons = new HBox(10, cancelBtn, saveBtn);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox root = new VBox(20, description, form, buttons);
+        root.setPadding(new Insets(25));
+
+        Scene scene = new Scene(root);
+
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setScene(scene);
+        stage.showAndWait();
+    }
+
     private void rebuildTableFilter() {
         if (columnsFrozen) {
             // Apply TableFilter only to scroll table
@@ -2193,7 +2284,7 @@ public class DashboardController {
 
                 Platform.runLater(() -> historyTable.setDisable(true));
 
-                if (mysqldumpPath == null) {
+                if (mysqldumpPath == null || !new File(mysqldumpPath).exists()) {
                     Platform.runLater(() -> {
                         AlertUtil.showError("Error", "mysqldump path not configured.");
                         historyTable.setDisable(false);
@@ -2437,8 +2528,7 @@ public class DashboardController {
             return false;
         }
 
-        if (!RESTORE_PASSWORD.equals(result.get())) {
-
+        if (!AppConfig.getAdminPasswordHash().equals(result.get())) {
             AlertUtil.showError(
                     "Access Denied",
                     "Incorrect restore password."
@@ -2446,7 +2536,6 @@ public class DashboardController {
 
             return false;
         }
-
         return true;
     }
 
@@ -2733,7 +2822,7 @@ public class DashboardController {
         unfreezeColumnsMenuItem.setDisable(!connected || !frozen);
 
         searchField.setDisable(!connected);
-        setupDatabase.setDisable(!connected);
+        setupDatabase.setDisable(false);
         backupDatabase.setDisable(!connected);
         restoreDatabase.setDisable(!connected);
         resetFiltersButton.setDisable(!connected);

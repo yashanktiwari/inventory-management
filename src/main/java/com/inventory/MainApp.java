@@ -17,6 +17,9 @@ public class MainApp extends Application {
     public void start(Stage stage) throws Exception {
 
         // 🔹 Try auto load MySQL config
+//        java.util.prefs.Preferences.userNodeForPackage(
+//                com.inventory.ui.controller.DashboardController.class
+//        ).removeNode();
         boolean loaded = AppConfig.loadDatabaseConfig();
 
         if (loaded) {

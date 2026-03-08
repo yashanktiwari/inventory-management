@@ -208,7 +208,7 @@ public class ItemHistoryController {
                         data.getValue().getLastModifiedBy()
                 ));
     }
-    
+
     public void loadHistory(String field, String value, String title) {
 
         titleLabel.setText("History for: " + value);

@@ -2,6 +2,7 @@ package com.inventory.database;
 
 import java.io.*;
 import java.util.Properties;
+import com.inventory.util.PasswordUtil;
 
 public class AppConfig {
 
@@ -115,6 +116,101 @@ public class AppConfig {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private static Properties loadProperties() throws IOException {
+
+        File file = new File(CONFIG_FILE);
+        Properties props = new Properties();
+
+        if (file.exists()) {
+            try (FileInputStream fis = new FileInputStream(file)) {
+                props.load(fis);
+            }
+        }
+
+        return props;
+    }
+
+    private static void saveProperties(Properties props) throws IOException {
+
+        File folder = new File(CONFIG_FOLDER);
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE)) {
+            props.store(fos, "Inventory Config");
+        }
+    }
+
+    public static void saveMysqlPath(String path) {
+
+        try {
+            Properties props = loadProperties();
+            props.setProperty("mysql.path", path);
+            saveProperties(props);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String getMysqlPath() {
+
+        try {
+            Properties props = loadProperties();
+            return props.getProperty("mysql.path");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static void saveMysqlDumpPath(String path) {
+
+        try {
+            Properties props = loadProperties();
+            props.setProperty("mysqldump.path", path);
+            saveProperties(props);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String getMysqlDumpPath() {
+
+        try {
+            Properties props = loadProperties();
+            return props.getProperty("mysqldump.path");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static void saveAdminPassword(String password) {
+        try {
+            Properties props = loadProperties();
+            String hashedPassword = PasswordUtil.hashPassword(password);
+            props.setProperty("admin.password.hash", hashedPassword);
+            saveProperties(props);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String getAdminPasswordHash() {
+        try {
+            Properties props = loadProperties();
+            String storedHash = props.getProperty("admin.password.hash");
+            if (storedHash == null || storedHash.isEmpty()) {
+                return PasswordUtil.hashPassword("admin123");
+            }
+            return storedHash;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return PasswordUtil.hashPassword("admin123");
         }
     }
 }
