@@ -1563,7 +1563,6 @@ public class DashboardController {
                 if (count <= 0 || count >= totalColumns) {
                     throw new IllegalArgumentException();
                 }
-//                logTableState("BEFORE FREEZE");
                 captureFilters();
 
                 if(tableFilter != null) {
@@ -1614,7 +1613,6 @@ public class DashboardController {
 
     @FXML
     private void handleUnfreezeColumns() {
-//        logTableState("BEFORE UNFREEZE");
         captureFilters();
         freezeManager.restoreOriginalTable();
 
@@ -1631,7 +1629,6 @@ public class DashboardController {
         exportPDFButton.setDisable(false);
         freezeColumnsMenuItem.setDisable(false);
         unfreezeColumnsMenuItem.setDisable(true);
-//        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
         Platform.runLater(this::rebuildTableFilter);
     }
 
@@ -1676,8 +1673,6 @@ public class DashboardController {
     }
 
     private void rebuildTableFilter() {
-//        logTableState("BEFORE REBUILD");
-
         if (columnsFrozen) {
             // Apply TableFilter only to scroll table
             TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
@@ -1714,8 +1709,6 @@ public class DashboardController {
             restoreFilters();
             tableFilter.executeFilter();
         }
-
-//        logTableState("AFTER REBUILD");
     }
 
     private void loadHistory() {
