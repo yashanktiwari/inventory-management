@@ -86,7 +86,8 @@ public class TableFreezeManager<T> {
 
         syncVerticalScroll();
 
-        frozenTable.setStyle("-fx-padding: 0; -fx-border-right: 1px solid #cccccc;");
+        frozenTable.setStyle("-fx-padding: 0; -fx-border-width: 0 1 0 0;\n" +
+                "-fx-border-color: transparent #cccccc transparent transparent;");
         scrollTable.setStyle("-fx-padding: 0;");
 
         VBox leftBox = new VBox(frozenTable);
@@ -201,4 +202,148 @@ public class TableFreezeManager<T> {
 
         return clone;
     }
+
+    public TableView<T> getScrollTable() {
+        return scrollTable;
+    }
+
+    public TableView<T> getFrozenTable() {
+        return frozenTable;
+    }
 }
+
+
+//package com.inventory.util;
+//
+//import javafx.collections.ObservableList;
+//import javafx.scene.control.*;
+//import javafx.geometry.Orientation;
+//import javafx.scene.Node;
+//import javafx.util.Callback;
+//
+//import java.util.ArrayList;
+//import java.util.List;
+//
+//public class TableFreezeManager<T> {
+//
+//    private final TableView<T> originalTable;
+//
+//    private TableView<T> frozenTable;
+//    private TableView<T> scrollTable;
+//
+//    private List<TableColumn<T, ?>> originalColumns;
+//
+//    public TableFreezeManager(TableView<T> table) {
+//        this.originalTable = table;
+//    }
+//
+//    public SplitPane freezeColumns(int count) {
+//
+//        ObservableList<T> items = originalTable.getItems();
+//
+//        originalColumns = new ArrayList<>(originalTable.getColumns());
+//
+//        frozenTable = new TableView<>();
+//        scrollTable = new TableView<>();
+//
+//        frozenTable.setItems(items);
+//        scrollTable.setItems(items);
+//
+//        frozenTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+//        scrollTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+//
+//        frozenTable.setSelectionModel(originalTable.getSelectionModel());
+//        scrollTable.setSelectionModel(originalTable.getSelectionModel());
+//
+//        for (int i = 0; i < originalColumns.size(); i++) {
+//
+//            TableColumn<T, ?> column = originalColumns.get(i);
+//
+//            TableColumn<T, ?> cloned = cloneColumn(column);
+//
+//            if (i < count) {
+//                frozenTable.getColumns().add(cloned);
+//            } else {
+//                scrollTable.getColumns().add(cloned);
+//            }
+//        }
+//
+//        frozenTable.setFixedCellSize(originalTable.getFixedCellSize());
+//        scrollTable.setFixedCellSize(originalTable.getFixedCellSize());
+//
+//        syncVerticalScroll();
+//
+//        SplitPane pane = new SplitPane(frozenTable, scrollTable);
+//        pane.setDividerPositions(0.25);
+//
+//        return pane;
+//    }
+//
+//    public void restoreOriginalTable() {
+//
+//        originalTable.getColumns().setAll(originalColumns);
+//
+//        if (frozenTable != null) {
+//            frozenTable.setItems(null);
+//        }
+//
+//        if (scrollTable != null) {
+//            scrollTable.setItems(null);
+//        }
+//    }
+//
+//    private TableColumn<T, ?> cloneColumn(TableColumn<T, ?> column) {
+//
+//        TableColumn<T, Object> newCol = new TableColumn<>(column.getText());
+//
+//        newCol.setCellValueFactory((TableColumn.CellDataFeatures<T, Object> param) ->
+//                (javafx.beans.value.ObservableValue<Object>) column.getCellObservableValue(param.getValue()));
+//
+////        newCol.setCellFactory(column.getCellFactory());
+//
+//        newCol.setCellFactory(
+//                (Callback<TableColumn<T, Object>, TableCell<T, Object>>)
+//                        (Callback<?, ?>) column.getCellFactory()
+//        );
+//        newCol.setPrefWidth(column.getWidth());
+//        newCol.setId(column.getId());
+//
+//        return newCol;
+//    }
+//
+//    private void syncVerticalScroll() {
+//
+//        frozenTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+//
+//            ScrollBar frozenBar = findVerticalScrollbar(frozenTable);
+//            ScrollBar scrollBar = findVerticalScrollbar(scrollTable);
+//
+//            if (frozenBar != null && scrollBar != null) {
+//
+//                frozenBar.valueProperty().bindBidirectional(scrollBar.valueProperty());
+//            }
+//        });
+//    }
+//
+//    private ScrollBar findVerticalScrollbar(TableView<?> table) {
+//
+//        for (Node node : table.lookupAll(".scroll-bar")) {
+//
+//            if (node instanceof ScrollBar sb &&
+//                    sb.getOrientation() == Orientation.VERTICAL) {
+//
+//                return sb;
+//            }
+//        }
+//
+//        return null;
+//    }
+//
+//    public TableView<T> getScrollTable() {
+//        return scrollTable;
+//    }
+//
+//    public TableView<T> getFrozenTable() {
+//        return frozenTable;
+//    }
+//}

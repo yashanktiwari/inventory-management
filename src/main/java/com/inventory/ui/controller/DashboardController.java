@@ -5,8 +5,8 @@ import com.inventory.database.AppConfig;
 import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
 import com.inventory.model.TransactionHistory;
-import com.inventory.util.AlertUtil;
-import com.inventory.util.TableFreezeManager;
+import com.inventory.util.*;
+//import com.inventory.util.TableFreezeManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
@@ -32,6 +32,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 import java.util.concurrent.Executors;
@@ -43,7 +44,6 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import com.inventory.util.ExportUtil;
 import javafx.util.Pair;
 import org.controlsfx.control.table.TableFilter;
 
@@ -183,6 +183,9 @@ public class DashboardController {
     @FXML
     private MenuItem restoreDatabase;
 
+    @FXML
+    private TableColumn<TransactionHistory, Void> attachmentColumn;
+
 
     private ObservableList<TransactionHistory> masterData;
     private FilteredList<TransactionHistory> filteredData;
@@ -200,13 +203,16 @@ public class DashboardController {
     private boolean lastConnectionState = false;
     private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
     private TableFreezeManager<TransactionHistory> freezeManager;
+    private TableColumnFreezer<TransactionHistory> columnFreezer;
     private BorderPane rootPane;
     private TableFilter<TransactionHistory> tableFilter;
     private final Map<String, Set<String>> activeFilters = new HashMap<>();
+    private FilteredList<TransactionHistory> filterPipeline;
 
     @FXML
     public void initialize() {
         freezeManager = new TableFreezeManager<>(historyTable);
+
 
         Platform.runLater(() -> {
             rootPane = (BorderPane) historyTable.getScene().getRoot();
@@ -1150,7 +1156,6 @@ public class DashboardController {
         });
 
         returnedColumn.setCellValueFactory(cellData -> {
-
             TransactionHistory history = cellData.getValue();
             // If item was bought → show --
             if ("Buy".equalsIgnoreCase(history.getBuySell())) {
@@ -1169,11 +1174,39 @@ public class DashboardController {
             );
         });
 
+        attachmentColumn.setCellFactory(col -> new TableCell<>() {
+            private final Button btn = new Button();
+            {
+                btn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                btn.setOnAction(e -> {
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+                    handleAttachment(row);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
+                TransactionHistory history =
+                        getTableView().getItems().get(getIndex());
+                if (history.getAttachmentFile() == null ||
+                        history.getAttachmentFile().isBlank()) {
+                    btn.setText("📎 Attach"); // upload icon
+                } else {
+                    btn.setText("👁 View"); // view icon
+                }
+                setGraphic(btn);
+            }
+        });
+
         // 🔹 Search
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
-
             if (filteredData == null) return;
-
             filteredData.setPredicate(history -> {
                 if (newValue == null || newValue.isBlank()) {
                     return true;
@@ -1217,17 +1250,28 @@ public class DashboardController {
             });
         });
 
-//        updateConnectionStatus();
+//        masterData = FXCollections.observableArrayList();
+//        filteredData = new FilteredList<>(masterData, p -> true);
+//
+//        SortedList<TransactionHistory> sortedData =
+//                new SortedList<>(filteredData);
+//
+//        sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
+//
+//        historyTable.setItems(sortedData);
 
         masterData = FXCollections.observableArrayList();
-        filteredData = new FilteredList<>(masterData, p -> true);
+
+        filterPipeline = new FilteredList<>(masterData, p -> true);
 
         SortedList<TransactionHistory> sortedData =
-                new SortedList<>(filteredData);
+                new SortedList<>(filterPipeline);
 
         sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
 
         historyTable.setItems(sortedData);
+        columnFreezer = new TableColumnFreezer<>(historyTable);
+
         loadHistory();
 
         Platform.runLater(() -> {
@@ -1273,7 +1317,7 @@ public class DashboardController {
 
     @FXML
     private void handleRefresh() {
-        captureFilters();
+//        captureFilters();
         runDbTask(this::loadHistory);
     }
 
@@ -1524,123 +1568,457 @@ public class DashboardController {
         });
     }
 
-    @FXML
-    private void handleFreezeColumns() {
+//    @FXML
+//    private void handleFreezeColumns() {
+//
+//        TextInputDialog dialog = new TextInputDialog("2");
+//        dialog.setTitle("Freeze Columns");
+//        dialog.setHeaderText("Freeze first N columns");
+//
+//        dialog.showAndWait().ifPresent(input -> {
+//
+//            try {
+//
+//                int count = Integer.parseInt(input);
+//
+//                int totalColumns = historyTable.getColumns().size();
+//
+//                if (count <= 0 || count >= totalColumns) {
+//                    throw new IllegalArgumentException();
+//                }
+//                logTableState("BEFORE FREEZE");
+//                captureFilters();
+//                SplitPane pane = freezeManager.freezeColumns(count);
+//                VBox.setVgrow(pane, Priority.ALWAYS);
+//
+//                VBox centerBox = (VBox) rootPane.getCenter();
+//
+//                int tableIndex = centerBox.getChildren().indexOf(historyTable);
+//
+//                if (tableIndex == -1) {
+//                    tableIndex = centerBox.getChildren().size() - 1;
+//                }
+//
+//                centerBox.getChildren().set(tableIndex, pane);
+//                logTableState("AFTER FREEZE BEFORE FILTER REBUILD");
+////                Platform.runLater(() -> {
+////                    tableFilter = TableFilter.forTableView(historyTable).apply();
+////                    restoreFilters();
+////                });
+//                Platform.runLater(this::rebuildTableFilter);
+//
+//
+//                columnsFrozen = true;
+//                exportExcelButton.setDisable(columnsFrozen);
+//                exportPDFButton.setDisable(columnsFrozen);
+//                addTransactionButton.setDisable(columnsFrozen);
+//                freezeColumnsMenuItem.setDisable(true);
+//                unfreezeColumnsMenuItem.setDisable(false);
+//
+//            } catch (NumberFormatException e) {
+//
+//                Alert alert = new Alert(Alert.AlertType.ERROR);
+//                alert.setContentText("Please enter a valid number.");
+//                alert.show();
+//
+//            } catch (IllegalArgumentException e) {
+//
+//                Alert alert = new Alert(Alert.AlertType.ERROR);
+//                alert.setContentText("Invalid number of columns.");
+//                alert.show();
+//
+//            }
+//        });
+//    }
 
-        TextInputDialog dialog = new TextInputDialog("2");
-        dialog.setTitle("Freeze Columns");
-        dialog.setHeaderText("Freeze first N columns");
+//@FXML
+//private void handleFreezeColumns() {
+//
+//    TextInputDialog dialog = new TextInputDialog("2");
+//    dialog.setTitle("Freeze Columns");
+//    dialog.setHeaderText("Freeze first N columns");
+//
+//    dialog.showAndWait().ifPresent(input -> {
+//
+//        try {
+//
+//            int count = Integer.parseInt(input);
+//
+//            if (count <= 0 || count >= historyTable.getColumns().size()) {
+//                throw new IllegalArgumentException();
+//            }
+//
+//            columnFreezer.freezeColumns(count);
+//
+//            columnsFrozen = true;
+//
+//            exportExcelButton.setDisable(true);
+//            exportPDFButton.setDisable(true);
+//            freezeColumnsMenuItem.setDisable(true);
+//            unfreezeColumnsMenuItem.setDisable(false);
+//
+//        } catch (Exception e) {
+//
+//            Alert alert = new Alert(Alert.AlertType.ERROR);
+//            alert.setContentText("Invalid column count.");
+//            alert.show();
+//        }
+//    });
+//}
 
-        dialog.showAndWait().ifPresent(input -> {
+@FXML
+private void handleFreezeColumns() {
 
-            try {
+    TextInputDialog dialog = new TextInputDialog("2");
+    dialog.setTitle("Freeze Columns");
+    dialog.setHeaderText("Freeze first N columns");
 
-                int count = Integer.parseInt(input);
+    dialog.showAndWait().ifPresent(input -> {
 
-                int totalColumns = historyTable.getColumns().size();
+        try {
 
-                if (count <= 0 || count >= totalColumns) {
-                    throw new IllegalArgumentException();
-                }
-                captureFilters();
-                SplitPane pane = freezeManager.freezeColumns(count);
-                VBox.setVgrow(pane, Priority.ALWAYS);
+            int count = Integer.parseInt(input);
 
-                VBox centerBox = (VBox) rootPane.getCenter();
+            SplitPane pane = freezeManager.freezeColumns(count);
 
-                int tableIndex = centerBox.getChildren().indexOf(historyTable);
+            VBox centerBox = (VBox) rootPane.getCenter();
 
-                if (tableIndex == -1) {
-                    tableIndex = centerBox.getChildren().size() - 1;
-                }
+            int tableIndex = centerBox.getChildren().indexOf(historyTable);
 
-                centerBox.getChildren().set(tableIndex, pane);
+            centerBox.getChildren().set(tableIndex, pane);
 
-                Platform.runLater(() -> {
-                    tableFilter = TableFilter.forTableView(historyTable).apply();
-                    restoreFilters();
-                });
+            columnsFrozen = true;
 
-                columnsFrozen = true;
-                exportExcelButton.setDisable(columnsFrozen);
-                exportPDFButton.setDisable(columnsFrozen);
-                addTransactionButton.setDisable(columnsFrozen);
-                freezeColumnsMenuItem.setDisable(true);
-                unfreezeColumnsMenuItem.setDisable(false);
+            exportExcelButton.setDisable(true);
+            exportPDFButton.setDisable(true);
 
-            } catch (NumberFormatException e) {
+            freezeColumnsMenuItem.setDisable(true);
+            unfreezeColumnsMenuItem.setDisable(false);
 
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setContentText("Please enter a valid number.");
-                alert.show();
+        } catch (Exception e) {
 
-            } catch (IllegalArgumentException e) {
-
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setContentText("Invalid number of columns.");
-                alert.show();
-
-            }
-        });
-    }
-
-    @FXML
-    private void handleUnfreezeColumns() {
-
-        freezeManager.restoreOriginalTable();
-
-        VBox centerBox = (VBox) rootPane.getCenter();
-
-        int paneIndex = centerBox.getChildren().size() - 1;
-
-        centerBox.getChildren().set(paneIndex, historyTable);
-
-        columnsFrozen = false;
-        exportExcelButton.setDisable(columnsFrozen);
-        exportPDFButton.setDisable(columnsFrozen);
-        freezeColumnsMenuItem.setDisable(false);
-        unfreezeColumnsMenuItem.setDisable(true);
-
-        Platform.runLater(() -> {
-            tableFilter = TableFilter.forTableView(historyTable).apply();
-            restoreFilters();   // reload saved filters if any
-        });
-    }
-
-    @FXML
-    private void handleResetFilters() {
-        if (tableFilter == null) return;
-        tableFilter.getColumnFilters().forEach(columnFilter -> {
-            columnFilter.selectAllValues();   // select all values
-        });
-        tableFilter.executeFilter();
-        historyTable.refresh();
-        // remove saved preferences
-        tableFilter.getColumnFilters().forEach(columnFilter -> {
-            String columnId = columnFilter.getTableColumn().getId();
-            if (columnId == null) return;
-            prefs.remove("filter_" + columnId);
-        });
-    }
-
-private void loadHistory() {
-
-    if (!DBConnection.isDatabaseSet()) {
-        return;
-    }
-
-    List<TransactionHistory> data = transactionDAO.getAllTransactions();
-
-    Platform.runLater(() -> {
-        masterData.setAll(data);
-
-        if (tableFilter != null) {
-            tableFilter.executeFilter();
+            new Alert(Alert.AlertType.ERROR, "Invalid column count").show();
         }
-
-        historyTable.refresh();
     });
 }
+
+//    @FXML
+//    private void handleUnfreezeColumns() {
+//        logTableState("BEFORE UNFREEZE");
+//        captureFilters();
+//        freezeManager.restoreOriginalTable();
+//
+//        VBox centerBox = (VBox) rootPane.getCenter();
+//
+//        int paneIndex = centerBox.getChildren().size() - 1;
+//
+//        centerBox.getChildren().set(paneIndex, historyTable);
+//
+//        columnsFrozen = false;
+//        exportExcelButton.setDisable(columnsFrozen);
+//        exportPDFButton.setDisable(columnsFrozen);
+//        freezeColumnsMenuItem.setDisable(false);
+//        unfreezeColumnsMenuItem.setDisable(true);
+//        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
+////        Platform.runLater(() -> {
+////            tableFilter = TableFilter.forTableView(historyTable).apply();
+////            restoreFilters();   // reload saved filters if any
+////        });
+//        Platform.runLater(this::rebuildTableFilter);
+//    }
+
+//@FXML
+//private void handleUnfreezeColumns() {
+//
+//    columnFreezer.unfreezeColumns();
+//
+//    columnsFrozen = false;
+//
+//    exportExcelButton.setDisable(false);
+//    exportPDFButton.setDisable(false);
+//
+//    freezeColumnsMenuItem.setDisable(false);
+//    unfreezeColumnsMenuItem.setDisable(true);
+//
+//    historyTable.refresh();
+//}
+
+@FXML
+private void handleUnfreezeColumns() {
+
+    freezeManager.restoreOriginalTable();
+
+    VBox centerBox = (VBox) rootPane.getCenter();
+
+    int paneIndex = centerBox.getChildren().size() - 1;
+
+    centerBox.getChildren().set(paneIndex, historyTable);
+
+    columnsFrozen = false;
+
+    exportExcelButton.setDisable(false);
+    exportPDFButton.setDisable(false);
+
+    freezeColumnsMenuItem.setDisable(false);
+    unfreezeColumnsMenuItem.setDisable(true);
+}
+
+//    @FXML
+//    private void handleResetFilters() {
+//        if (tableFilter == null) return;
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            columnFilter.selectAllValues();   // select all values
+//        });
+//        tableFilter.executeFilter();
+//        historyTable.refresh();
+//        // remove saved preferences
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            String columnId = columnFilter.getTableColumn().getId();
+//            if (columnId == null) return;
+//            prefs.remove("filter_" + columnId);
+//        });
+//    }
+
+//    @FXML
+//    private void handleResetFilters() {
+//        if (tableFilter == null) return;
+//        tableFilter.getColumnFilters().forEach(columnFilter ->
+//                columnFilter.selectAllValues()
+//        );
+//        tableFilter.executeFilter();
+//        activeFilters.clear();
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            String columnId = columnFilter.getTableColumn().getId();
+//            if (columnId != null) {
+//                prefs.remove("filter_" + columnId);
+//            }
+//        });
+//        loadHistory();   // 🔥 critical
+//    }
+
+//    @FXML
+//    private void handleResetFilters() {
+//
+//        if (tableFilter == null) return;
+//
+//        filteredData.setPredicate(p -> true);
+//
+//        tableFilter.getColumnFilters().forEach(columnFilter ->
+//                columnFilter.selectAllValues());
+//
+//        tableFilter.executeFilter();
+//
+//        activeFilters.clear();
+//
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            String columnId = columnFilter.getTableColumn().getId();
+//            if (columnId != null) {
+//                prefs.remove("filter_" + columnId);
+//            }
+//        });
+//
+//        loadHistory();
+//    }
+
+//    @FXML
+//    private void handleResetFilters() {
+//
+//        if (tableFilter == null) return;
+//
+//        tableFilter.getColumnFilters().forEach(cf -> cf.selectAllValues());
+//
+//        tableFilter.executeFilter();
+//
+//        historyTable.refresh();
+//
+//        activeFilters.clear();
+//
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            String columnId = columnFilter.getTableColumn().getId();
+//            if (columnId != null) {
+//                prefs.remove("filter_" + columnId);
+//            }
+//        });
+//    }
+
+//    @FXML
+//    private void handleResetFilters() {
+//
+//        if (tableFilter == null) return;
+//
+//        tableFilter.getColumnFilters().forEach(cf ->
+//                cf.selectAllValues());
+//
+//        tableFilter.executeFilter();
+//
+//        historyTable.refresh();
+//
+//        activeFilters.clear();
+//
+//        tableFilter.getColumnFilters().forEach(cf -> {
+//            String columnId = cf.getTableColumn().getId();
+//            if (columnId != null) {
+//                prefs.remove("filter_" + columnId);
+//            }
+//        });
+//    }
+
+    @FXML
+    private void handleResetFilters() throws BackingStoreException {
+
+        if (tableFilter == null) return;
+
+        tableFilter.getColumnFilters().forEach(cf ->
+                cf.selectAllValues());
+
+        tableFilter.executeFilter();
+
+        prefs.clear();
+    }
+
+//    private void rebuildFilters() {
+//        if (tableFilter != null) {
+//            tableFilter = null;
+//        }
+//        Platform.runLater(() -> {
+//            tableFilter = TableFilter.forTableView(historyTable).apply();
+//            restoreFilters();
+//        });
+//    }
+
+//    private void rebuildFilters() {
+//
+//        if (tableFilter != null) {
+//            tableFilter = null;
+//        }
+//
+//        Platform.runLater(() -> {
+//
+//            historyTable.refresh();
+//
+//            tableFilter = TableFilter.forTableView(historyTable).apply();
+//
+//            restoreFilters();
+//        });
+//    }
+
+//    private void rebuildFilters() {
+//
+//        Platform.runLater(() -> {
+//
+//            // reset predicate so full dataset is visible
+//            filteredData.setPredicate(p -> true);
+//
+//            historyTable.setItems(masterData);
+//
+//            historyTable.refresh();
+//
+//            tableFilter = TableFilter.forTableView(historyTable).apply();
+//
+//            restoreFilters();
+//
+//            // restore filtered + sorted pipeline
+//            SortedList<TransactionHistory> sortedData =
+//                    new SortedList<>(filteredData);
+//
+//            sortedData.comparatorProperty()
+//                    .bind(historyTable.comparatorProperty());
+//
+//            historyTable.setItems(sortedData);
+//        });
+//    }
+
+//    private void rebuildFilter() {
+//
+//        if (tableFilter != null) {
+//            saveFilters();   // persist current selections
+//        }
+//
+//        historyTable.refresh();
+//
+//        tableFilter = TableFilter.forTableView(historyTable).apply();
+//
+//        restoreFilters();
+//
+//        tableFilter.executeFilter();
+//    }
+
+//    private void rebuildFilter() {
+//
+//        if (tableFilter != null) {
+//            captureFilters();   // save current filter state
+//        }
+//
+//        historyTable.refresh();
+//
+////        tableFilter = TableFilter.forTableView(historyTable).apply();
+//
+//        restoreFilters();
+//
+//        tableFilter.executeFilter();
+//    }
+
+//private void rebuildTableFilter() {
+//    logTableState("BEFORE REBUILD");
+//    historyTable.refresh();
+//
+//    tableFilter = TableFilter.forTableView(historyTable).apply();
+//
+//    restoreFilters();
+//
+//    tableFilter.executeFilter();
+//    logTableState("AFTER REBUILD");
+//}
+
+//private void rebuildTableFilter() {
+//
+//    logTableState("BEFORE REBUILD");
+//
+//    // temporarily show full dataset
+//    filterPipeline.setPredicate(p -> true);
+//
+//    historyTable.refresh();
+//
+//    tableFilter = TableFilter.forTableView(historyTable).apply();
+//
+//    // restore previous filters
+//    restoreFilters();
+//
+//    tableFilter.executeFilter();
+//
+//    logTableState("AFTER REBUILD");
+//}
+
+private void rebuildTableFilter() {
+
+    logTableState("BEFORE REBUILD");
+
+//    tableFilter = TableFilter.forTableView(historyTable).apply();
+    TableView<TransactionHistory> targetTable =
+            columnsFrozen ? freezeManager.getScrollTable() : historyTable;
+
+    tableFilter = TableFilter.forTableView(targetTable).apply();
+
+    restoreFilters();
+
+    tableFilter.executeFilter();
+
+    logTableState("AFTER REBUILD");
+}
+
+    private void loadHistory() {
+        if (!DBConnection.isDatabaseSet()) {
+            return;
+        }
+        List<TransactionHistory> data = transactionDAO.getAllTransactions();
+        Platform.runLater(() -> {
+            masterData.setAll(data);
+            if (tableFilter != null) {
+                tableFilter.executeFilter();
+            }
+            historyTable.refresh();
+        });
+    }
 
     private void openItemHistoryPage(String itemId, String itemName) {
 
@@ -2144,9 +2522,9 @@ private void loadHistory() {
 
     public void saveColumnOrder() {
 
-        if (columnsFrozen) {
-            freezeManager.restoreOriginalTable();
-        }
+//        if (columnsFrozen) {
+//            freezeManager.restoreOriginalTable();
+//        }
 
         StringBuilder order = new StringBuilder();
 
@@ -2171,7 +2549,9 @@ private void loadHistory() {
 
             if (columnId.equals("serialColumn")
                     || columnId.equals("actionColumn")
-                    || columnId.equals("deleteColumn")) {
+                    || columnId.equals("deleteColumn")
+                    || columnId.equals("attachmentColumn")
+            ) {
                 return;
             }
 
@@ -2201,6 +2581,13 @@ private void loadHistory() {
 
             String columnId = columnFilter.getTableColumn().getId();
             if (columnId == null) return;
+            if (columnId.equals("serialColumn")
+                    || columnId.equals("actionColumn")
+                    || columnId.equals("deleteColumn")
+                    || columnId.equals("attachmentColumn")
+            ) {
+                return;
+            }
 
             String saved = prefs.get("filter_" + columnId, null);
             if (saved == null) return;
@@ -2222,8 +2609,16 @@ private void loadHistory() {
 
         tableFilter.getColumnFilters().forEach(columnFilter -> {
 
+
             String columnId = columnFilter.getTableColumn().getId();
             if (columnId == null) return;
+            if (columnId.equals("serialColumn")
+                    || columnId.equals("actionColumn")
+                    || columnId.equals("deleteColumn")
+                    || columnId.equals("attachmentColumn")
+            ) {
+                return;
+            }
 
             Set<String> selected = columnFilter.getFilterValues().stream()
                     .filter(v -> v.selectedProperty().get())
@@ -2231,6 +2626,8 @@ private void loadHistory() {
                     .collect(Collectors.toSet());
 
             activeFilters.put(columnId, selected);
+            System.out.println("Capturing filters for column: " + columnId);
+            System.out.println("Selected values: " + selected);
 
             prefs.put("filter_" + columnId, String.join("|", selected));
         });
@@ -2270,6 +2667,95 @@ private void loadHistory() {
         if (connectionScheduler != null && !connectionScheduler.isShutdown()) {
             connectionScheduler.shutdownNow();
         }
+    }
 
+    private void handleAttachment(TransactionHistory history) {
+        String storagePath = AppConfig.getAttachmentPath();
+        if (storagePath == null || storagePath.isBlank()) {
+            StoragePathDialog.show(
+                    (Stage) historyTable.getScene().getWindow()
+            );
+            return;
+        }
+        try {
+            if (history.getAttachmentFile() == null ||
+                    history.getAttachmentFile().isBlank()) {
+                uploadAttachment(history, storagePath);
+            } else {
+                viewAttachment(history, storagePath);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            AlertUtil.showError("Error", "Unable to process attachment");
+        }
+    }
+
+    private void uploadAttachment(TransactionHistory history, String storagePath) throws Exception {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select Attachment");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PDF", "*.pdf"),
+                new FileChooser.ExtensionFilter("Images", "*.png","*.jpg","*.jpeg")
+        );
+        File file = chooser.showOpenDialog(historyTable.getScene().getWindow());
+        if (file == null) return;
+        if (file.length() > 204800) {
+            AlertUtil.showError("File Too Large", "Max size allowed is 200KB");
+            return;
+        }
+        String extension =
+                file.getName().substring(file.getName().lastIndexOf("."));
+        String newName =
+                history.getTransactionId() + "_" +
+                        System.currentTimeMillis() + extension;
+        File target = new File(
+                storagePath + File.separator +
+                        "transactions" + File.separator + newName
+        );
+        java.nio.file.Files.copy(file.toPath(), target.toPath());
+        transactionDAO.updateAttachment(
+                history.getTransactionId(),
+                newName
+        );
+        loadHistory();
+    }
+
+    private void viewAttachment(TransactionHistory history, String storagePath) throws Exception {
+        File file = new File(
+                storagePath + File.separator +
+                        "transactions" + File.separator +
+                        history.getAttachmentFile()
+        );
+        if (!file.exists()) {
+            AlertUtil.showError("File Missing", "Attachment not found.");
+            return;
+        }
+        java.awt.Desktop.getDesktop().open(file);
+    }
+
+    private void logTableState(String stage) {
+
+        System.out.println("\n========== " + stage + " ==========");
+
+        System.out.println("MasterData size: " + masterData.size());
+
+        System.out.println("TableView items size: " + historyTable.getItems().size());
+
+        if (tableFilter != null) {
+            tableFilter.getColumnFilters().forEach(cf -> {
+
+                String col = cf.getTableColumn().getId();
+
+                var values = cf.getFilterValues().stream()
+                        .map(v -> v.getValue().toString())
+                        .toList();
+
+                System.out.println("Column: " + col);
+                System.out.println("Available values: " + values);
+
+            });
+        }
+
+        System.out.println("====================================\n");
     }
 }
