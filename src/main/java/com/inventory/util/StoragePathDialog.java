@@ -16,8 +16,6 @@ import java.nio.file.Path;
 
 public class StoragePathDialog {
 
-    private static final String CHANGE_PATH_PASSWORD = "admin123";
-
     public static void show(Stage owner) {
 
         Stage stage = new Stage();
@@ -274,7 +272,7 @@ public class StoragePathDialog {
         });
         String result = dialog.showAndWait().orElse(null);
         if (result == null) return false;
-        if (!CHANGE_PATH_PASSWORD.equals(result)) {
+        if (!AppConfig.getAdminPasswordHash().equals(result)) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Access Denied");
             alert.setContentText("Incorrect password");
