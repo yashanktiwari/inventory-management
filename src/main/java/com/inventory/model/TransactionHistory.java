@@ -31,9 +31,6 @@ public class TransactionHistory {
 
     private String status;
 
-//    private String issuedDateTime;
-//    private String returnedDateTime;
-
     private LocalDateTime issuedDateTime;
     private LocalDateTime returnedDateTime;
 

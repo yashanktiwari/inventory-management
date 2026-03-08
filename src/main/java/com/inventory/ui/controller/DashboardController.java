@@ -1204,74 +1204,6 @@ public class DashboardController {
                  new SimpleStringProperty(
                         data.getValue().getLastModifiedBy()
                 ));
-//        auditColumn.setCellFactory(col -> new TableCell<>() {
-//
-//            private final Tooltip tooltip = new Tooltip();
-//
-//            @Override
-//            protected void updateItem(String user, boolean empty) {
-//
-//                super.updateItem(user, empty);
-//
-//                if (empty || user == null) {
-//                    setText(null);
-//                    setTooltip(null);
-//                    return;
-//                }
-//
-//                setText(user + " ⓘ");
-//
-//                TransactionHistory transaction =
-//                        getTableView().getItems().get(getIndex());
-//
-//                if (transaction.getAuditEntries() == null) {
-//                    return;
-//                }
-//
-//                StringBuilder auditText = new StringBuilder();
-//
-//                Map<String, List<AuditEntry>> grouped = new LinkedHashMap<>();
-//
-//                // Group entries by user + timestamp
-//                for (AuditEntry entry : transaction.getAuditEntries()) {
-//
-//                    String key = entry.getModifiedBy() + "|" + entry.getModifiedAt();
-//
-//                    grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
-//                }
-//
-//                // Build tooltip text
-//                for (List<AuditEntry> group : grouped.values()) {
-//
-//                    AuditEntry first = group.get(0);
-//
-//                    auditText.append(first.getModifiedBy())
-//                            .append(" | ")
-//                            .append(first.getModifiedAt().format(formatter))
-//                            .append("\n");
-//
-//                    for (AuditEntry e : group) {
-//
-//                        auditText.append(e.getFieldName())
-//                                .append(" : ")
-//                                .append(e.getOldValue())
-//                                .append(" → ")
-//                                .append(e.getNewValue())
-//                                .append("\n");
-//                    }
-//
-//                    auditText.append("\n");
-//                }
-//
-//                tooltip.setText(auditText.toString());
-//                tooltip.setWrapText(true);
-//                tooltip.setMaxWidth(500);
-//                tooltip.setStyle("-fx-font-size: 14px;");
-//
-//                setTooltip(tooltip);
-//            }
-//        });
-
         auditColumn.setCellFactory(col -> new TableCell<>() {
 
             private final Tooltip tooltip = new Tooltip();
@@ -2039,34 +1971,6 @@ public class DashboardController {
             historyTable.refresh();
         });
     }
-
-//    private void openItemHistoryPage(String itemId, String itemName) {
-//
-//        try {
-//            FXMLLoader loader = new FXMLLoader(
-//                    getClass().getResource("/fxml/item-history.fxml")
-//            );
-//
-//            Parent root = loader.load();
-//
-//            ItemHistoryController controller = loader.getController();
-//            controller.loadItemHistory(itemId, itemName);
-//
-//            Stage stage = new Stage();
-//            stage.setTitle("Item History");
-//
-//            Scene scene = new Scene(root, 1200, 650); // fixed window size
-//            scene.getRoot().disableProperty().bind(
-//                    ConnectionState.connectedProperty().not()
-//            );
-//            stage.setScene(scene);
-//            stage.setResizable(true);
-//            stage.show();
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
 
     private void openHistoryPage(String field, String value, String title) {
         try {
