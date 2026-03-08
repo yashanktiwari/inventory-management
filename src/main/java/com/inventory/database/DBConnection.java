@@ -60,7 +60,7 @@ public class DBConnection {
         String url = "jdbc:mysql://" + host + ":" + port + "/" + databaseName
                 + "?useSSL=false"
                 + "&allowPublicKeyRetrieval=true"
-                + "&serverTimezone=UTC"
+                + "&serverTimezone=Asia/Kolkata"
                 + "&connectTimeout=2000"
                 + "&socketTimeout=2000";
 
@@ -115,47 +115,60 @@ public class DBConnection {
                 """;
 
             String createTransactionsTable = """
-CREATE TABLE IF NOT EXISTS transactions (
+                CREATE TABLE IF NOT EXISTS transactions (
 
-    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+                transaction_id INT AUTO_INCREMENT PRIMARY KEY,
 
-    buy_sell VARCHAR(50),
-    plant VARCHAR(100),
-    department VARCHAR(100),
-    location VARCHAR(100),
+                buy_sell VARCHAR(50),
+                plant VARCHAR(100),
+                department VARCHAR(100),
+                location VARCHAR(100),
+            
+                employee_id VARCHAR(100),
+                employee_name VARCHAR(255),
+            
+                ip_address VARCHAR(100),
+            
+                item_code VARCHAR(100),
+                item_name VARCHAR(255),
+                item_make VARCHAR(255),
+                item_model VARCHAR(255),
+                item_serial VARCHAR(255),
 
-    employee_id VARCHAR(100),
-    employee_name VARCHAR(255),
+                item_count DOUBLE,
+                unit VARCHAR(50),
+            
+                imei_no VARCHAR(100),
+                sim_no VARCHAR(100),
+            
+                po_no VARCHAR(100),
+                party_name VARCHAR(255),
+            
+                status VARCHAR(50),
+            
+                issued_datetime DATETIME,
+                returned_datetime DATETIME,
+            
+                remarks TEXT
+            )
+            """;
 
-    ip_address VARCHAR(100),
-
-    item_code VARCHAR(100),
-    item_name VARCHAR(255),
-    item_make VARCHAR(255),
-    item_model VARCHAR(255),
-    item_serial VARCHAR(255),
-
-    item_count DOUBLE,
-    unit VARCHAR(50),
-
-    imei_no VARCHAR(100),
-    sim_no VARCHAR(100),
-
-    po_no VARCHAR(100),
-    party_name VARCHAR(255),
-
-    status VARCHAR(50),
-
-    issued_datetime DATETIME,
-    returned_datetime DATETIME,
-
-    remarks TEXT
-)
-""";
+            String createAuditTable = """
+                CREATE TABLE IF NOT EXISTS transaction_audit (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    transaction_id INT NOT NULL,
+                    modified_by VARCHAR(255),
+                    modified_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    field_name VARCHAR(100),
+                    old_value TEXT,
+                    new_value TEXT
+                )
+            """;
 
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
             stmt.execute(createTransactionsTable);
+            stmt.execute(createAuditTable);
             try {
                 stmt.execute("ALTER TABLE transactions ADD COLUMN item_count DOUBLE");
             } catch (SQLException ignored) {}

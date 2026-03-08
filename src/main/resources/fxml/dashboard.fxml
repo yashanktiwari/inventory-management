@@ -105,6 +105,7 @@
                         <TableColumn fx:id="deleteColumn" text="Delete" prefWidth="100"/>
 
                         <TableColumn fx:id="attachmentColumn" text="Attachment" prefWidth="90"/>
+                        <TableColumn fx:id="auditColumn" text="Last Modified" prefWidth="140"/>
 
                     </columns>
                 </TableView>

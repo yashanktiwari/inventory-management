@@ -133,8 +133,35 @@ public class AddTransactionController {
         String status = statusBox.getValue();
         String remarks = remarksField.getText();
 
-        String itemCount = itemCountField.getText();
+        String itemCountText = itemCountField.getText();
+        java.math.BigDecimal itemCount;
+
+        try {
+            itemCount = new java.math.BigDecimal(itemCountText.trim());
+        } catch (NumberFormatException e) {
+            AlertUtil.showError("Validation Error", "Invalid item count value.");
+            return;
+        }
+
+        if (itemCount.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            AlertUtil.showError("Validation Error", "Item count cannot be negative.");
+            return;
+        }
+
+        if (itemCount.compareTo(new java.math.BigDecimal("99999999.99")) > 0) {
+            AlertUtil.showError("Validation Error",
+                    "Item count exceeds maximum allowed value (99,999,999.99).");
+            return;
+        }
+
+        if (itemCount.scale() > 2) {
+            AlertUtil.showError("Validation Error",
+                    "Item count can have maximum 2 decimal places.");
+            return;
+        }
         String unit = unitComboBox.getValue();
+
+
 
         int transactionId = transactionDAO.createTransaction(
                 buySell,
@@ -155,7 +182,7 @@ public class AddTransactionController {
                 party,
                 status,
                 remarks,
-                itemCount,
+                itemCountText,
                 unit
         );
         saveAttachment(transactionId);
