@@ -36,6 +36,8 @@ public class TransactionHistory {
     private Double itemCount;
     private String unit;
 
+    private String attachmentFile;
+
     public TransactionHistory(
             int transactionId,
             String buySell,
@@ -59,7 +61,8 @@ public class TransactionHistory {
             String returnedDateTime,
             String remarks,
             Double itemCount,
-            String unit
+            String unit,
+            String attachmentFile
     ) {
 
         this.transactionId = transactionId;
@@ -95,6 +98,8 @@ public class TransactionHistory {
 
         this.itemCount = itemCount;
         this.unit = unit;
+
+        this.attachmentFile = attachmentFile;
     }
 
     public int getTransactionId() { return transactionId; }
@@ -130,4 +135,6 @@ public class TransactionHistory {
 
     public Double getItemCount() { return itemCount; }
     public String getUnit() { return unit; }
+
+    public String getAttachmentFile() { return attachmentFile; }
 }

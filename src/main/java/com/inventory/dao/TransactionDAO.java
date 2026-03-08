@@ -15,7 +15,7 @@ public class TransactionDAO {
     }
 
     // 🔹 Insert Transaction
-    public void createTransaction(
+    public int createTransaction(
             String buySell,
             String plant,
             String department,
@@ -66,7 +66,10 @@ public class TransactionDAO {
         """;
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(
+                     sql,
+                     Statement.RETURN_GENERATED_KEYS
+             )) {
 
             pstmt.setString(1, buySell);
             pstmt.setString(2, plant);
@@ -106,9 +109,18 @@ public class TransactionDAO {
 
             pstmt.executeUpdate();
 
+            ResultSet rs = pstmt.getGeneratedKeys();
+
+            if (rs.next()) {
+                System.out.println("Transaction ID = " + rs.getInt(1));
+                return rs.getInt(1);
+            }
+
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return -1;
     }
 
     // 🔹 Get All Transactions
@@ -123,7 +135,10 @@ public class TransactionDAO {
                 """;
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
+             PreparedStatement pstmt = conn.prepareStatement(
+                     sql,
+                     Statement.RETURN_GENERATED_KEYS
+             );
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
@@ -171,7 +186,8 @@ public class TransactionDAO {
                         safe(rs.getString("remarks")),
 
                         itemCount,
-                        safe(rs.getString("unit"))
+                        safe(rs.getString("unit")),
+                        safe(rs.getString("attachment_file"))
                 );
 
                 historyList.add(history);
@@ -248,7 +264,86 @@ public class TransactionDAO {
                         safe(rs.getString("remarks")),
 
                         itemCount,
-                        safe(rs.getString("unit"))
+                        safe(rs.getString("unit")),
+                        safe(rs.getString("attachment_file"))
+                );
+
+                historyList.add(history);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return historyList;
+    }
+
+    // Get Transactions by field name
+    public List<TransactionHistory> getTransactionsByField(String fieldName, String value) {
+
+        List<TransactionHistory> historyList = new ArrayList<>();
+
+        String sql = """
+            SELECT *
+            FROM transactions
+            WHERE %s = ?
+            ORDER BY issued_datetime DESC
+            """.formatted(fieldName);
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, value);
+
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                String issued = issuedTs != null ? issuedTs.toString() : null;
+                String returned = returnedTs != null ? returnedTs.toString() : null;
+
+                double itemCount = rs.getDouble("item_count");
+                if (rs.wasNull()) itemCount = 0;
+
+                TransactionHistory history = new TransactionHistory(
+
+                        rs.getInt("transaction_id"),
+
+                        safe(rs.getString("buy_sell")),
+                        safe(rs.getString("plant")),
+                        safe(rs.getString("department")),
+                        safe(rs.getString("location")),
+
+                        safe(rs.getString("employee_id")),
+                        safe(rs.getString("employee_name")),
+
+                        safe(rs.getString("ip_address")),
+
+                        safe(rs.getString("item_code")),
+                        safe(rs.getString("item_name")),
+                        safe(rs.getString("item_make")),
+                        safe(rs.getString("item_model")),
+                        safe(rs.getString("item_serial")),
+
+                        safe(rs.getString("imei_no")),
+                        safe(rs.getString("sim_no")),
+
+                        safe(rs.getString("po_no")),
+                        safe(rs.getString("party_name")),
+
+                        safe(rs.getString("status")),
+
+                        issued,
+                        returned,
+
+                        safe(rs.getString("remarks")),
+
+                        itemCount,
+                        safe(rs.getString("unit")),
+                        safe(rs.getString("attachment_file"))
                 );
 
                 historyList.add(history);
@@ -296,6 +391,32 @@ public class TransactionDAO {
             pstmt.executeUpdate();
 
         } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateTransactionStatus(int transactionId, String status, String remarks) {
+        String sql = "UPDATE transactions SET status = ?, remarks = ? WHERE transaction_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            stmt.setString(2, remarks);
+            stmt.setInt(3, transactionId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateAttachment(int transactionId, String fileName) {
+        String sql =
+                "UPDATE transactions SET attachment_file=? WHERE transaction_id=?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fileName);
+            ps.setInt(2, transactionId);
+            ps.executeUpdate();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

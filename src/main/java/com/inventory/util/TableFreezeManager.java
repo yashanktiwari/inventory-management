@@ -86,7 +86,8 @@ public class TableFreezeManager<T> {
 
         syncVerticalScroll();
 
-        frozenTable.setStyle("-fx-padding: 0; -fx-border-right: 1px solid #cccccc;");
+        frozenTable.setStyle("-fx-padding: 0; -fx-border-width: 0 1 0 0;\n" +
+                "-fx-border-color: transparent #cccccc transparent transparent;");
         scrollTable.setStyle("-fx-padding: 0;");
 
         VBox leftBox = new VBox(frozenTable);
@@ -200,5 +201,13 @@ public class TableFreezeManager<T> {
         clone.setReorderable(false);
 
         return clone;
+    }
+
+    public TableView<T> getScrollTable() {
+        return scrollTable;
+    }
+
+    public TableView<T> getFrozenTable() {
+        return frozenTable;
     }
 }

@@ -82,9 +82,23 @@
             <Label text="Status:" GridPane.rowIndex="17"/>
             <ComboBox fx:id="statusBox" GridPane.rowIndex="17" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
-            <Label text="Remarks:" GridPane.rowIndex="18"/>
+            <Label text="Attachment:" GridPane.rowIndex="18"/>
+            <HBox spacing="10" GridPane.rowIndex="18" GridPane.columnIndex="1">
+                <TextField fx:id="attachmentField"
+                           promptText="No file selected"
+                           editable="false"
+                           prefWidth="250"/>
+
+                <Button text="Browse"
+                        onAction="#handleBrowseAttachment"/>
+
+                <Button text="Clear"
+                        onAction="#handleClearAttachment"/>
+            </HBox>
+
+            <Label text="Remarks:" GridPane.rowIndex="19"/>
             <TextArea fx:id="remarksField" prefRowCount="3"
-                      GridPane.rowIndex="18" GridPane.columnIndex="1"/>
+                      GridPane.rowIndex="19" GridPane.columnIndex="1"/>
 
         </GridPane>
 

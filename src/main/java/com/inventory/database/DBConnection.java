@@ -164,6 +164,11 @@ CREATE TABLE IF NOT EXISTS transactions (
                 stmt.execute("ALTER TABLE transactions ADD COLUMN unit VARCHAR(50)");
             } catch (SQLException ignored) {}
 
+            try {
+                stmt.execute("ALTER TABLE transactions\n" +
+                        "    ADD COLUMN attachment_file VARCHAR(255)");
+            } catch (SQLException ignored) {}
+
             System.out.println("MySQL database initialized successfully.");
 
         } catch (SQLException e) {

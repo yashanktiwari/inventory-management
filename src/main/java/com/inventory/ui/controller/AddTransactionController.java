@@ -3,15 +3,20 @@ package com.inventory.ui.controller;
 import com.inventory.dao.ItemDAO;
 import com.inventory.dao.PersonDAO;
 import com.inventory.dao.TransactionDAO;
+import com.inventory.database.AppConfig;
 import com.inventory.model.Item;
 import com.inventory.model.Person;
+import com.inventory.util.AlertUtil;
+import com.inventory.util.StoragePathDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 
+import java.io.File;
 import java.util.List;
 import java.util.Objects;
 
@@ -47,7 +52,9 @@ public class AddTransactionController {
     @FXML private TextField itemCountField;
     @FXML private ComboBox<String> unitComboBox;
 
+    @FXML private TextField attachmentField;
 
+    private File selectedAttachment;
     private ObservableList<String> masterItemList;
     private Popup suggestionsPopup;
     private ListView<String> suggestionsListView;
@@ -129,7 +136,7 @@ public class AddTransactionController {
         String itemCount = itemCountField.getText();
         String unit = unitComboBox.getValue();
 
-        new Thread(() -> transactionDAO.createTransaction(
+        int transactionId = transactionDAO.createTransaction(
                 buySell,
                 plant,
                 department,
@@ -150,13 +157,57 @@ public class AddTransactionController {
                 remarks,
                 itemCount,
                 unit
-        ));
-
+        );
+        saveAttachment(transactionId);
         closeWindow();
     }
 
-    // ================= AUTOCOMPLETE =================
+    // ================= CANCEL ================
+    @FXML
+    private void handleCancel() {
+        closeWindow();
+    }
 
+    // ================= BROWSE ATTACHMENT ============
+    @FXML
+    private void handleBrowseAttachment() {
+        String path = AppConfig.getAttachmentPath();
+        if (path == null || path.isBlank()) {
+            StoragePathDialog.show(
+                    (Stage) attachmentField.getScene().getWindow()
+            );
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select Attachment");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf"),
+                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg")
+        );
+        File file = chooser.showOpenDialog(
+                attachmentField.getScene().getWindow()
+        );
+        if (file == null) return;
+        if (file.length() > 204800) {
+            AlertUtil.showError(
+                    "File Too Large",
+                    "Maximum allowed size is 200KB"
+            );
+            return;
+        }
+        selectedAttachment = file;
+        attachmentField.setText(file.getName());
+    }
+
+    // ================ CLEAR ATTACHMENT ==============
+    @FXML
+    private void handleClearAttachment() {
+
+        selectedAttachment = null;
+        attachmentField.clear();
+    }
+
+    // ================= AUTOCOMPLETE =================
     private void setupAutoComplete() {
 
         suggestionsPopup = new Popup();
@@ -268,20 +319,46 @@ public class AddTransactionController {
         itemNameField.requestFocus();
     }
 
-    // ================= UTIL =================
+    private void saveAttachment(int transactionId) {
 
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.NONE);
-        alert.setTitle("Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.getButtonTypes().setAll(ButtonType.OK);
-        alert.showAndWait();
-    }
+        if (selectedAttachment == null) return;
 
-    @FXML
-    private void handleCancel() {
-        closeWindow();
+        try {
+
+            String storagePath = AppConfig.getAttachmentPath();
+
+            String extension =
+                    selectedAttachment.getName()
+                            .substring(selectedAttachment.getName().lastIndexOf("."));
+
+            String timestamp =
+                    java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+            String newName =
+                    transactionId + "_" + timestamp + extension;
+
+            File target = new File(
+                    storagePath + File.separator +
+                            "transactions" + File.separator + newName
+            );
+
+            java.nio.file.Files.copy(
+                    selectedAttachment.toPath(),
+                    target.toPath()
+            );
+
+            transactionDAO.updateAttachment(transactionId, newName);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            AlertUtil.showError(
+                    "Attachment Error",
+                    "Transaction saved but attachment failed."
+            );
+        }
     }
 
     private void closeWindow() {

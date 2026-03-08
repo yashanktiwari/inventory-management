@@ -99,6 +99,8 @@
                         <TableColumn fx:id="actionColumn" text="Update Status" prefWidth="140"/>
                         <TableColumn fx:id="deleteColumn" text="Delete" prefWidth="100"/>
 
+                        <TableColumn fx:id="attachmentColumn" text="Attachment" prefWidth="90"/>
+
                     </columns>
                 </TableView>
             </VBox>

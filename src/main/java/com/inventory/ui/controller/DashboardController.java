@@ -5,7 +5,7 @@ import com.inventory.database.AppConfig;
 import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
 import com.inventory.model.TransactionHistory;
-import com.inventory.util.AlertUtil;
+import com.inventory.util.*;
 import com.inventory.util.TableFreezeManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -43,7 +43,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import com.inventory.util.ExportUtil;
+import javafx.util.Pair;
 import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
@@ -142,14 +142,12 @@ public class DashboardController {
     @FXML
     private TableColumn<TransactionHistory, Void> deleteColumn;
 
-
     // 🔹 Connection Status
     @FXML
     private javafx.scene.shape.Circle statusDot;
 
     @FXML
     private Label statusLabel;
-
 
     // 🔹 Buttons
     @FXML
@@ -182,9 +180,11 @@ public class DashboardController {
     @FXML
     private MenuItem restoreDatabase;
 
+    @FXML
+    private TableColumn<TransactionHistory, Void> attachmentColumn;
+
 
     private ObservableList<TransactionHistory> masterData;
-    private FilteredList<TransactionHistory> filteredData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
     private ScheduledExecutorService connectionScheduler;
     private final DateTimeFormatter formatter =
@@ -201,11 +201,14 @@ public class DashboardController {
     private TableFreezeManager<TransactionHistory> freezeManager;
     private BorderPane rootPane;
     private TableFilter<TransactionHistory> tableFilter;
+    private TableFilter<TransactionHistory> frozenTableFilter;
     private final Map<String, Set<String>> activeFilters = new HashMap<>();
+    private FilteredList<TransactionHistory> filterPipeline;
 
     @FXML
     public void initialize() {
         freezeManager = new TableFreezeManager<>(historyTable);
+
 
         Platform.runLater(() -> {
             rootPane = (BorderPane) historyTable.getScene().getRoot();
@@ -213,6 +216,7 @@ public class DashboardController {
             restoreColumnOrder();
         });
 
+        historyTable.setFixedCellSize(28);
         historyTable.getColumns().addListener(
                 (javafx.collections.ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
                     if (!columnsFrozen) {
@@ -225,75 +229,109 @@ public class DashboardController {
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
 
-                    private final Button updateBtn = new Button("Update");
+            private final Button updateBtn = new Button("Update");
 
-                    {
-                        updateBtn.setOnAction(event -> {
+            {
+                updateBtn.setOnAction(event -> {
 
-                            TransactionHistory history =
-                                    getTableView().getItems().get(getIndex());
+                    TransactionHistory history =
+                            getTableView().getItems().get(getIndex());
 
-                            if (!"Sell".equalsIgnoreCase(history.getBuySell())) {
-                                return;
-                            }
-
-                            ChoiceDialog<String> dialog =
-                                    new ChoiceDialog<>("Returned", "Returned", "Scrap");
-
-                            dialog.setTitle("Update Status");
-                            dialog.setHeaderText("Select new status");
-
-                            Optional<String> result = dialog.showAndWait();
-
-                            result.ifPresent(status -> {
-
-                                transactionDAO.updateTransactionStatus(
-                                        history.getTransactionId(),
-                                        status
-                                );
-
-                                loadHistory();
-                            });
-                        });
+                    if (!"Sell".equalsIgnoreCase(history.getBuySell())) {
+                        return;
                     }
 
-                    @Override
-                    protected void updateItem(Void item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty) {
-                            setGraphic(null);
-                            return;
-                        }
-                        TransactionHistory history =
-                                getTableView().getItems().get(getIndex());
+                    Dialog<Pair<String, String>> dialog = new Dialog<>();
+                    dialog.setTitle("Update Status");
+                    dialog.setHeaderText("Update status and remarks");
 
-                        String buySell = history.getBuySell();
-                        String status = history.getStatus();
-                        // BUY → always disabled
-                        if ("Buy".equalsIgnoreCase(buySell)) {
-                            updateBtn.setDisable(true);
-                            updateBtn.setText("In Stock");
+                    ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
+                    dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
 
+                    ChoiceBox<String> statusChoice = new ChoiceBox<>();
+                    statusChoice.getItems().addAll("Returned", "Scrap");
+
+                    // Set current status from DB
+                    statusChoice.setValue(history.getStatus());
+
+                    TextArea remarksArea = new TextArea();
+
+                    // Pre-fill remarks from DB
+                    remarksArea.setText(history.getRemarks());
+                    remarksArea.setPrefRowCount(3);
+                    remarksArea.setPromptText("Enter remarks");
+
+                    VBox content = new VBox(10,
+                            new Label("Status"),
+                            statusChoice,
+                            new Label("Remarks"),
+                            remarksArea
+                    );
+
+                    dialog.getDialogPane().setContent(content);
+
+                    dialog.setResultConverter(dialogButton -> {
+                        if (dialogButton == updateButtonType) {
+                            return new Pair<>(statusChoice.getValue(), remarksArea.getText());
                         }
-                        // SELL → depends on status
-                        else if ("Sell".equalsIgnoreCase(buySell)) {
-                            if ("Issued".equalsIgnoreCase(status)) {
-                                updateBtn.setDisable(false);
-                                updateBtn.setText("Issued");
-                            } else if ("Returned".equalsIgnoreCase(status)) {
-                                updateBtn.setDisable(true);
-                                updateBtn.setText("Returned");
-                            } else if ("Scrap".equalsIgnoreCase(status) || "Scrapped".equalsIgnoreCase(status)) {
-                                updateBtn.setDisable(true);
-                                updateBtn.setText("Scrapped");
-                            } else {
-                                updateBtn.setDisable(true);
-                                updateBtn.setText(status);
-                            }
-                        }
-                        setGraphic(updateBtn);
-                    }
+                        return null;
+                    });
+
+                    Optional<Pair<String, String>> result = dialog.showAndWait();
+
+                    result.ifPresent(pair -> {
+
+                        String status = pair.getKey();
+                        String remarks = pair.getValue();
+
+                        transactionDAO.updateTransactionStatus(
+                                history.getTransactionId(),
+                                status,
+                                remarks
+                        );
+
+                        loadHistory();
+                    });
                 });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
+                TransactionHistory history =
+                        getTableView().getItems().get(getIndex());
+
+                String buySell = history.getBuySell();
+                String status = history.getStatus();
+                // BUY → always disabled
+                if ("Buy".equalsIgnoreCase(buySell)) {
+                    updateBtn.setDisable(true);
+                    updateBtn.setText("In Stock");
+
+                }
+                // SELL → depends on status
+                else if ("Sell".equalsIgnoreCase(buySell)) {
+                    if ("Issued".equalsIgnoreCase(status)) {
+                        updateBtn.setDisable(false);
+                        updateBtn.setText("Issued");
+                    } else if ("Returned".equalsIgnoreCase(status)) {
+                        updateBtn.setDisable(true);
+                        updateBtn.setText("Returned");
+                    } else if ("Scrap".equalsIgnoreCase(status) || "Scrapped".equalsIgnoreCase(status)) {
+                        updateBtn.setDisable(true);
+                        updateBtn.setText("Scrapped");
+                    } else {
+                        updateBtn.setDisable(true);
+                        updateBtn.setText(status);
+                    }
+                }
+                setGraphic(updateBtn);
+            }
+        });
 
         deleteColumn.setCellFactory(param -> new TableCell<>() {
             private final Button deleteButton = new Button("Delete");
@@ -375,13 +413,274 @@ public class DashboardController {
         });
 
         plantColumn.setCellValueFactory(new PropertyValueFactory<>("plant"));
+        plantColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "plant",
+                            row.getPlant(),
+                            row.getPlant()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
+        departmentColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "department",
+                            row.getDepartment(),
+                            row.getDepartment()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         locationColumn.setCellValueFactory(new PropertyValueFactory<>("location"));
+        locationColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "location",
+                            row.getLocation(),
+                            row.getLocation()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+        employeeIdColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "employee_id",
+                            row.getEmployeeId(),
+                            row.getEmployeeId()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
+        employeeNameColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "employee_name",
+                            row.getEmployeeName(),
+                            row.getEmployeeName()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         ipAddressColumn.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));
+        ipAddressColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "ip_address",
+                            row.getIpAddress(),
+                            row.getIpAddress()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         itemCodeColumn.setCellValueFactory(new PropertyValueFactory<>("itemCode"));
         itemCodeColumn.setCellFactory(column -> new TableCell<>() {
@@ -389,53 +688,365 @@ public class DashboardController {
             private final Hyperlink link = new Hyperlink();
 
             {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
                 link.setOnAction(event -> {
-                    TransactionHistory history =
+
+                    TransactionHistory row =
                             getTableView().getItems().get(getIndex());
 
-                    openItemHistoryPage(
-                            history.getItemCode(),
-                            history.getItemName()
+                    openHistoryPage(
+                            "item_code",
+                            row.getItemCode(),
+                            row.getItemCode()
                     );
                 });
 
-                // change color automatically when row selection changes
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (newRow != null) {
                         link.textFillProperty().bind(
                                 javafx.beans.binding.Bindings.when(newRow.selectedProperty())
                                         .then(javafx.scene.paint.Color.WHITE)
-                                        .otherwise(javafx.scene.paint.Color.web("#0078d7"))
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
                         );
                     }
                 });
             }
 
             @Override
-            protected void updateItem(String itemCode, boolean empty) {
+            protected void updateItem(String ip, boolean empty) {
 
-                super.updateItem(itemCode, empty);
+                super.updateItem(ip, empty);
 
-                if (empty || itemCode == null) {
+                if (empty || ip == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(itemCode);
+                    link.setText(ip);
                     setGraphic(link);
                 }
             }
         });
+
         itemNameColumn.setCellValueFactory(new PropertyValueFactory<>("itemName"));
+        itemNameColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_name",
+                            row.getItemName(),
+                            row.getItemName()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
+        itemMakeColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_make",
+                            row.getItemMake(),
+                            row.getItemMake()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
+        itemModelColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_model",
+                            row.getItemModel(),
+                            row.getItemModel()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemSerialColumn.setCellValueFactory(new PropertyValueFactory<>("itemSerial"));
+        itemSerialColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_serial",
+                            row.getItemSerial(),
+                            row.getItemSerial()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
         unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));
 
         imeiColumn.setCellValueFactory(new PropertyValueFactory<>("imeiNo"));
+        imeiColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "imei_no",
+                            row.getImeiNo(),
+                            row.getImeiNo()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
+
         simColumn.setCellValueFactory(new PropertyValueFactory<>("simNo"));
+        simColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "sim_no",
+                            row.getSimNo(),
+                            row.getSimNo()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         poColumn.setCellValueFactory(new PropertyValueFactory<>("poNo"));
+
         partyColumn.setCellValueFactory(new PropertyValueFactory<>("partyName"));
+        partyColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "party_name",
+                            row.getPartyName(),
+                            row.getPartyName()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusColumn.setCellFactory(column -> new TableCell<>() {
@@ -472,6 +1083,56 @@ public class DashboardController {
         });
 
         remarksColumn.setCellValueFactory(new PropertyValueFactory<>("remarks"));
+        remarksColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Label textLabel = new Label();
+            private final Label iconLabel = new Label("ⓘ");   // info icon
+            private final Tooltip tooltip = new Tooltip();
+            private final HBox container = new HBox(5);
+
+            {
+                textLabel.setMaxWidth(Double.MAX_VALUE);
+                textLabel.setWrapText(false);
+                textLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+
+                iconLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
+                iconLabel.setVisible(false);
+
+                tooltip.setWrapText(true);
+                tooltip.setMaxWidth(400);
+                tooltip.setStyle("-fx-font-size:14px; -fx-padding:8px;");
+
+                HBox.setHgrow(textLabel, Priority.ALWAYS);
+                container.getChildren().addAll(textLabel, iconLabel);
+                container.setAlignment(Pos.CENTER_LEFT);
+            }
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null || value.isBlank()) {
+                    setGraphic(null);
+                    setTooltip(null);
+                    return;
+                }
+
+                textLabel.setText(value);
+                tooltip.setText(value);
+
+                // show icon only if text is long
+                if (value.length() > 25) {
+                    iconLabel.setVisible(true);
+                    setTooltip(tooltip);
+                } else {
+                    iconLabel.setVisible(false);
+                    setTooltip(null);
+                }
+
+                setGraphic(container);
+            }
+        });
 
         // 🔹 Date Formatting
         issuedColumn.setCellValueFactory(cellData -> {
@@ -491,7 +1152,6 @@ public class DashboardController {
         });
 
         returnedColumn.setCellValueFactory(cellData -> {
-
             TransactionHistory history = cellData.getValue();
             // If item was bought → show --
             if ("Buy".equalsIgnoreCase(history.getBuySell())) {
@@ -510,12 +1170,40 @@ public class DashboardController {
             );
         });
 
+        attachmentColumn.setCellFactory(col -> new TableCell<>() {
+            private final Button btn = new Button();
+            {
+                btn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                btn.setOnAction(e -> {
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+                    handleAttachment(row);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
+                TransactionHistory history =
+                        getTableView().getItems().get(getIndex());
+                if (history.getAttachmentFile() == null ||
+                        history.getAttachmentFile().isBlank()) {
+                    btn.setText("📎 Attach"); // upload icon
+                } else {
+                    btn.setText("👁 View"); // view icon
+                }
+                setGraphic(btn);
+            }
+        });
+
         // 🔹 Search
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
-
-            if (filteredData == null) return;
-
-            filteredData.setPredicate(history -> {
+            if (filterPipeline == null) return;
+            filterPipeline.setPredicate(history -> {
                 if (newValue == null || newValue.isBlank()) {
                     return true;
                 }
@@ -558,17 +1246,17 @@ public class DashboardController {
             });
         });
 
-//        updateConnectionStatus();
-
         masterData = FXCollections.observableArrayList();
-        filteredData = new FilteredList<>(masterData, p -> true);
+
+        filterPipeline = new FilteredList<>(masterData, p -> true);
 
         SortedList<TransactionHistory> sortedData =
-                new SortedList<>(filteredData);
+                new SortedList<>(filterPipeline);
 
         sortedData.comparatorProperty().bind(historyTable.comparatorProperty());
 
         historyTable.setItems(sortedData);
+
         loadHistory();
 
         Platform.runLater(() -> {
@@ -614,7 +1302,7 @@ public class DashboardController {
 
     @FXML
     private void handleRefresh() {
-        captureFilters();
+//        captureFilters();
         runDbTask(this::loadHistory);
     }
 
@@ -883,7 +1571,16 @@ public class DashboardController {
                 if (count <= 0 || count >= totalColumns) {
                     throw new IllegalArgumentException();
                 }
+                logTableState("BEFORE FREEZE");
                 captureFilters();
+
+                if(tableFilter != null) {
+                    tableFilter.getColumnFilters().forEach(cf -> cf.selectAllValues());
+                    tableFilter.executeFilter();
+                }
+
+                // Reset filterPipeline to show all data temporarily
+                filterPipeline.setPredicate(p -> true);
                 SplitPane pane = freezeManager.freezeColumns(count);
                 VBox.setVgrow(pane, Priority.ALWAYS);
 
@@ -896,16 +1593,13 @@ public class DashboardController {
                 }
 
                 centerBox.getChildren().set(tableIndex, pane);
+                Platform.runLater(this::rebuildTableFilter);
 
-                Platform.runLater(() -> {
-                    tableFilter = TableFilter.forTableView(historyTable).apply();
-                    restoreFilters();
-                });
 
                 columnsFrozen = true;
-                exportExcelButton.setDisable(columnsFrozen);
-                exportPDFButton.setDisable(columnsFrozen);
-                addTransactionButton.setDisable(columnsFrozen);
+                exportExcelButton.setDisable(true);
+                exportPDFButton.setDisable(true);
+                addTransactionButton.setDisable(true);
                 freezeColumnsMenuItem.setDisable(true);
                 unfreezeColumnsMenuItem.setDisable(false);
 
@@ -927,7 +1621,8 @@ public class DashboardController {
 
     @FXML
     private void handleUnfreezeColumns() {
-
+        logTableState("BEFORE UNFREEZE");
+        captureFilters();
         freezeManager.restoreOriginalTable();
 
         VBox centerBox = (VBox) rootPane.getCenter();
@@ -941,41 +1636,98 @@ public class DashboardController {
         exportPDFButton.setDisable(columnsFrozen);
         freezeColumnsMenuItem.setDisable(false);
         unfreezeColumnsMenuItem.setDisable(true);
-
-        Platform.runLater(() -> {
-            tableFilter = TableFilter.forTableView(historyTable).apply();
-            restoreFilters();   // reload saved filters if any
-        });
+        logTableState("AFTER UNFREEZE BEFORE FILTER REBUILD");
+        Platform.runLater(this::rebuildTableFilter);
     }
 
     @FXML
     private void handleResetFilters() {
         if (tableFilter == null) return;
+
+        // Reset table filter
         tableFilter.getColumnFilters().forEach(columnFilter -> {
-            columnFilter.selectAllValues();   // select all values
+            columnFilter.selectAllValues();
         });
         tableFilter.executeFilter();
+
+        if(columnsFrozen) {
+            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+            if(scrollTable != null && frozenTable != null) {
+                Platform.runLater(() -> {
+                    frozenTable.setItems(scrollTable.getItems());
+                });
+            }
+        }
+
         historyTable.refresh();
-        // remove saved preferences
+
+        // Remove saved preferences
         tableFilter.getColumnFilters().forEach(columnFilter -> {
-            String columnId = columnFilter.getTableColumn().getId();
-            if (columnId == null) return;
-            prefs.remove("filter_" + columnId);
+                String columnId = columnFilter.getTableColumn().getId();
+                if (columnId == null) return;
+                prefs.remove("filter_" + columnId);
+            });
+    }
+
+    private void rebuildFilters() {
+        if (tableFilter != null) {
+            tableFilter = null;
+        }
+        Platform.runLater(() -> {
+            tableFilter = TableFilter.forTableView(historyTable).apply();
+            restoreFilters();
         });
     }
 
-private void loadHistory() {
+    private void rebuildTableFilter() {
+        logTableState("BEFORE REBUILD");
 
-    if (!DBConnection.isDatabaseSet()) {
-        return;
+        if (columnsFrozen) {
+            // Apply TableFilter only to scroll table
+            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+
+            if (scrollTable != null && frozenTable != null) {
+                // Apply filter to scroll table (right side with more columns)
+                tableFilter = TableFilter.forTableView(scrollTable).apply();
+
+                frozenTable.setItems(scrollTable.getItems());
+
+                // Restore saved filter state to both
+                restoreFilters();
+
+                // Execute filters on both tables
+                tableFilter.executeFilter();
+
+                Platform.runLater(() -> {
+                    frozenTable.setItems(scrollTable.getItems());
+                });
+            }
+        } else {
+            // Normal mode - single table
+            historyTable.refresh();
+            tableFilter = TableFilter.forTableView(historyTable).apply();
+            restoreFilters();
+            tableFilter.executeFilter();
+        }
+
+        logTableState("AFTER REBUILD");
     }
 
-    List<TransactionHistory> data = transactionDAO.getAllTransactions();
-
-    Platform.runLater(() -> {
-        masterData.setAll(data);
-    });
-}
+    private void loadHistory() {
+        if (!DBConnection.isDatabaseSet()) {
+            return;
+        }
+        List<TransactionHistory> data = transactionDAO.getAllTransactions();
+        Platform.runLater(() -> {
+            masterData.setAll(data);
+            if (tableFilter != null) {
+                tableFilter.executeFilter();
+            }
+            historyTable.refresh();
+        });
+    }
 
     private void openItemHistoryPage(String itemId, String itemName) {
 
@@ -998,6 +1750,28 @@ private void loadHistory() {
             );
             stage.setScene(scene);
             stage.setResizable(true);
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void openHistoryPage(String field, String value, String title) {
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/item-history.fxml")
+            );
+
+            Parent root = loader.load();
+
+            ItemHistoryController controller = loader.getController();
+            controller.loadHistory(field, value, title);
+
+            Stage stage = new Stage();
+            stage.setTitle("Transaction History");
+            stage.setScene(new Scene(root, 1200, 650));
             stage.show();
 
         } catch (Exception e) {
@@ -1099,7 +1873,11 @@ private void loadHistory() {
 
     private void startConnectionMonitor() {
 
-        connectionScheduler = Executors.newSingleThreadScheduledExecutor();
+        connectionScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setDaemon(true);
+            return t;
+        });
 
         connectionScheduler.scheduleAtFixedRate(() -> {
 
@@ -1453,10 +2231,6 @@ private void loadHistory() {
 
     public void saveColumnOrder() {
 
-        if (columnsFrozen) {
-            freezeManager.restoreOriginalTable();
-        }
-
         StringBuilder order = new StringBuilder();
 
         for (TableColumn<?, ?> column : historyTable.getColumns()) {
@@ -1480,7 +2254,9 @@ private void loadHistory() {
 
             if (columnId.equals("serialColumn")
                     || columnId.equals("actionColumn")
-                    || columnId.equals("deleteColumn")) {
+                    || columnId.equals("deleteColumn")
+                    || columnId.equals("attachmentColumn")
+            ) {
                 return;
             }
 
@@ -1510,6 +2286,13 @@ private void loadHistory() {
 
             String columnId = columnFilter.getTableColumn().getId();
             if (columnId == null) return;
+            if (columnId.equals("serialColumn")
+                    || columnId.equals("actionColumn")
+                    || columnId.equals("deleteColumn")
+                    || columnId.equals("attachmentColumn")
+            ) {
+                return;
+            }
 
             String saved = prefs.get("filter_" + columnId, null);
             if (saved == null) return;
@@ -1531,8 +2314,16 @@ private void loadHistory() {
 
         tableFilter.getColumnFilters().forEach(columnFilter -> {
 
+
             String columnId = columnFilter.getTableColumn().getId();
             if (columnId == null) return;
+            if (columnId.equals("serialColumn")
+                    || columnId.equals("actionColumn")
+                    || columnId.equals("deleteColumn")
+                    || columnId.equals("attachmentColumn")
+            ) {
+                return;
+            }
 
             Set<String> selected = columnFilter.getFilterValues().stream()
                     .filter(v -> v.selectedProperty().get())
@@ -1540,6 +2331,8 @@ private void loadHistory() {
                     .collect(Collectors.toSet());
 
             activeFilters.put(columnId, selected);
+            System.out.println("Capturing filters for column: " + columnId);
+            System.out.println("Selected values: " + selected);
 
             prefs.put("filter_" + columnId, String.join("|", selected));
         });
@@ -1579,6 +2372,95 @@ private void loadHistory() {
         if (connectionScheduler != null && !connectionScheduler.isShutdown()) {
             connectionScheduler.shutdownNow();
         }
+    }
 
+    private void handleAttachment(TransactionHistory history) {
+        String storagePath = AppConfig.getAttachmentPath();
+        if (storagePath == null || storagePath.isBlank()) {
+            StoragePathDialog.show(
+                    (Stage) historyTable.getScene().getWindow()
+            );
+            return;
+        }
+        try {
+            if (history.getAttachmentFile() == null ||
+                    history.getAttachmentFile().isBlank()) {
+                uploadAttachment(history, storagePath);
+            } else {
+                viewAttachment(history, storagePath);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            AlertUtil.showError("Error", "Unable to process attachment");
+        }
+    }
+
+    private void uploadAttachment(TransactionHistory history, String storagePath) throws Exception {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select Attachment");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PDF", "*.pdf"),
+                new FileChooser.ExtensionFilter("Images", "*.png","*.jpg","*.jpeg")
+        );
+        File file = chooser.showOpenDialog(historyTable.getScene().getWindow());
+        if (file == null) return;
+        if (file.length() > 204800) {
+            AlertUtil.showError("File Too Large", "Max size allowed is 200KB");
+            return;
+        }
+        String extension =
+                file.getName().substring(file.getName().lastIndexOf("."));
+        String newName =
+                history.getTransactionId() + "_" +
+                        System.currentTimeMillis() + extension;
+        File target = new File(
+                storagePath + File.separator +
+                        "transactions" + File.separator + newName
+        );
+        java.nio.file.Files.copy(file.toPath(), target.toPath());
+        transactionDAO.updateAttachment(
+                history.getTransactionId(),
+                newName
+        );
+        loadHistory();
+    }
+
+    private void viewAttachment(TransactionHistory history, String storagePath) throws Exception {
+        File file = new File(
+                storagePath + File.separator +
+                        "transactions" + File.separator +
+                        history.getAttachmentFile()
+        );
+        if (!file.exists()) {
+            AlertUtil.showError("File Missing", "Attachment not found.");
+            return;
+        }
+        java.awt.Desktop.getDesktop().open(file);
+    }
+
+    private void logTableState(String stage) {
+
+        System.out.println("\n========== " + stage + " ==========");
+
+        System.out.println("MasterData size: " + masterData.size());
+
+        System.out.println("TableView items size: " + historyTable.getItems().size());
+
+        if (tableFilter != null) {
+            tableFilter.getColumnFilters().forEach(cf -> {
+
+                String col = cf.getTableColumn().getId();
+
+                var values = cf.getFilterValues().stream()
+                        .map(v -> v.getValue().toString())
+                        .toList();
+
+                System.out.println("Column: " + col);
+                System.out.println("Available values: " + values);
+
+            });
+        }
+
+        System.out.println("====================================\n");
     }
 }

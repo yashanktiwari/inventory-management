@@ -69,4 +69,52 @@ public class AppConfig {
             return false;
         }
     }
+
+    public static void saveAttachmentPath(String path) {
+
+        try {
+            File folder = new File(CONFIG_FOLDER);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+
+            Properties props = new Properties();
+
+            File file = new File(CONFIG_FILE);
+            if (file.exists()) {
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    props.load(fis);
+                }
+            }
+
+            props.setProperty("attachment.path", path);
+
+            try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE)) {
+                props.store(fos, "Inventory Config");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String getAttachmentPath() {
+
+        try {
+            File file = new File(CONFIG_FILE);
+            if (!file.exists()) return null;
+
+            Properties props = new Properties();
+
+            try (FileInputStream fis = new FileInputStream(file)) {
+                props.load(fis);
+            }
+
+            return props.getProperty("attachment.path");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

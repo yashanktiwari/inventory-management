@@ -1,16 +1,16 @@
 package com.inventory;
 
-import com.inventory.database.AppConfig;
-import com.inventory.database.DBConnection;
-import com.inventory.ui.controller.DashboardController;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
+import javafx.application.Platform;
+import com.inventory.database.AppConfig;
+import com.inventory.database.DBConnection;
+import com.inventory.ui.controller.DashboardController;
+import com.inventory.util.StoragePathDialog;
 
-import java.io.File;
 
 public class MainApp extends Application {
     @Override
@@ -47,10 +47,18 @@ public class MainApp extends Application {
             if (controller != null) {
                 controller.saveFilters();
                 controller.saveColumnOrder();
+                controller.shutdownConnectionMonitor();
             }
         });
 
         stage.show();
+
+        Platform.runLater(() -> {
+            String attachmentPath = AppConfig.getAttachmentPath();
+            if (attachmentPath == null || attachmentPath.isBlank()) {
+                StoragePathDialog.show(stage);
+            }
+        });
     }
 
     public static void main(String[] args) {
