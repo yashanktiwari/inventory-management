@@ -1086,7 +1086,7 @@ public class DashboardController {
         remarksColumn.setCellFactory(column -> new TableCell<>() {
 
             private final Label textLabel = new Label();
-            private final Label iconLabel = new Label("ⓘ");   // info icon
+            private final Label iconLabel = new Label("‼");   // info icon
             private final Tooltip tooltip = new Tooltip();
             private final HBox container = new HBox(5);
 
@@ -1095,8 +1095,18 @@ public class DashboardController {
                 textLabel.setWrapText(false);
                 textLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
 
-                iconLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
-                iconLabel.setVisible(false);
+                iconLabel.setStyle("-fx-font-size: 12px;");
+                iconLabel.setVisible(true);
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        iconLabel.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
 
                 tooltip.setWrapText(true);
                 tooltip.setMaxWidth(400);
@@ -1175,9 +1185,23 @@ public class DashboardController {
             {
                 btn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
                 btn.setOnAction(e -> {
+
                     TransactionHistory row =
                             getTableView().getItems().get(getIndex());
-                    handleAttachment(row);
+
+                    Stage stage = (Stage) btn.getScene().getWindow();
+
+                    handleAttachment(row, stage);
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        btn.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
                 });
             }
 
@@ -1662,14 +1686,12 @@ public class DashboardController {
             });
     }
 
-    private void rebuildFilters() {
-        if (tableFilter != null) {
-            tableFilter = null;
-        }
-        Platform.runLater(() -> {
-            tableFilter = TableFilter.forTableView(historyTable).apply();
-            restoreFilters();
-        });
+    @FXML
+    private void handleChangeAttachmentPath() {
+
+        StoragePathDialog.show(
+                (Stage) historyTable.getScene().getWindow()
+        );
     }
 
     private void rebuildTableFilter() {
@@ -2355,18 +2377,16 @@ public class DashboardController {
         }
     }
 
-    private void handleAttachment(TransactionHistory history) {
+    private void handleAttachment(TransactionHistory history, Stage stage) {
         String storagePath = AppConfig.getAttachmentPath();
         if (storagePath == null || storagePath.isBlank()) {
-            StoragePathDialog.show(
-                    (Stage) historyTable.getScene().getWindow()
-            );
+            StoragePathDialog.show(stage);
             return;
         }
         try {
             if (history.getAttachmentFile() == null ||
                     history.getAttachmentFile().isBlank()) {
-                uploadAttachment(history, storagePath);
+                uploadAttachment(history, storagePath, stage);
             } else {
                 viewAttachment(history, storagePath);
             }
@@ -2376,14 +2396,15 @@ public class DashboardController {
         }
     }
 
-    private void uploadAttachment(TransactionHistory history, String storagePath) throws Exception {
+    private void uploadAttachment(TransactionHistory history, String storagePath, Stage stage) throws Exception {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select Attachment");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("PDF", "*.pdf"),
                 new FileChooser.ExtensionFilter("Images", "*.png","*.jpg","*.jpeg")
         );
-        File file = chooser.showOpenDialog(historyTable.getScene().getWindow());
+
+        File file = chooser.showOpenDialog(stage);
         if (file == null) return;
         if (file.length() > 204800) {
             AlertUtil.showError("File Too Large", "Max size allowed is 200KB");

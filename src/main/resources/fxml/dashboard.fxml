@@ -35,6 +35,11 @@
                               disable="true"/>
                 </Menu>
 
+                <Menu text="Settings">
+                    <MenuItem text="Change Attachment Path"
+                              onAction="#handleChangeAttachmentPath"/>
+                </Menu>
+
                 <Menu text="About">
                     <MenuItem text="About Application"
                               onAction="#handleAbout"/>
