@@ -15,12 +15,14 @@ import java.nio.file.Path;
 
 public class StoragePathDialog {
 
+    private static final String CHANGE_PATH_PASSWORD = "admin123";
+
     public static void show(Stage owner) {
 
         Stage stage = new Stage();
         stage.setTitle("Attachment Storage Setup");
         stage.initOwner(owner);
-        stage.initModality(Modality.NONE);
+        stage.initModality(Modality.WINDOW_MODAL);
 
         Label info = new Label(
                 "Please select the folder where transaction attachments will be stored.\n" +
@@ -29,6 +31,11 @@ public class StoragePathDialog {
 
         TextField pathField = new TextField();
         pathField.setPrefWidth(350);
+
+        String existingPath = AppConfig.getAttachmentPath();
+        if (existingPath != null && !existingPath.isBlank()) {
+            pathField.setText(existingPath);
+        }
 
         Button browseBtn = new Button("Browse");
 
@@ -81,34 +88,40 @@ public class StoragePathDialog {
         Button saveBtn = new Button("Save & Continue");
 
         saveBtn.setOnAction(e -> {
-
-            String path = pathField.getText();
-
+            String newPath = pathField.getText();
             try {
-
-                Path p = Path.of(path);
-
-                if (!Files.exists(p)) {
-                    Files.createDirectories(p);
+                Path newDir = Path.of(newPath);
+                if (!Files.exists(newDir)) {
+                    Files.createDirectories(newDir);
                 }
-
-                if (!Files.isWritable(p)) {
+                if (!Files.isWritable(newDir)) {
                     resultLabel.setText("Folder not writable");
                     return;
                 }
-
-                // create transactions folder
-                Files.createDirectories(p.resolve("transactions"));
-
-                AppConfig.saveAttachmentPath(path);
-
+                Path newTransactions =
+                        newDir.resolve("transactions");
+                Files.createDirectories(newTransactions);
+                String oldPath = AppConfig.getAttachmentPath();
+                if (oldPath != null && !oldPath.equals(newPath)) {
+                    if (!verifyPassword()) {
+                        return;
+                    }
+                    Path oldTransactions =
+                            Path.of(oldPath, "transactions");
+                    if (Files.exists(oldTransactions)) {
+                        migrateAttachments(
+                                stage,
+                                oldTransactions,
+                                newTransactions,
+                                newPath
+                        );
+                    }
+                }
+                AppConfig.saveAttachmentPath(newPath);
                 stage.close();
-
             } catch (Exception ex) {
-
                 resultLabel.setText("Unable to access path");
                 resultLabel.setStyle("-fx-text-fill:red;");
-
             }
 
         });
@@ -126,5 +139,113 @@ public class StoragePathDialog {
         stage.setScene(new Scene(root));
         stage.setWidth(500);
         stage.showAndWait();
+    }
+
+    private static void migrateAttachments(
+            Stage parentStage,
+            Path oldTransactions,
+            Path newTransactions,
+            String newPath
+    ) {
+        Stage progressStage = new Stage();
+        progressStage.setTitle("Migrating Attachments");
+        progressStage.initOwner(parentStage.getOwner());
+        progressStage.initModality(Modality.APPLICATION_MODAL);
+        ProgressBar progressBar = new ProgressBar(0);
+        progressBar.setPrefWidth(320);
+        Label statusLabel = new Label("Preparing migration...");
+        Button finishBtn = new Button("Finish");
+        finishBtn.setDisable(true);
+        VBox root = new VBox(15, statusLabel, progressBar, finishBtn);
+        root.setPadding(new Insets(20));
+        progressStage.setScene(new Scene(root, 380, 160));
+        progressStage.setAlwaysOnTop(true);
+        progressStage.show();
+        progressStage.requestFocus();
+        new Thread(() -> {
+            try {
+                var files = Files.list(oldTransactions).toList();
+                int total = files.size();
+                int count = 0;
+                if (total == 0) {
+                    javafx.application.Platform.runLater(() -> {
+                        progressBar.setProgress(1);
+                        statusLabel.setText("No attachments found.");
+                        finishBtn.setDisable(false);
+                    });
+                    return;
+                }
+                for (Path file : files) {
+                    Path target =
+                            newTransactions.resolve(file.getFileName());
+                    Files.copy(
+                            file,
+                            target,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                    );
+                    count++;
+                    double progress = (double) count / total;
+                    int current = count;
+                    // small animation delay like Windows
+                    try {
+                        Thread.sleep(40);
+                    } catch (InterruptedException ignored) {}
+                    javafx.application.Platform.runLater(() -> {
+                        progressBar.setProgress(progress);
+                        statusLabel.setText(
+                                "Copied " + current + " / " + total + " files"
+                        );
+                    });
+                }
+                javafx.application.Platform.runLater(() -> {
+                    progressBar.setProgress(1);
+                    statusLabel.setText("Migration completed successfully.");
+                    finishBtn.setDisable(false);
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                javafx.application.Platform.runLater(() -> {
+                    statusLabel.setText("Migration failed.");
+                    finishBtn.setDisable(false);
+                });
+            }
+        }).start();
+        finishBtn.setOnAction(e -> {
+            // Save new path only AFTER migration completes
+            AppConfig.saveAttachmentPath(newPath);
+            progressStage.close();
+            parentStage.close();
+        });
+    }
+
+    private static boolean verifyPassword() {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Authorization Required");
+        dialog.setHeaderText("Enter admin password");
+        ButtonType verifyBtn =
+                new ButtonType("Verify", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes()
+                .addAll(verifyBtn, ButtonType.CANCEL);
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Password");
+        VBox box = new VBox(10, passwordField);
+        box.setPadding(new Insets(15));
+        dialog.getDialogPane().setContent(box);
+        dialog.setResultConverter(btn -> {
+            if (btn == verifyBtn) {
+                return passwordField.getText();
+            }
+            return null;
+        });
+        String result = dialog.showAndWait().orElse(null);
+        if (result == null) return false;
+        if (!CHANGE_PATH_PASSWORD.equals(result)) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Access Denied");
+            alert.setContentText("Incorrect password");
+            alert.showAndWait();
+            return false;
+        }
+        return true;
     }
 }

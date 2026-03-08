@@ -22,6 +22,7 @@ public class TableFreezeManager<T> {
     private TableView<T> frozenTable;
     private TableView<T> scrollTable;
     private List<TableColumn<T, ?>> originalColumns;
+    private boolean syncingSort = false;
 
     public TableFreezeManager(TableView<T> table) {
         this.originalTable = table;
@@ -64,24 +65,60 @@ public class TableFreezeManager<T> {
             scrollTable.getColumns().add(cloneColumn(originalColumns.get(i)));
         }
 
+//        frozenTable.getSelectionModel().selectedIndexProperty().addListener((obs, o, n) -> {
+//            if (scrollTable.getSelectionModel().getSelectedIndex() != n.intValue()) {
+//                scrollTable.getSelectionModel().select(n.intValue());
+//            }
+//        });
+//
+//        scrollTable.getSelectionModel().selectedIndexProperty().addListener((obs, o, n) -> {
+//            if (frozenTable.getSelectionModel().getSelectedIndex() != n.intValue()) {
+//                frozenTable.getSelectionModel().select(n.intValue());
+//            }
+//        });
+//
+//        scrollTable.getSortOrder().addListener((javafx.collections.ListChangeListener<TableColumn<T, ?>>) change -> {
+//            frozenTable.getSortOrder().setAll(scrollTable.getSortOrder());
+//        });
+//
+//        frozenTable.getSortOrder().addListener((javafx.collections.ListChangeListener<TableColumn<T, ?>>) change -> {
+//            scrollTable.getSortOrder().setAll(frozenTable.getSortOrder());
+//        });
+
         frozenTable.getSelectionModel().selectedIndexProperty().addListener((obs, o, n) -> {
+
+            if (scrollTable == null || frozenTable == null) return;
+
             if (scrollTable.getSelectionModel().getSelectedIndex() != n.intValue()) {
                 scrollTable.getSelectionModel().select(n.intValue());
             }
         });
 
         scrollTable.getSelectionModel().selectedIndexProperty().addListener((obs, o, n) -> {
+
+            if (scrollTable == null || frozenTable == null) return;
+
             if (frozenTable.getSelectionModel().getSelectedIndex() != n.intValue()) {
                 frozenTable.getSelectionModel().select(n.intValue());
             }
         });
 
         scrollTable.getSortOrder().addListener((javafx.collections.ListChangeListener<TableColumn<T, ?>>) change -> {
+
+            if (syncingSort) return;
+
+            syncingSort = true;
             frozenTable.getSortOrder().setAll(scrollTable.getSortOrder());
+            syncingSort = false;
         });
 
         frozenTable.getSortOrder().addListener((javafx.collections.ListChangeListener<TableColumn<T, ?>>) change -> {
+
+            if (syncingSort) return;
+
+            syncingSort = true;
             scrollTable.getSortOrder().setAll(frozenTable.getSortOrder());
+            syncingSort = false;
         });
 
         syncVerticalScroll();
