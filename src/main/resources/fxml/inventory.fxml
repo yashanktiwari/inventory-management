@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.inventory.ui.controller.InventoryController"
+            style="-fx-background-color:#f4f6f8;">
+
+    <top>
+
+        <VBox spacing="10" style="-fx-padding:15">
+
+            <Label text="Inventory"
+                   style="-fx-font-size:20px; -fx-font-weight:bold;" />
+
+            <HBox spacing="20">
+
+                <VBox style="-fx-background-color:white; -fx-padding:15; -fx-background-radius:8;">
+                    <Label text="📦 Items in Inventory"/>
+                    <Label fx:id="totalItemsLabel"
+                           style="-fx-font-size:18px; -fx-font-weight:bold;" />
+                </VBox>
+
+            </HBox>
+
+        </VBox>
+
+    </top>
+
+    <center>
+
+        <VBox style="-fx-padding:15">
+
+            <TableView fx:id="inventoryTable">
+
+                <columns>
+
+                    <TableColumn fx:id="itemNameCol"
+                                 text="Item Name"
+                                 prefWidth="350" />
+
+                    <TableColumn fx:id="stockCol"
+                                 text="Quantity"
+                                 prefWidth="200" />
+
+                </columns>
+
+            </TableView>
+
+        </VBox>
+
+    </center>
+
+</BorderPane>

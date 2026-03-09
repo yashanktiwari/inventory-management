@@ -2,6 +2,7 @@ package com.inventory.dao;
 
 import com.inventory.database.DBConnection;
 import com.inventory.model.AuditEntry;
+import com.inventory.model.InventoryItem;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.UserUtil;
 
@@ -582,5 +583,184 @@ public class TransactionDAO {
                     String.valueOf(oldT.getItemCount()),
                     String.valueOf(newT.getItemCount()));
         }
+    }
+
+    public List<InventoryItem> getInventory() {
+
+        List<InventoryItem> inventory = new ArrayList<>();
+
+        String sql = """
+    SELECT 
+        item_name,
+        unit,
+        SUM(
+            CASE 
+                WHEN buy_sell = 'Buy' THEN item_count
+                ELSE -item_count
+            END
+        ) AS stock
+    FROM transactions
+    GROUP BY item_name, unit
+    HAVING stock > 0
+    ORDER BY item_name
+""";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                inventory.add(new InventoryItem(
+                        rs.getString("item_name"),
+                        rs.getDouble("stock"),
+                        rs.getString("unit")
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return inventory;
+    }
+
+    public String getUnitForItem(String itemName) {
+
+        String sql = """
+        SELECT unit
+        FROM transactions
+        WHERE item_name = ?
+        LIMIT 1
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("unit");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public double getCurrentStock(String itemName) {
+
+        String sql = """
+        SELECT
+        SUM(CASE WHEN buy_sell='Buy' THEN item_count ELSE 0 END) -
+        SUM(CASE WHEN buy_sell='Sell' THEN item_count ELSE 0 END) AS stock
+        FROM transactions
+        WHERE item_name = ?
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getDouble("stock");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    public List<TransactionHistory> getAvailableSerialItems(String itemName) {
+
+        List<TransactionHistory> list = new ArrayList<>();
+
+        String sql = """
+                SELECT
+                            item_serial,
+                            MAX(item_make) AS item_make,
+                            MAX(item_model) AS item_model,
+                            MAX(unit) AS unit,
+                            MIN(issued_datetime) AS issued_datetime,
+                            SUM(
+                                CASE
+                                    WHEN buy_sell='Buy' THEN item_count
+                                    ELSE -item_count
+                                END
+                            ) AS remaining_count
+                        FROM transactions
+                        WHERE item_name = ?
+                        AND item_serial IS NOT NULL
+                        GROUP BY item_serial
+                        HAVING remaining_count > 0
+                        ORDER BY issued_datetime
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+
+                LocalDateTime issued =
+                        issuedTs != null ? issuedTs.toLocalDateTime() : null;
+
+                TransactionHistory history = new TransactionHistory(
+
+                        0,                          // transaction_id (not needed here)
+
+                        "Buy",                      // buy_sell
+                        "", "", "",                 // plant, department, location
+                        "", "",                     // employee_id, employee_name
+                        "",                         // ip_address
+
+                        "",                         // item_code
+                        itemName,                   // item_name
+
+                        rs.getString("item_make"),
+                        rs.getString("item_model"),
+                        rs.getString("item_serial"),
+
+                        "", "",                     // imei_no, sim_no
+                        "", "",                     // po_no, party_name
+
+                        "",                         // status
+
+                        issued,
+                        null,
+
+                        "",                         // remarks
+
+                        rs.getDouble("remaining_count"),
+
+                        rs.getString("unit"),
+
+                        "",                         // attachment
+                        "",                         // lastModifiedBy
+                        new ArrayList<>()
+                );
+
+                list.add(history);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
     }
 }

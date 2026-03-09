@@ -161,7 +161,27 @@ public class AddTransactionController {
         }
         String unit = unitComboBox.getValue();
 
+        // Check whether the units for items match
+        String existingUnit = transactionDAO.getUnitForItem(itemName);
+        if (existingUnit != null && !existingUnit.equalsIgnoreCase(unit)) {
+            AlertUtil.showError(
+                    "Unit Mismatch",
+                    "This item already uses unit: " + existingUnit +
+                            "\nYou cannot change it to: " + unit
+            );
+            return;
+        }
 
+        if ("Sell".equalsIgnoreCase(buySell)) {
+            double currentStock = transactionDAO.getCurrentStock(itemName);
+            if (itemCount.doubleValue() > currentStock) {
+                AlertUtil.showError(
+                        "Stock Error",
+                        "Not enough inventory.\nAvailable stock: " + currentStock
+                );
+                return;
+            }
+        }
 
         int transactionId = transactionDAO.createTransaction(
                 buySell,

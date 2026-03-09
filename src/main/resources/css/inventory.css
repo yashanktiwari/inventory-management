@@ -1,0 +1,12 @@
+.table-view {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.table-view .column-header {
+    -fx-font-weight: bold;
+}
+
+.table-row-cell {
+    -fx-cell-size: 36px;
+}
