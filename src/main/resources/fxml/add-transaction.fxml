@@ -59,31 +59,39 @@
             <!-- NEW QUANTITY ROW -->
 
             <Label text="Quantity:" GridPane.rowIndex="12"/>
-
             <HBox spacing="10" GridPane.rowIndex="12" GridPane.columnIndex="1">
                 <TextField fx:id="itemCountField" prefWidth="120"/>
                 <ComboBox fx:id="unitComboBox" maxWidth="Infinity"/>
             </HBox>
 
+            <Label text="Transaction Date:" GridPane.rowIndex="13"/>
+            <HBox spacing="10" GridPane.rowIndex="13" GridPane.columnIndex="1">
+                <DatePicker fx:id="transactionDatePicker" prefWidth="150"/>
+                <Spinner fx:id="hourSpinner" prefWidth="70"/>
+                <Label text=":"/>
+                <Spinner fx:id="minuteSpinner" prefWidth="70"/>
+                <ComboBox fx:id="ampmBox" prefWidth="80"/>
+            </HBox>
+
             <!-- SHIFTED ROWS -->
 
-            <Label text="IMEI:" GridPane.rowIndex="13"/>
-            <TextField fx:id="imeiField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
+            <Label text="IMEI:" GridPane.rowIndex="14"/>
+            <TextField fx:id="imeiField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
 
-            <Label text="SIM No:" GridPane.rowIndex="14"/>
-            <TextField fx:id="simField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
+            <Label text="SIM No:" GridPane.rowIndex="15"/>
+            <TextField fx:id="simField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
 
-            <Label text="PO No:" GridPane.rowIndex="15"/>
-            <TextField fx:id="poField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
+            <Label text="PO No:" GridPane.rowIndex="16"/>
+            <TextField fx:id="poField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
 
-            <Label text="Party Name:" GridPane.rowIndex="16"/>
-            <TextField fx:id="partyField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
+            <Label text="Party Name:" GridPane.rowIndex="17"/>
+            <TextField fx:id="partyField" GridPane.rowIndex="17" GridPane.columnIndex="1"/>
 
-            <Label text="Status:" GridPane.rowIndex="17"/>
-            <ComboBox fx:id="statusBox" GridPane.rowIndex="17" GridPane.columnIndex="1" maxWidth="Infinity"/>
+            <Label text="Status:" GridPane.rowIndex="18"/>
+            <ComboBox fx:id="statusBox" GridPane.rowIndex="18" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
-            <Label text="Attachment:" GridPane.rowIndex="18"/>
-            <HBox spacing="10" GridPane.rowIndex="18" GridPane.columnIndex="1">
+            <Label text="Attachment:" GridPane.rowIndex="19"/>
+            <HBox spacing="10" GridPane.rowIndex="19" GridPane.columnIndex="1">
                 <TextField fx:id="attachmentField"
                            promptText="No file selected"
                            editable="false"
@@ -96,9 +104,9 @@
                         onAction="#handleClearAttachment"/>
             </HBox>
 
-            <Label text="Remarks:" GridPane.rowIndex="19"/>
+            <Label text="Remarks:" GridPane.rowIndex="20"/>
             <TextArea fx:id="remarksField" prefRowCount="3"
-                      GridPane.rowIndex="19" GridPane.columnIndex="1"/>
+                      GridPane.rowIndex="20" GridPane.columnIndex="1"/>
 
         </GridPane>
 

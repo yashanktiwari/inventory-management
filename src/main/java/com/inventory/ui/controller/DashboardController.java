@@ -199,8 +199,6 @@ public class DashboardController {
     private ScheduledExecutorService connectionScheduler;
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
-    private String mysqldumpPath;
-    private String mysqlPath;
     private final Preferences prefs =
             Preferences.userNodeForPackage(DashboardController.class);
     private boolean columnsFrozen = false;
@@ -216,8 +214,7 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
-        mysqldumpPath = AppConfig.getMysqlDumpPath();
-        mysqlPath = AppConfig.getMysqlPath();
+        historyTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 
         freezeManager = new TableFreezeManager<>(historyTable);
 
@@ -1465,6 +1462,18 @@ public class DashboardController {
             updateUIState(connected);
         });
 
+        historyTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+            Platform.runLater(() -> {
+                ScrollBar hBar =
+                        (ScrollBar) historyTable.lookup(".scroll-bar:horizontal");
+                if (hBar != null) {
+                    hBar.setDisable(false);
+                    hBar.setVisible(true);
+                    hBar.setManaged(true);
+                }
+            });
+        });
+
         updateUIState(ConnectionState.isConnected());
     }
 
@@ -2010,6 +2019,24 @@ public class DashboardController {
         stage.showAndWait();
     }
 
+    @FXML
+    public void handleOpenInventory() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/inventory.fxml")
+            );
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setTitle("Inventory");
+            stage.setScene(new Scene(root, 700, 600));
+            stage.initOwner(stage.getOwner());
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void rebuildTableFilter() {
         if (columnsFrozen) {
             // Apply TableFilter only to scroll table
@@ -2284,7 +2311,8 @@ public class DashboardController {
 
                 Platform.runLater(() -> historyTable.setDisable(true));
 
-                if (mysqldumpPath == null || !new File(mysqldumpPath).exists()) {
+                String mysqldumpPath = AppConfig.getMysqlDumpPath();
+                if (mysqldumpPath == null) {
                     Platform.runLater(() -> {
                         AlertUtil.showError("Error", "mysqldump path not configured.");
                         historyTable.setDisable(false);
@@ -2364,6 +2392,7 @@ public class DashboardController {
 
                 Platform.runLater(() -> historyTable.setDisable(true));
 
+                String mysqlPath = AppConfig.getMysqlPath();
                 if (mysqlPath == null) {
                     Platform.runLater(() -> {
                         AlertUtil.showError("Error", "mysql path not configured.");
@@ -2528,7 +2557,7 @@ public class DashboardController {
             return false;
         }
 
-        if (!AppConfig.getAdminPasswordHash().equals(result.get())) {
+        if (!AppConfig.getAdminPasswordHash().equals(PasswordUtil.hashPassword(result.get()))) {
             AlertUtil.showError(
                     "Access Denied",
                     "Incorrect restore password."
@@ -2831,4 +2860,6 @@ public class DashboardController {
             rootPane.getCenter().setDisable(!connected);
         }
     }
+
+
 }

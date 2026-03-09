@@ -25,6 +25,9 @@
                 </Menu>
 
                 <Menu text="View">
+                    <MenuItem text="Inventory"
+                              onAction="#handleOpenInventory"/>
+                    <SeparatorMenuItem/>
                     <MenuItem fx:id="freezeColumnsMenuItem"
                               text="Freeze Columns"
                               onAction="#handleFreezeColumns"/>

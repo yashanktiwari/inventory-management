@@ -44,6 +44,9 @@ public class TransactionHistory {
     private String lastModifiedBy;
     private List<AuditEntry> auditEntries;
 
+    public TransactionHistory() {
+    }
+
     public TransactionHistory(
             int transactionId,
             String buySell,

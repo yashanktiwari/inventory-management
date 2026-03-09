@@ -1,5 +1,7 @@
 package com.inventory;
 
+import com.inventory.dao.TransactionDAO;
+import com.inventory.model.InventoryItem;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -10,6 +12,8 @@ import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
 import com.inventory.ui.controller.DashboardController;
 import com.inventory.util.StoragePathDialog;
+
+import java.util.List;
 
 
 public class MainApp extends Application {

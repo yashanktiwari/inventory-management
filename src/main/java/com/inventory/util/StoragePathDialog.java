@@ -7,6 +7,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -35,6 +36,8 @@ public class StoragePathDialog {
         HBox header = new HBox(10, icon, info);
         header.setAlignment(Pos.CENTER_LEFT);
 
+        /* ---------------- Attachment Path ---------------- */
+
         TextField pathField = new TextField();
         pathField.setPrefWidth(350);
         pathField.setPromptText("Select attachment storage folder");
@@ -62,6 +65,69 @@ public class StoragePathDialog {
         HBox pathBox = new HBox(10, pathField, browseBtn);
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
+
+        /* ---------------- MYSQL PATH ---------------- */
+
+        TextField mysqlField = new TextField();
+        mysqlField.setPrefWidth(350);
+        mysqlField.setPromptText("Select mysql.exe");
+
+        String mysqlPath = AppConfig.getMysqlPath();
+        if (mysqlPath != null && !mysqlPath.isBlank()) {
+            mysqlField.setText(mysqlPath);
+        }
+
+        Button browseMysqlBtn = new Button("Browse");
+        browseMysqlBtn.setMinWidth(90);
+
+        browseMysqlBtn.setOnAction(e -> {
+
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Select mysql.exe");
+
+            File file = chooser.showOpenDialog(stage);
+
+            if (file != null) {
+                mysqlField.setText(file.getAbsolutePath());
+            }
+        });
+
+        HBox mysqlBox = new HBox(10, mysqlField, browseMysqlBtn);
+        HBox.setHgrow(mysqlField, Priority.ALWAYS);
+
+
+        /* ---------------- MYSQLDUMP PATH ---------------- */
+
+        TextField dumpField = new TextField();
+        dumpField.setPrefWidth(350);
+        dumpField.setPromptText("Select mysqldump.exe");
+
+        String dumpPath = AppConfig.getMysqlDumpPath();
+        if (dumpPath != null && !dumpPath.isBlank()) {
+            dumpField.setText(dumpPath);
+        }
+
+        Button browseDumpBtn = new Button("Browse");
+        browseDumpBtn.setMinWidth(90);
+
+        browseDumpBtn.setOnAction(e -> {
+
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Select mysqldump.exe");
+
+            File file = chooser.showOpenDialog(stage);
+
+            if (file != null) {
+                dumpField.setText(file.getAbsolutePath());
+            }
+        });
+
+        HBox dumpBox = new HBox(10, dumpField, browseDumpBtn);
+        HBox.setHgrow(dumpField, Priority.ALWAYS);
+
+
+        /* ---------------- TEST STORAGE ---------------- */
+
         Button testBtn = new Button("Test Connection");
 
         Label resultLabel = new Label();
@@ -83,16 +149,17 @@ public class StoragePathDialog {
 
                     resultLabel.setText("✗ Folder not accessible");
                     resultLabel.setStyle("-fx-text-fill: red;");
-
                 }
 
             } catch (Exception ex) {
 
                 resultLabel.setText("✗ Invalid path");
                 resultLabel.setStyle("-fx-text-fill: red;");
-
             }
         });
+
+
+        /* ---------------- SAVE BUTTON ---------------- */
 
         Button saveBtn = new Button("Save & Continue");
 
@@ -105,6 +172,8 @@ public class StoragePathDialog {
         saveBtn.setOnAction(e -> {
 
             String newPath = pathField.getText();
+            String mysql = mysqlField.getText();
+            String dump = dumpField.getText();
 
             try {
 
@@ -144,7 +213,10 @@ public class StoragePathDialog {
                     }
                 }
 
+                /* SAVE CONFIG */
                 AppConfig.saveAttachmentPath(newPath);
+                AppConfig.saveMysqlPath(mysql);
+                AppConfig.saveMysqlDumpPath(dump);
 
                 stage.close();
 
@@ -155,12 +227,20 @@ public class StoragePathDialog {
             }
         });
 
+
+        /* ---------------- ACTIONS ---------------- */
+
         HBox actions = new HBox(10, testBtn, saveBtn);
         actions.setAlignment(Pos.CENTER_RIGHT);
+
+
+        /* ---------------- ROOT ---------------- */
 
         VBox root = new VBox(15,
                 header,
                 pathBox,
+                mysqlBox,
+                dumpBox,
                 resultLabel,
                 actions
         );

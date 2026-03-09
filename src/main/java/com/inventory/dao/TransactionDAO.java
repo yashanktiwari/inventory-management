@@ -2,6 +2,7 @@ package com.inventory.dao;
 
 import com.inventory.database.DBConnection;
 import com.inventory.model.AuditEntry;
+import com.inventory.model.InventoryItem;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.UserUtil;
 
@@ -42,7 +43,8 @@ public class TransactionDAO {
             String status,
             String remarks,
             String itemCount,
-            String unit
+            String unit,
+            LocalDateTime transactionTime
     ) {
 
         String sql = """
@@ -65,11 +67,12 @@ public class TransactionDAO {
             party_name,
             status,
             issued_datetime,
+            returned_datetime,
             remarks,
             item_count,
             unit
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -102,17 +105,23 @@ public class TransactionDAO {
 
             pstmt.setString(17, status);
 
-            pstmt.setTimestamp(18, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setTimestamp(18, Timestamp.valueOf(transactionTime));
 
-            pstmt.setString(19, remarks);
-
-            if (itemCount == null || itemCount.isBlank()) {
-                pstmt.setNull(20, Types.DOUBLE);
+            if ("Scrap".equalsIgnoreCase(status)) {
+                pstmt.setTimestamp(19, Timestamp.valueOf(LocalDateTime.now()));
             } else {
-                pstmt.setDouble(20, Double.parseDouble(itemCount));
+                pstmt.setNull(19, Types.TIMESTAMP);
             }
 
-            pstmt.setString(21, unit);
+            pstmt.setString(20, remarks);
+
+            if (itemCount == null || itemCount.isBlank()) {
+                pstmt.setNull(21, Types.DOUBLE);
+            } else {
+                pstmt.setDouble(21, Double.parseDouble(itemCount));
+            }
+
+            pstmt.setString(22, unit);
 
             pstmt.executeUpdate();
 
@@ -582,5 +591,286 @@ public class TransactionDAO {
                     String.valueOf(oldT.getItemCount()),
                     String.valueOf(newT.getItemCount()));
         }
+    }
+
+    public List<InventoryItem> getInventory() {
+
+        List<InventoryItem> inventory = new ArrayList<>();
+
+        String sql = """
+            SELECT
+                item_name,
+                unit,
+                SUM(
+                    CASE
+                        WHEN buy_sell = 'Buy' THEN item_count
+                        WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
+                        WHEN buy_sell = 'Sell' THEN -item_count
+                        ELSE 0
+                    END
+                ) AS stock
+            FROM transactions
+            GROUP BY item_name, unit
+            HAVING stock > 0
+            ORDER BY item_name;
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+
+                inventory.add(new InventoryItem(
+                        rs.getString("item_name"),
+                        rs.getDouble("stock"),
+                        rs.getString("unit")
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return inventory;
+    }
+
+    public String getUnitForItem(String itemName) {
+
+        String sql = """
+        SELECT unit
+        FROM transactions
+        WHERE item_name = ?
+        LIMIT 1
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("unit");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public double getCurrentStock(String itemName) {
+
+        String sql = """
+            SELECT
+            SUM(
+                CASE
+                    WHEN buy_sell = 'Buy' THEN item_count
+                    WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
+                    WHEN buy_sell = 'Sell' THEN -item_count
+                    ELSE 0
+                END
+            ) AS stock
+            FROM transactions
+            WHERE item_name = ?;
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getDouble("stock");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    public List<TransactionHistory> getAvailableSerialItems(String itemName) {
+        List<TransactionHistory> list = new ArrayList<>();
+        String sql = """
+        SELECT
+            item_serial,
+            item_make,
+            item_model,
+            unit,
+            MIN(issued_datetime) AS issued_datetime,
+            SUM(
+                CASE
+                    WHEN buy_sell = 'Buy' THEN item_count
+                    WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
+                    WHEN buy_sell = 'Sell' THEN -item_count
+                    ELSE 0
+                END
+            ) AS remaining_count
+        FROM transactions
+        WHERE item_name = ?
+        GROUP BY item_serial, item_make, item_model, unit
+        HAVING remaining_count > 0
+        ORDER BY issued_datetime;
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+
+                LocalDateTime issued =
+                        issuedTs != null ? issuedTs.toLocalDateTime() : null;
+
+                String serial = rs.getString("item_serial");
+                if (serial == null || serial.isEmpty()) {
+                    serial = "";
+                }
+
+                TransactionHistory history = new TransactionHistory(
+
+                        0,                          // transaction_id (not needed here)
+
+                        "Buy",                      // buy_sell
+                        "", "", "",                 // plant, department, location
+                        "", "",                     // employee_id, employee_name
+                        "",                         // ip_address
+
+                        "",                         // item_code
+                        itemName,                   // item_name
+
+                        rs.getString("item_make"),
+                        rs.getString("item_model"),
+                        serial,
+
+                        "", "",                     // imei_no, sim_no
+                        "", "",                     // po_no, party_name
+
+                        "",                         // status
+
+                        issued,
+                        null,
+
+                        "",                         // remarks
+
+                        rs.getDouble("remaining_count"),
+
+                        rs.getString("unit"),
+
+                        "",                         // attachment
+                        "",                         // lastModifiedBy
+                        new ArrayList<>()
+                );
+
+                list.add(history);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public boolean itemExistsInInventory(
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial
+    ) {
+
+        String sql = """
+        SELECT COUNT(*) 
+        FROM transactions
+        WHERE buy_sell = 'Buy'
+        AND item_code = ?
+        AND item_name = ?
+        AND item_make = ?
+        AND item_model = ?
+        AND item_serial = ?
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemCode);
+            ps.setString(2, itemName);
+            ps.setString(3, itemMake);
+            ps.setString(4, itemModel);
+            ps.setString(5, itemSerial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public boolean isSerialAvailable(
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial
+    ) {
+
+        String sql = """
+        SELECT
+            SUM(
+                CASE
+                    WHEN buy_sell = 'Buy' THEN 1
+                    WHEN buy_sell = 'Sell' AND status = 'Issued' THEN -1
+                    WHEN buy_sell = 'Sell' AND status = 'Scrap' THEN -1
+                    ELSE 0
+                END
+            ) AS balance
+        FROM transactions
+        WHERE item_name = ?
+        AND (? IS NULL OR item_code = ?)
+        AND (? IS NULL OR item_make = ?)
+        AND (? IS NULL OR item_model = ?)
+        AND (? IS NULL OR item_serial = ?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemCode);
+            ps.setString(2, itemName);
+            ps.setString(3, itemMake);
+            ps.setString(4, itemModel);
+            ps.setString(5, itemSerial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int balance = rs.getInt(1);
+                return balance > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }

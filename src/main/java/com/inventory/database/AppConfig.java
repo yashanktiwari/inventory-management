@@ -23,23 +23,18 @@ public class AppConfig {
             String pass
     ) {
         try {
-            File folder = new File(CONFIG_FOLDER);
-            if (!folder.exists()) {
-                folder.mkdirs();
-            }
 
-            Properties props = new Properties();
+            Properties props = loadProperties();
+
             props.setProperty("db.host", host);
             props.setProperty("db.port", port);
             props.setProperty("db.name", dbName);
             props.setProperty("db.user", user);
             props.setProperty("db.pass", pass);
 
-            try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE)) {
-                props.store(fos, "Inventory Management MySQL Config");
-            }
+            saveProperties(props);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -74,25 +69,12 @@ public class AppConfig {
     public static void saveAttachmentPath(String path) {
 
         try {
-            File folder = new File(CONFIG_FOLDER);
-            if (!folder.exists()) {
-                folder.mkdirs();
-            }
 
-            Properties props = new Properties();
-
-            File file = new File(CONFIG_FILE);
-            if (file.exists()) {
-                try (FileInputStream fis = new FileInputStream(file)) {
-                    props.load(fis);
-                }
-            }
+            Properties props = loadProperties();
 
             props.setProperty("attachment.path", path);
 
-            try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE)) {
-                props.store(fos, "Inventory Config");
-            }
+            saveProperties(props);
 
         } catch (Exception e) {
             e.printStackTrace();
