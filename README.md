@@ -34,6 +34,11 @@
 33. Shift + Scroll = Horizontal scroll
 
 
+## For MySQL:
+- CREATE USER 'inventory_user'@'%' IDENTIFIED BY 'StrongPassword123'; 
+- GRANT ALL PRIVILEGES ON inventory_db.* TO 'inventory_user'@'%'; 
+- FLUSH PRIVILEGES;
+
 
 ## To run the application:
 - mvn clean javafx:run
@@ -41,28 +46,28 @@
 ## For packaging:
 - mvn clean package
 
-## For MySQL:
-- CREATE USER 'inventory_user'@'%' IDENTIFIED BY 'StrongPassword123'; 
-- GRANT ALL PRIVILEGES ON inventory_db.* TO 'inventory_user'@'%'; 
-- FLUSH PRIVILEGES;
+## For proguard contents:
+- Check the proguard.pro file
 
 
 ## The command to create package the project to .exe:
 
-& "C:\Program Files\Java\jdk-24\bin\jpackage.exe" `
+ & "C:\Program Files\Java\jdk-24\bin\jpackage.exe" `
 --input target `
 --name InventoryManagementSystem `
---main-jar inventory-management-1.0-SNAPSHOT.jar `
+--main-jar inventory-obfuscated.jar `
 --main-class com.inventory.MainApp `
 --type exe `
 --app-version 1.0 `
 --vendor "Yashank Tiwari" `
+--icon "C:\Users\yasha\Downloads\ChatGPT Image Mar 9, 2026, 11_58_18 PM.ico" `
 --module-path "C:\Users\yasha\Downloads\openjfx-21.0.10_windows-x64_bin-jmods\javafx-jmods-21.0.10" `
 --add-modules javafx.controls,javafx.fxml,java.sql,java.naming `
+--java-options "--add-opens=javafx.controls/javafx.scene.control.skin=ALL-UNNAMED" `
 --win-shortcut `
 --win-menu `
 --win-dir-chooser
-
+ 
 
 ## Command to fill database with random 100 values for testing:
 INSERT INTO transactions (
