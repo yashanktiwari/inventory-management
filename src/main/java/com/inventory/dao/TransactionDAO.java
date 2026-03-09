@@ -105,8 +105,6 @@ public class TransactionDAO {
 
             pstmt.setString(17, status);
 
-//            pstmt.setTimestamp(18, Timestamp.valueOf(LocalDateTime.now()));
-
             pstmt.setTimestamp(18, Timestamp.valueOf(transactionTime));
 
             if ("Scrap".equalsIgnoreCase(status)) {
