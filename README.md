@@ -48,6 +48,7 @@
 
 ## For proguard contents:
 - Check the proguard.pro file
+- java -jar "C:\Users\yasha\Downloads\proguard-7.8.2\lib\proguard.jar" "@proguard.pro"
 
 
 ## The command to create package the project to .exe:
@@ -60,14 +61,15 @@
 --type exe `
 --app-version 1.0 `
 --vendor "Yashank Tiwari" `
---icon "C:\Users\yasha\Downloads\ChatGPT Image Mar 9, 2026, 11_58_18 PM.ico" `
+--icon "D:\Projects\InventoryManagement\InventoryManagement\src\main\resources\icons\inventory_icon.png" `
 --module-path "C:\Users\yasha\Downloads\openjfx-21.0.10_windows-x64_bin-jmods\javafx-jmods-21.0.10" `
 --add-modules javafx.controls,javafx.fxml,java.sql,java.naming `
 --java-options "--add-opens=javafx.controls/javafx.scene.control.skin=ALL-UNNAMED" `
 --win-shortcut `
 --win-menu `
 --win-dir-chooser
- 
+
+ Do check the paths and all before running
 
 ## Command to fill database with random 100 values for testing:
 INSERT INTO transactions (
