@@ -17,6 +17,9 @@ import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,6 +57,11 @@ public class AddTransactionController {
 
     @FXML private TextField attachmentField;
 
+    @FXML private DatePicker transactionDatePicker;
+    @FXML private Spinner<Integer> hourSpinner;
+    @FXML private Spinner<Integer> minuteSpinner;
+    @FXML private ComboBox<String> ampmBox;
+
     private File selectedAttachment;
     private ObservableList<String> masterItemList;
     private Popup suggestionsPopup;
@@ -66,6 +74,36 @@ public class AddTransactionController {
     @FXML
     public void initialize() {
 
+        transactionDatePicker.setValue(java.time.LocalDate.now());
+
+        // Disable future dates
+        transactionDatePicker.setDayCellFactory(dp -> new DateCell() {
+            @Override
+            public void updateItem(java.time.LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (item.isAfter(java.time.LocalDate.now())) {
+                    setDisable(true);
+                }
+            }
+        });
+
+        // Hour (1–12)
+        hourSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 12,
+                        java.time.LocalTime.now().getHour() % 12 == 0 ? 12 :
+                                java.time.LocalTime.now().getHour() % 12)
+        );
+
+        // Minute (0–59)
+        minuteSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59,
+                        java.time.LocalTime.now().getMinute())
+        );
+
+        // AM PM
+        ampmBox.getItems().addAll("AM", "PM");
+        ampmBox.setValue(java.time.LocalTime.now().getHour() >= 12 ? "PM" : "AM");
 
         masterItemList = FXCollections.observableArrayList(
                 itemDAO.getAllItems()
@@ -159,6 +197,34 @@ public class AddTransactionController {
                     "Item count can have maximum 2 decimal places.");
             return;
         }
+
+        LocalDate date = transactionDatePicker.getValue();
+
+        int hour12 = hourSpinner.getValue();
+        int minute = minuteSpinner.getValue();
+        String ampm = ampmBox.getValue();
+
+        int hour24 = hour12;
+
+        if ("PM".equals(ampm) && hour12 != 12) {
+            hour24 += 12;
+        }
+
+        if ("AM".equals(ampm) && hour12 == 12) {
+            hour24 = 0;
+        }
+
+        LocalDateTime transactionTime =
+                LocalDateTime.of(date, LocalTime.of(hour24, minute));
+
+        if (transactionTime.isAfter(LocalDateTime.now())) {
+            AlertUtil.showError(
+                    "Invalid Date",
+                    "Transaction time cannot be in the future."
+            );
+            return;
+        }
+
         String unit = unitComboBox.getValue();
 
         // Check whether the units for items match
@@ -173,6 +239,38 @@ public class AddTransactionController {
         }
 
         if ("Sell".equalsIgnoreCase(buySell)) {
+
+            if (itemName == null || itemName.isBlank()) {
+                AlertUtil.showError(
+                        "Validation Error",
+                        "Item Name is required for Sell transactions."
+                );
+                return;
+            }
+
+            if (itemSerial == null || itemSerial.isBlank()) {
+                AlertUtil.showError(
+                        "Validation Error",
+                        "Item Serial is required for Sell transactions."
+                );
+                return;
+            }
+
+            boolean exists = transactionDAO.itemExistsInInventory(
+                    itemCode,
+                    itemName,
+                    itemMake,
+                    itemModel,
+                    itemSerial
+            );
+            if (!exists) {
+                AlertUtil.showError(
+                        "Invalid Transaction",
+                        "This item does not exist in inventory.\n" +
+                                "Please check Item Code / Name / Make / Model / Serial Number."
+                );
+                return;
+            }
             double currentStock = transactionDAO.getCurrentStock(itemName);
             if (itemCount.doubleValue() > currentStock) {
                 AlertUtil.showError(
@@ -203,7 +301,8 @@ public class AddTransactionController {
                 status,
                 remarks,
                 itemCountText,
-                unit
+                unit,
+                transactionTime
         );
         saveAttachment(transactionId);
         closeWindow();

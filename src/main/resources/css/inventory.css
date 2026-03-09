@@ -1,12 +1,76 @@
+/* ===== TABLE ROOT ===== */
 .table-view {
     -fx-background-radius: 8;
     -fx-border-radius: 8;
+    -fx-border-color: #dfe6ee;
+}
+
+/* ===== HEADER ===== */
+.table-view .column-header-background {
+    -fx-background-color: #f3f5f7;
 }
 
 .table-view .column-header {
+    -fx-padding: 12 18 12 18;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
 }
 
+/* ===== CELLS ===== */
+.table-view .table-cell {
+    -fx-padding: 14 20 14 20;   /* <-- THIS adds the spacing */
+    -fx-font-size: 13px;
+}
+
+/* ===== ROW HEIGHT ===== */
 .table-row-cell {
-    -fx-cell-size: 36px;
+    -fx-cell-size: 46px;
+}
+
+/* ===== ZEBRA ROWS ===== */
+.table-row-cell:odd {
+    -fx-background-color: #fafbfc;
+}
+
+.table-row-cell:even {
+    -fx-background-color: white;
+}
+
+/* ===== HOVER ===== */
+.table-row-cell:hover {
+    -fx-background-color: #eef5ff;
+}
+
+/* ===== REMOVE BLUE BORDER ===== */
+.table-view:focused {
+    -fx-background-insets: 0;
+}
+
+/* Selected row background */
+.table-row-cell:selected {
+    -fx-background-color: #d9e9ff;
+}
+
+/* Selected row text color */
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: #1f2d3d;
+}
+
+/* Hover effect */
+.table-row-cell:hover {
+    -fx-background-color: #eef5ff;
+}
+
+/* Selected row border */
+.table-row-cell:selected {
+    -fx-border-color: #4a90e2;
+    -fx-border-width: 0 0 0 2;
+}
+
+.table-view .scroll-bar:horizontal {
+    -fx-opacity: 1;
+}
+
+.table-view .scroll-bar:horizontal:disabled {
+    -fx-opacity: 1;
 }

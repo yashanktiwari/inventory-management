@@ -14,6 +14,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.util.List;
@@ -41,6 +43,23 @@ public class InventoryController {
         inventoryTable.getStylesheets().add(
                 getClass().getResource("/css/inventory.css").toExternalForm()
         );
+
+        inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        Label text = new Label("No inventory items available");
+        text.setStyle(
+                "-fx-text-fill:#6b7c93;" +
+                        "-fx-font-size:14px;" +
+                        "-fx-font-style:italic;"
+        );
+
+        VBox emptyBox = new VBox(text);
+        emptyBox.setStyle(
+                "-fx-alignment:center;" +
+                        "-fx-padding:40;"
+        );
+
+        inventoryTable.setPlaceholder(emptyBox);
 
         itemNameCol.setCellValueFactory(
                 new PropertyValueFactory<>("itemName")
@@ -81,28 +100,39 @@ public class InventoryController {
         });
     }
 
-    private void loadInventory() {
+//    private void loadInventory() {
+//
+//        List<InventoryItem> list = transactionDAO.getInventory();
+//
+//        inventoryTable.setItems(
+//                FXCollections.observableArrayList(list)
+//        );
+//
+//        totalItemsLabel.setText(String.valueOf(list.size()));
+//
+////        int visibleRows = Math.max(3, Math.min(list.size(), MAX_VISIBLE_ROWS));
+////        double tableHeight = (visibleRows + 1) * ROW_HEIGHT;
+//
+////        inventoryTable.setPrefHeight(tableHeight);
+////        inventoryTable.setMinHeight(tableHeight);
+////        inventoryTable.setMaxHeight(tableHeight);
+//
+//        Platform.runLater(() -> {
+//            Stage stage = (Stage) inventoryTable.getScene().getWindow();
+//            stage.sizeToScene();
+//        });
+//    }
 
-        List<InventoryItem> list = transactionDAO.getInventory();
+private void loadInventory() {
 
-        inventoryTable.setItems(
-                FXCollections.observableArrayList(list)
-        );
+    List<InventoryItem> list = transactionDAO.getInventory();
 
-        totalItemsLabel.setText(String.valueOf(list.size()));
+    inventoryTable.setItems(
+            FXCollections.observableArrayList(list)
+    );
 
-        int visibleRows = Math.min(list.size(), MAX_VISIBLE_ROWS);
-        double tableHeight = (visibleRows + 1) * ROW_HEIGHT;
-
-        inventoryTable.setPrefHeight(tableHeight);
-        inventoryTable.setMinHeight(tableHeight);
-        inventoryTable.setMaxHeight(tableHeight);
-
-        Platform.runLater(() -> {
-            Stage stage = (Stage) inventoryTable.getScene().getWindow();
-            stage.sizeToScene();
-        });
-    }
+    totalItemsLabel.setText(String.valueOf(list.size()));
+}
 
     private void openAvailableInventory(String itemName) {
         try {
@@ -118,6 +148,8 @@ public class InventoryController {
             Stage stage = new Stage();
             stage.setTitle(itemName + " Inventory");
             stage.setScene(new Scene(root, 700, 550));
+            stage.initOwner(stage.getOwner());
+            stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
 
         } catch (Exception e) {

@@ -43,7 +43,8 @@ public class TransactionDAO {
             String status,
             String remarks,
             String itemCount,
-            String unit
+            String unit,
+            LocalDateTime transactionTime
     ) {
 
         String sql = """
@@ -66,11 +67,12 @@ public class TransactionDAO {
             party_name,
             status,
             issued_datetime,
+            returned_datetime,
             remarks,
             item_count,
             unit
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -103,17 +105,25 @@ public class TransactionDAO {
 
             pstmt.setString(17, status);
 
-            pstmt.setTimestamp(18, Timestamp.valueOf(LocalDateTime.now()));
+//            pstmt.setTimestamp(18, Timestamp.valueOf(LocalDateTime.now()));
 
-            pstmt.setString(19, remarks);
+            pstmt.setTimestamp(18, Timestamp.valueOf(transactionTime));
 
-            if (itemCount == null || itemCount.isBlank()) {
-                pstmt.setNull(20, Types.DOUBLE);
+            if ("Scrap".equalsIgnoreCase(status)) {
+                pstmt.setTimestamp(19, Timestamp.valueOf(LocalDateTime.now()));
             } else {
-                pstmt.setDouble(20, Double.parseDouble(itemCount));
+                pstmt.setNull(19, Types.TIMESTAMP);
             }
 
-            pstmt.setString(21, unit);
+            pstmt.setString(20, remarks);
+
+            if (itemCount == null || itemCount.isBlank()) {
+                pstmt.setNull(21, Types.DOUBLE);
+            } else {
+                pstmt.setDouble(21, Double.parseDouble(itemCount));
+            }
+
+            pstmt.setString(22, unit);
 
             pstmt.executeUpdate();
 
@@ -590,20 +600,22 @@ public class TransactionDAO {
         List<InventoryItem> inventory = new ArrayList<>();
 
         String sql = """
-    SELECT 
-        item_name,
-        unit,
-        SUM(
-            CASE 
-                WHEN buy_sell = 'Buy' THEN item_count
-                ELSE -item_count
-            END
-        ) AS stock
-    FROM transactions
-    GROUP BY item_name, unit
-    HAVING stock > 0
-    ORDER BY item_name
-""";
+            SELECT
+                item_name,
+                unit,
+                SUM(
+                    CASE
+                        WHEN buy_sell = 'Buy' THEN item_count
+                        WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
+                        WHEN buy_sell = 'Sell' THEN -item_count
+                        ELSE 0
+                    END
+                ) AS stock
+            FROM transactions
+            GROUP BY item_name, unit
+            HAVING stock > 0
+            ORDER BY item_name;
+        """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -655,11 +667,17 @@ public class TransactionDAO {
     public double getCurrentStock(String itemName) {
 
         String sql = """
-        SELECT
-        SUM(CASE WHEN buy_sell='Buy' THEN item_count ELSE 0 END) -
-        SUM(CASE WHEN buy_sell='Sell' THEN item_count ELSE 0 END) AS stock
-        FROM transactions
-        WHERE item_name = ?
+            SELECT
+            SUM(
+                CASE
+                    WHEN buy_sell = 'Buy' THEN item_count
+                    WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
+                    WHEN buy_sell = 'Sell' THEN -item_count
+                    ELSE 0
+                END
+            ) AS stock
+            FROM transactions
+            WHERE item_name = ?;
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -681,28 +699,27 @@ public class TransactionDAO {
     }
 
     public List<TransactionHistory> getAvailableSerialItems(String itemName) {
-
         List<TransactionHistory> list = new ArrayList<>();
-
         String sql = """
-                SELECT
-                            item_serial,
-                            MAX(item_make) AS item_make,
-                            MAX(item_model) AS item_model,
-                            MAX(unit) AS unit,
-                            MIN(issued_datetime) AS issued_datetime,
-                            SUM(
-                                CASE
-                                    WHEN buy_sell='Buy' THEN item_count
-                                    ELSE -item_count
-                                END
-                            ) AS remaining_count
-                        FROM transactions
-                        WHERE item_name = ?
-                        AND item_serial IS NOT NULL
-                        GROUP BY item_serial
-                        HAVING remaining_count > 0
-                        ORDER BY issued_datetime
+        SELECT
+            item_serial,
+            item_make,
+            item_model,
+            unit,
+            MIN(issued_datetime) AS issued_datetime,
+            SUM(
+                CASE
+                    WHEN buy_sell = 'Buy' THEN item_count
+                    WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
+                    WHEN buy_sell = 'Sell' THEN -item_count
+                    ELSE 0
+                END
+            ) AS remaining_count
+        FROM transactions
+        WHERE item_name = ?
+        GROUP BY item_serial, item_make, item_model, unit
+        HAVING remaining_count > 0
+        ORDER BY issued_datetime;
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -719,6 +736,11 @@ public class TransactionDAO {
                 LocalDateTime issued =
                         issuedTs != null ? issuedTs.toLocalDateTime() : null;
 
+                String serial = rs.getString("item_serial");
+                if (serial == null || serial.isEmpty()) {
+                    serial = "";
+                }
+
                 TransactionHistory history = new TransactionHistory(
 
                         0,                          // transaction_id (not needed here)
@@ -733,7 +755,7 @@ public class TransactionDAO {
 
                         rs.getString("item_make"),
                         rs.getString("item_model"),
-                        rs.getString("item_serial"),
+                        serial,
 
                         "", "",                     // imei_no, sim_no
                         "", "",                     // po_no, party_name
@@ -762,5 +784,95 @@ public class TransactionDAO {
         }
 
         return list;
+    }
+
+    public boolean itemExistsInInventory(
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial
+    ) {
+
+        String sql = """
+        SELECT COUNT(*) 
+        FROM transactions
+        WHERE buy_sell = 'Buy'
+        AND item_code = ?
+        AND item_name = ?
+        AND item_make = ?
+        AND item_model = ?
+        AND item_serial = ?
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemCode);
+            ps.setString(2, itemName);
+            ps.setString(3, itemMake);
+            ps.setString(4, itemModel);
+            ps.setString(5, itemSerial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public boolean isSerialAvailable(
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial
+    ) {
+
+        String sql = """
+        SELECT
+            SUM(
+                CASE
+                    WHEN buy_sell = 'Buy' THEN 1
+                    WHEN buy_sell = 'Sell' AND status = 'Issued' THEN -1
+                    WHEN buy_sell = 'Sell' AND status = 'Scrap' THEN -1
+                    ELSE 0
+                END
+            ) AS balance
+        FROM transactions
+        WHERE item_name = ?
+        AND (? IS NULL OR item_code = ?)
+        AND (? IS NULL OR item_make = ?)
+        AND (? IS NULL OR item_model = ?)
+        AND (? IS NULL OR item_serial = ?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemCode);
+            ps.setString(2, itemName);
+            ps.setString(3, itemMake);
+            ps.setString(4, itemModel);
+            ps.setString(5, itemSerial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int balance = rs.getInt(1);
+                return balance > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }

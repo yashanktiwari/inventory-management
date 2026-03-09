@@ -214,6 +214,8 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
+        historyTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+
         freezeManager = new TableFreezeManager<>(historyTable);
 
         Platform.runLater(() -> {
@@ -1460,6 +1462,18 @@ public class DashboardController {
             updateUIState(connected);
         });
 
+        historyTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+            Platform.runLater(() -> {
+                ScrollBar hBar =
+                        (ScrollBar) historyTable.lookup(".scroll-bar:horizontal");
+                if (hBar != null) {
+                    hBar.setDisable(false);
+                    hBar.setVisible(true);
+                    hBar.setManaged(true);
+                }
+            });
+        });
+
         updateUIState(ConnectionState.isConnected());
     }
 
@@ -2015,6 +2029,8 @@ public class DashboardController {
             Stage stage = new Stage();
             stage.setTitle("Inventory");
             stage.setScene(new Scene(root, 700, 600));
+            stage.initOwner(stage.getOwner());
+            stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
         } catch (Exception e) {
             e.printStackTrace();
@@ -2541,7 +2557,7 @@ public class DashboardController {
             return false;
         }
 
-        if (!AppConfig.getAdminPasswordHash().equals(result.get())) {
+        if (!AppConfig.getAdminPasswordHash().equals(PasswordUtil.hashPassword(result.get()))) {
             AlertUtil.showError(
                     "Access Denied",
                     "Incorrect restore password."
@@ -2844,4 +2860,6 @@ public class DashboardController {
             rootPane.getCenter().setDisable(!connected);
         }
     }
+
+
 }

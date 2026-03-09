@@ -49,12 +49,6 @@ public class MainApp extends Application {
         stage.setTitle("Inventory Management System");
         stage.setScene(scene);
 
-        List<InventoryItem> list = new TransactionDAO().getInventory();
-
-        for (InventoryItem i : list) {
-            System.out.println(i.getItemName() + " -> " + i.getStock() + " " + i.getUnit());
-        }
-
         // 🔹 Save column order when app closes
         stage.setOnCloseRequest(event -> {
             if (controller != null) {
