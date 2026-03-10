@@ -134,7 +134,7 @@ public class ItemHistoryController {
         departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
         locationColumn.setCellValueFactory(new PropertyValueFactory<>("location"));
 
-        employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+        employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeCode"));
         employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
 
         ipColumn.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));

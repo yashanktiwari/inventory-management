@@ -5,13 +5,17 @@ import com.inventory.dao.PersonDAO;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
 import com.inventory.model.Item;
-import com.inventory.model.Person;
+import com.inventory.model.TransactionHistory;
 import com.inventory.util.AlertUtil;
 import com.inventory.util.StoragePathDialog;
+import com.inventory.util.TransactionPrefill;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
@@ -21,14 +25,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Objects;
 
 public class AddTransactionController {
 
+    @FXML private HBox plantRow;
+    @FXML private HBox departmentRow;
+    @FXML private HBox locationRow;
+    @FXML private HBox employeeCodeRow;
+    @FXML private HBox employeeNameRow;
+    @FXML private HBox ipRow;
+
+    @FXML private VBox sellFieldsContainer;
+
+
     @FXML private TextField itemNameField;
-    @FXML private TextField itemIdField;
-    @FXML private TextField employeeIdField;
-    @FXML private TextField personNameField;
     @FXML private TextField departmentField;
     @FXML private TextArea remarksField;
     @FXML private ComboBox<String> buySellBox;
@@ -62,6 +72,8 @@ public class AddTransactionController {
     @FXML private Spinner<Integer> minuteSpinner;
     @FXML private ComboBox<String> ampmBox;
 
+    @FXML private Button saveAndAddAnotherButton;
+
     private File selectedAttachment;
     private ObservableList<String> masterItemList;
     private Popup suggestionsPopup;
@@ -70,6 +82,9 @@ public class AddTransactionController {
     private final ItemDAO itemDAO = new ItemDAO();
     private final PersonDAO personDAO = new PersonDAO();
     private final TransactionDAO transactionDAO = new TransactionDAO();
+    private Runnable onTransactionSaved;
+
+    private Integer editTransactionId = null;
 
     @FXML
     public void initialize() {
@@ -118,6 +133,11 @@ public class AddTransactionController {
         ));
 
         buySellBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if ("Buy".equalsIgnoreCase(newVal)) {
+                hideBuyFields(true);
+            } else {
+                hideBuyFields(false);
+            }
 
             if ("Buy".equalsIgnoreCase(newVal)) {
                 statusBox.setItems(FXCollections.observableArrayList("In Stock"));
@@ -146,166 +166,11 @@ public class AddTransactionController {
     @FXML
     private void handleSave() {
 
-        String buySell = buySellBox.getValue();
-        String plant = plantField.getText();
-        String department = departmentField.getText();
-        String location = locationField.getText();
+        Integer transactionId = saveTransaction();
 
-        String employeeCode = employeeCodeField.getText();
-        String employeeName = employeeNameField.getText();
-
-        String ip = ipField.getText();
-
-        String itemCode = itemCodeField.getText();
-        String itemName = itemNameField.getText();
-        String itemMake = itemMakeField.getText();
-        String itemModel = itemModelField.getText();
-        String itemSerial = itemSerialField.getText();
-
-        String imei = imeiField.getText();
-        String sim = simField.getText();
-
-        String po = poField.getText();
-        String party = partyField.getText();
-
-        String status = statusBox.getValue();
-        String remarks = remarksField.getText();
-
-        String itemCountText = itemCountField.getText();
-        java.math.BigDecimal itemCount;
-
-        try {
-            itemCount = new java.math.BigDecimal(itemCountText.trim());
-        } catch (NumberFormatException e) {
-            AlertUtil.showError("Validation Error", "Invalid item count value.");
-            return;
+        if (transactionId != null) {
+            closeWindow();
         }
-
-        if (itemCount.compareTo(java.math.BigDecimal.ZERO) < 0) {
-            AlertUtil.showError("Validation Error", "Item count cannot be negative.");
-            return;
-        }
-
-        if (itemCount.compareTo(new java.math.BigDecimal("99999999.99")) > 0) {
-            AlertUtil.showError("Validation Error",
-                    "Item count exceeds maximum allowed value (99,999,999.99).");
-            return;
-        }
-
-        if (itemCount.scale() > 2) {
-            AlertUtil.showError("Validation Error",
-                    "Item count can have maximum 2 decimal places.");
-            return;
-        }
-
-        LocalDate date = transactionDatePicker.getValue();
-
-        int hour12 = hourSpinner.getValue();
-        int minute = minuteSpinner.getValue();
-        String ampm = ampmBox.getValue();
-
-        int hour24 = hour12;
-
-        if ("PM".equals(ampm) && hour12 != 12) {
-            hour24 += 12;
-        }
-
-        if ("AM".equals(ampm) && hour12 == 12) {
-            hour24 = 0;
-        }
-
-        LocalDateTime transactionTime =
-                LocalDateTime.of(date, LocalTime.of(hour24, minute));
-
-        if (transactionTime.isAfter(LocalDateTime.now())) {
-            AlertUtil.showError(
-                    "Invalid Date",
-                    "Transaction time cannot be in the future."
-            );
-            return;
-        }
-
-        String unit = unitComboBox.getValue();
-
-        // Check whether the units for items match
-        String existingUnit = transactionDAO.getUnitForItem(itemName);
-        if (existingUnit != null && !existingUnit.equalsIgnoreCase(unit)) {
-            AlertUtil.showError(
-                    "Unit Mismatch",
-                    "This item already uses unit: " + existingUnit +
-                            "\nYou cannot change it to: " + unit
-            );
-            return;
-        }
-
-        if ("Sell".equalsIgnoreCase(buySell)) {
-
-            if (itemName == null || itemName.isBlank()) {
-                AlertUtil.showError(
-                        "Validation Error",
-                        "Item Name is required for Sell transactions."
-                );
-                return;
-            }
-
-            if (itemSerial == null || itemSerial.isBlank()) {
-                AlertUtil.showError(
-                        "Validation Error",
-                        "Item Serial is required for Sell transactions."
-                );
-                return;
-            }
-
-            boolean exists = transactionDAO.itemExistsInInventory(
-                    itemCode,
-                    itemName,
-                    itemMake,
-                    itemModel,
-                    itemSerial
-            );
-            if (!exists) {
-                AlertUtil.showError(
-                        "Invalid Transaction",
-                        "This item does not exist in inventory.\n" +
-                                "Please check Item Code / Name / Make / Model / Serial Number."
-                );
-                return;
-            }
-            double currentStock = transactionDAO.getCurrentStock(itemName);
-            if (itemCount.doubleValue() > currentStock) {
-                AlertUtil.showError(
-                        "Stock Error",
-                        "Not enough inventory.\nAvailable stock: " + currentStock
-                );
-                return;
-            }
-        }
-
-        int transactionId = transactionDAO.createTransaction(
-                buySell,
-                plant,
-                department,
-                location,
-                employeeCode,
-                employeeName,
-                ip,
-                itemCode,
-                itemName,
-                itemMake,
-                itemModel,
-                itemSerial,
-                imei,
-                sim,
-                po,
-                party,
-                status,
-                remarks,
-                itemCountText,
-                unit,
-                transactionTime
-        );
-        saveAttachment(transactionId);
-        closeWindow();
     }
 
     // ================= CANCEL ================
@@ -351,6 +216,32 @@ public class AddTransactionController {
 
         selectedAttachment = null;
         attachmentField.clear();
+    }
+
+    // ================ SAVE AND ADD ANOTHER ===========
+    @FXML
+    private void handleSaveAndAddAnother() {
+        Integer transactionId = saveTransaction();
+        if (transactionId == null) {
+            return;
+        }
+
+        if (onTransactionSaved != null) {
+            onTransactionSaved.run();
+        }
+
+        // Clear only fields that must change
+        itemSerialField.clear();
+        imeiField.clear();
+        simField.clear();
+        remarksField.clear();
+
+        // reset attachment
+        selectedAttachment = null;
+        attachmentField.clear();
+
+        // focus serial for next entry
+        itemSerialField.requestFocus();
     }
 
     // ================= AUTOCOMPLETE =================
@@ -458,6 +349,143 @@ public class AddTransactionController {
         });
     }
 
+    private Integer saveTransaction() {
+
+        if (transactionDAO.isDemoLimitReached()) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Demo Limit Reached");
+            alert.setHeaderText(null);
+            alert.setContentText(
+                    "This demo version allows only 75 transactions.\n" +
+                            "Please contact the administrator for the full version."
+            );
+            alert.showAndWait();
+            return null;
+        }
+
+        String buySell = buySellBox.getValue();
+        String plant = plantField.getText();
+        String department = departmentField.getText();
+        String location = locationField.getText();
+
+        String employeeCode = employeeCodeField.getText();
+        String employeeName = employeeNameField.getText();
+
+        String ip = ipField.getText();
+
+        String itemCode = itemCodeField.getText();
+        String itemName = itemNameField.getText();
+        String itemMake = itemMakeField.getText();
+        String itemModel = itemModelField.getText();
+        String itemSerial = itemSerialField.getText();
+
+        String imei = imeiField.getText();
+        String sim = simField.getText();
+
+        String po = poField.getText();
+        String party = partyField.getText();
+
+        String status = statusBox.getValue();
+        String remarks = remarksField.getText();
+
+        String itemCountText = itemCountField.getText();
+        java.math.BigDecimal itemCount;
+
+        if (buySell == null) {
+            AlertUtil.showError("Validation Error", "Please mention BUY OR SELL");
+            return null;
+        }
+
+        try {
+            itemCount = new java.math.BigDecimal(itemCountText.trim());
+        } catch (Exception e) {
+            AlertUtil.showError("Validation Error", "Invalid item count value.");
+            return null;
+        }
+
+        if (itemCount.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            AlertUtil.showError("Validation Error", "Item count cannot be negative.");
+            return null;
+        }
+
+        LocalDate date = transactionDatePicker.getValue();
+
+        int hour12 = hourSpinner.getValue();
+        int minute = minuteSpinner.getValue();
+        String ampm = ampmBox.getValue();
+
+        int hour24 = hour12;
+
+        if ("PM".equals(ampm) && hour12 != 12) hour24 += 12;
+        if ("AM".equals(ampm) && hour12 == 12) hour24 = 0;
+
+        LocalDateTime transactionTime =
+                LocalDateTime.of(date, LocalTime.of(hour24, minute));
+
+        String unit = unitComboBox.getValue();
+
+        int transactionId;
+
+        if (editTransactionId != null) {
+
+            transactionDAO.updateTransaction(
+                    editTransactionId,
+                    buySell,
+                    plant,
+                    department,
+                    location,
+                    employeeCode,
+                    employeeName,
+                    ip,
+                    itemCode,
+                    itemName,
+                    itemMake,
+                    itemModel,
+                    itemSerial,
+                    imei,
+                    sim,
+                    po,
+                    party,
+                    status,
+                    remarks,
+                    itemCountText,
+                    unit
+            );
+
+            transactionId = editTransactionId;
+
+        } else {
+
+            transactionId = transactionDAO.createTransaction(
+                    buySell,
+                    plant,
+                    department,
+                    location,
+                    employeeCode,
+                    employeeName,
+                    ip,
+                    itemCode,
+                    itemName,
+                    itemMake,
+                    itemModel,
+                    itemSerial,
+                    imei,
+                    sim,
+                    po,
+                    party,
+                    status,
+                    remarks,
+                    itemCountText,
+                    unit,
+                    transactionTime
+            );
+        }
+
+        saveAttachment(transactionId);
+
+        return transactionId;
+    }
+
     private void applySelection(String selected) {
         itemNameField.setText(selected);
         itemNameField.positionCaret(selected.length());
@@ -507,8 +535,94 @@ public class AddTransactionController {
         }
     }
 
+    public void prefill(TransactionPrefill data) {
+
+        if (data.buySell != null) {
+            buySellBox.setValue(data.buySell);
+        }
+
+        plantField.setText(safe(data.plant));
+        departmentField.setText(safe(data.department));
+        locationField.setText(safe(data.location));
+
+        employeeCodeField.setText(safe(data.employeeCode));
+        employeeNameField.setText(safe(data.employeeName));
+
+        ipField.setText(safe(data.ipAddress));
+
+        itemCodeField.setText(safe(data.itemCode));
+        itemNameField.setText(safe(data.itemName));
+        itemMakeField.setText(safe(data.itemMake));
+        itemModelField.setText(safe(data.itemModel));
+        itemCountField.setText(data.itemCount == null ? "" : data.itemCount + "");
+
+        itemSerialField.setText(safe(data.itemSerial));
+
+        imeiField.setText(safe(data.imeiNo));
+        simField.setText(safe(data.simNo));
+
+        poField.setText(safe(data.poNo));
+        partyField.setText(safe(data.partyName));
+
+        unitComboBox.setValue(safe(data.unit));
+    }
+
+    public void prefillSell(TransactionPrefill data) {
+
+        prefill(data);   // reuse the normal prefill
+
+        buySellBox.setValue("Sell");
+        buySellBox.setDisable(true);
+
+        itemCountField.setDisable(true);
+        itemCodeField.setDisable(true);
+        itemNameField.setDisable(true);
+        itemMakeField.setDisable(true);
+        itemModelField.setDisable(true);
+        itemSerialField.setDisable(true);
+        unitComboBox.setDisable(true);
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
     private void closeWindow() {
         Stage stage = (Stage) itemNameField.getScene().getWindow();
         stage.close();
+    }
+
+    public void setEditTransactionId(int id) {
+        this.editTransactionId = id;
+
+        if (saveAndAddAnotherButton != null) {
+            buySellBox.setDisable(true);
+            saveAndAddAnotherButton.setVisible(false);
+            saveAndAddAnotherButton.setManaged(false);
+        }
+    }
+
+    public void hideFieldsIfBuyTransaction(TransactionHistory t) {
+
+        if ("Buy".equalsIgnoreCase(t.getBuySell())) {
+            hideBuyFields(true);
+        }
+
+    }
+
+    private void hideBuyFields(boolean hide) {
+        // This one call collapses the entire "Sell" section
+        sellFieldsContainer.setVisible(!hide);
+        sellFieldsContainer.setManaged(!hide);
+
+        // Forces the window to shrink/grow to fit the new content
+        Platform.runLater(() -> {
+            Stage stage = (Stage) buySellBox.getScene().getWindow();
+            if (stage != null) stage.sizeToScene();
+        });
+    }
+
+    public void setOnTransactionSaved(Runnable callback) {
+        this.onTransactionSaved = callback;
     }
 }

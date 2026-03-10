@@ -1,10 +1,9 @@
 package com.inventory;
 
-import com.inventory.dao.TransactionDAO;
-import com.inventory.model.InventoryItem;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
 import javafx.application.Platform;
@@ -12,8 +11,6 @@ import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
 import com.inventory.ui.controller.DashboardController;
 import com.inventory.util.StoragePathDialog;
-
-import java.util.List;
 
 
 public class MainApp extends Application {
@@ -48,6 +45,8 @@ public class MainApp extends Application {
         );
         stage.setTitle("Inventory Management System");
         stage.setScene(scene);
+
+        stage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/inventory_icon.png")));
 
         // 🔹 Save column order when app closes
         stage.setOnCloseRequest(event -> {

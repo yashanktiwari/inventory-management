@@ -12,7 +12,7 @@ public class TransactionHistory {
     private String department;
     private String location;
 
-    private String employeeId;
+    private String employeeCode;
     private String employeeName;
 
     private String ipAddress;
@@ -83,7 +83,7 @@ public class TransactionHistory {
         this.department = department;
         this.location = location;
 
-        this.employeeId = employeeId;
+        this.employeeCode = employeeId;
         this.employeeName = employeeName;
 
         this.ipAddress = ipAddress;
@@ -123,7 +123,7 @@ public class TransactionHistory {
     public String getDepartment() { return department; }
     public String getLocation() { return location; }
 
-    public String getEmployeeId() { return employeeId; }
+    public String getEmployeeCode() { return employeeCode; }
     public String getEmployeeName() { return employeeName; }
 
     public String getIpAddress() { return ipAddress; }

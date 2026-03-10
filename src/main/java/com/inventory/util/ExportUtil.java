@@ -63,7 +63,7 @@ public class ExportUtil {
                 row.createCell(1).setCellValue(nullSafe(t.getPlant()));
                 row.createCell(2).setCellValue(nullSafe(t.getDepartment()));
                 row.createCell(3).setCellValue(nullSafe(t.getLocation()));
-                row.createCell(4).setCellValue(nullSafe(t.getEmployeeId()));
+                row.createCell(4).setCellValue(nullSafe(t.getEmployeeCode()));
                 row.createCell(5).setCellValue(nullSafe(t.getEmployeeName()));
                 row.createCell(6).setCellValue(nullSafe(t.getIpAddress()));
                 row.createCell(7).setCellValue(nullSafe(t.getItemCode()));
@@ -160,7 +160,7 @@ public class ExportUtil {
                 table.addCell(nullSafe(t.getPlant()));
                 table.addCell(nullSafe(t.getDepartment()));
                 table.addCell(nullSafe(t.getLocation()));
-                table.addCell(nullSafe(t.getEmployeeId()));
+                table.addCell(nullSafe(t.getEmployeeCode()));
                 table.addCell(nullSafe(t.getEmployeeName()));
                 table.addCell(nullSafe(t.getIpAddress()));
                 table.addCell(nullSafe(t.getItemCode()));

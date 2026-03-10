@@ -74,3 +74,25 @@
 .table-view .scroll-bar:horizontal:disabled {
     -fx-opacity: 1;
 }
+
+.context-menu {
+    -fx-background-color: white;
+    -fx-padding: 6;
+}
+
+.menu-item {
+    -fx-padding: 8 18 8 18;   /* top right bottom left */
+    -fx-font-size: 13px;
+}
+
+.menu-item .label {
+    -fx-padding: 0 6 0 6;     /* extra spacing around text */
+}
+
+.menu-item:focused {
+    -fx-background-color: #0078D7;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: white;
+}

@@ -12,6 +12,10 @@
         <version>0.0.8</version>
         <configuration>
           <mainClass>com.inventory.MainApp</mainClass>
+          <options>
+            <option>--add-opens</option>
+            <option>javafx.controls/javafx.scene.control.skin=ALL-UNNAMED</option>
+          </options>
         </configuration>
       </plugin>
       <plugin>
