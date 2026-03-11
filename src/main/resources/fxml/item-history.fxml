@@ -49,6 +49,7 @@
                 <TableColumn fx:id="returnedColumn" text="Returned Date" prefWidth="170"/>
 
                 <TableColumn fx:id="remarksColumn" text="Remarks" prefWidth="200"/>
+                <TableColumn fx:id="attachmentColumn" text="Attachment" prefWidth="90"/>
                 <TableColumn fx:id="auditColumn" text="Last Modified" prefWidth="140"/>
 
             </columns>

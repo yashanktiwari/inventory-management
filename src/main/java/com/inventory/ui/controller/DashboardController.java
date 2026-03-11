@@ -210,55 +210,12 @@ public class DashboardController {
     private TableFilter<TransactionHistory> frozenTableFilter;
     private final Map<String, Set<String>> activeFilters = new HashMap<>();
     private FilteredList<TransactionHistory> filterPipeline;
+    private AttachmentManager attachmentManager;
 
     @FXML
     public void initialize() {
+        attachmentManager = new AttachmentManager();
         historyTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-
-//        historyTable.setRowFactory(table -> {
-//            TableRow<TransactionHistory> row = new TableRow<>();
-//
-//            ContextMenu contextMenu = new ContextMenu();
-//
-//            MenuItem sellItem = createMenuItem("Sell");
-//            MenuItem editItem = createMenuItem("Edit");
-//
-//            sellItem.setOnAction(e -> {
-//                TransactionHistory transaction = row.getItem();
-//                if (transaction != null) {
-//                    openSellTransaction(transaction);
-//                }
-//            });
-//
-//            editItem.setOnAction(e -> {
-//                TransactionHistory transaction = row.getItem();
-//                if (transaction != null) {
-//                    openEditTransaction(transaction);
-//                }
-//            });
-//
-//            row.itemProperty().addListener((obs, oldItem, newItem) -> {
-//
-//                contextMenu.getItems().clear();
-//
-//                if (newItem == null) return;
-//
-//                // Sell only for BUY
-//                if ("Buy".equalsIgnoreCase(newItem.getBuySell())) {
-//                    contextMenu.getItems().add(sellItem);
-//                }
-//
-//                contextMenu.getItems().add(editItem);
-//            });
-//
-//            row.contextMenuProperty().bind(
-//                    Bindings.when(row.emptyProperty())
-//                            .then((ContextMenu) null)
-//                            .otherwise(contextMenu)
-//            );
-//
-//            return row;
-//        });
 
         historyTable.setRowFactory(table -> {
 
@@ -302,14 +259,17 @@ public class DashboardController {
                             .otherwise(contextMenu)
             );
 
-            // ⭐ DOUBLE CLICK SELECT CELL VALUE
             row.setOnMouseClicked(event -> {
 
                 if (event.getClickCount() == 2 && !row.isEmpty()) {
 
-                    TablePosition<?, ?> pos = historyTable.getSelectionModel().getSelectedCells().get(0);
+                    TablePosition<?, ?> pos = historyTable.getFocusModel().getFocusedCell();
+
+                    if (pos == null) return;
 
                     TableColumn<?, ?> column = pos.getTableColumn();
+
+                    if (column == null) return;
 
                     Object value = column.getCellData(row.getIndex());
 
@@ -319,7 +279,6 @@ public class DashboardController {
                         content.putString(value.toString());
                         Clipboard.getSystemClipboard().setContent(content);
 
-                        // ⭐ show copied notification
                         Tooltip copiedTip = new Tooltip("Copied!");
                         copiedTip.setAutoHide(true);
 
@@ -1184,6 +1143,49 @@ public class DashboardController {
         });
 
         poColumn.setCellValueFactory(new PropertyValueFactory<>("poNo"));
+        poColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "po_no",
+                            row.getSimNo(),
+                            row.getSimNo()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
 
         partyColumn.setCellValueFactory(new PropertyValueFactory<>("partyName"));
         partyColumn.setCellFactory(column -> new TableCell<>() {
@@ -1494,7 +1496,7 @@ public class DashboardController {
 
                     Stage stage = (Stage) btn.getScene().getWindow();
 
-                    handleAttachment(row, stage);
+                    attachmentManager.handleAttachment(row, stage, transactionDAO, () -> loadHistory());
                 });
 
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
@@ -2264,6 +2266,9 @@ public class DashboardController {
             Stage stage = new Stage();
             stage.setTitle("Transaction History");
             stage.setScene(new Scene(root, 1200, 650));
+            stage.setOnCloseRequest(event -> {
+                loadHistory();
+            });
             stage.show();
 
         } catch (Exception e) {
@@ -2935,66 +2940,6 @@ public class DashboardController {
         }
     }
 
-    private void handleAttachment(TransactionHistory history, Stage stage) {
-        String storagePath = AppConfig.getAttachmentPath();
-        if (storagePath == null || storagePath.isBlank()) {
-            StoragePathDialog.show(stage);
-            return;
-        }
-        try {
-            if (history.getAttachmentFile() == null ||
-                    history.getAttachmentFile().isBlank()) {
-                uploadAttachment(history, storagePath, stage);
-            } else {
-                viewAttachment(history, storagePath);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            AlertUtil.showError("Error", "Unable to process attachment");
-        }
-    }
-
-    private void uploadAttachment(TransactionHistory history, String storagePath, Stage stage) throws Exception {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select Attachment");
-        chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Images", "*.png","*.jpg","*.jpeg"),
-                new FileChooser.ExtensionFilter("PDF", "*.pdf")
-        );
-
-        File file = chooser.showOpenDialog(stage);
-        if (file == null) return;
-
-        String extension =
-                file.getName().substring(file.getName().lastIndexOf("."));
-        String newName =
-                history.getTransactionId() + "_" +
-                        System.currentTimeMillis() + extension;
-        File target = new File(
-                storagePath + File.separator +
-                        "transactions" + File.separator + newName
-        );
-        java.nio.file.Files.copy(file.toPath(), target.toPath());
-        transactionDAO.updateAttachment(
-                history.getTransactionId(),
-                newName
-        );
-        loadHistory();
-    }
-
-    private void viewAttachment(TransactionHistory history, String storagePath) throws Exception {
-        File file = new File(
-                storagePath + File.separator +
-                        "transactions" + File.separator +
-                        history.getAttachmentFile()
-        );
-        if (!file.exists()) {
-            AlertUtil.showError("File Missing", "Attachment not found.");
-            return;
-        }
-        java.awt.Desktop.getDesktop().open(file);
-    }
-
     private void updateUIState(boolean connected) {
 
         boolean frozen = columnsFrozen;
@@ -3045,6 +2990,7 @@ public class DashboardController {
         p.partyName = t.getPartyName();
 
         p.unit = t.getUnit();
+        p.attachmentFile = t.getAttachmentFile();
 
         return p;
     }
@@ -3078,6 +3024,7 @@ public class DashboardController {
         p.partyName = t.getPartyName();
 
         p.unit = t.getUnit();
+        p.attachmentFile = t.getAttachmentFile();
 
         return p;
     }
