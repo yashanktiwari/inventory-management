@@ -67,7 +67,8 @@
 --java-options "--add-opens=javafx.controls/javafx.scene.control.skin=ALL-UNNAMED" `
 --win-shortcut `
 --win-menu `
---win-dir-chooser
+--win-dir-chooser `
+--win-upgrade-uuid 123e4567-e89b-12d3-a456-426614174000
 
  Do check the paths and all before running
 
