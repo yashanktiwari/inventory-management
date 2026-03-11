@@ -61,7 +61,7 @@
 --type exe `
 --app-version 1.0 `
 --vendor "Yashank Tiwari" `
---icon "D:\Projects\InventoryManagement\InventoryManagement\src\main\resources\icons\inventory_icon.png" `
+--icon "D:\Projects\InventoryManagement\InventoryManagement\src\main\resources\icons\inventory_icon.ico" `
 --module-path "C:\Users\yasha\Downloads\openjfx-21.0.10_windows-x64_bin-jmods\javafx-jmods-21.0.10" `
 --add-modules javafx.controls,javafx.fxml,java.sql,java.naming `
 --java-options "--add-opens=javafx.controls/javafx.scene.control.skin=ALL-UNNAMED" `
