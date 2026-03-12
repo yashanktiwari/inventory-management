@@ -47,6 +47,8 @@ public class TransactionHistory {
 
     private String lastModifiedBy;
     private List<AuditEntry> auditEntries;
+    private boolean available;
+
 
     public TransactionHistory() {
     }
@@ -168,4 +170,8 @@ public class TransactionHistory {
 
     public String getLastModifiedBy() { return lastModifiedBy; }
     public List<AuditEntry> getAuditEntries() { return auditEntries; }
+
+    public boolean isAvailable() { return available; }
+
+    public void setAvailable(boolean available) { this.available = available; }
 }

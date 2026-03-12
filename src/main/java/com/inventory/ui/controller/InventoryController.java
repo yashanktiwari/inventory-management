@@ -5,14 +5,12 @@ import com.inventory.model.InventoryItem;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.VBox;
@@ -37,11 +35,20 @@ public class InventoryController {
     private TableColumn<InventoryItem, Double> minimumCol;
 
     @FXML
+    private TableColumn<InventoryItem, String> itemCodeCol;
+
+    @FXML
+    private TextField searchField;
+
+
+    @FXML
     private Label totalItemsLabel;
 
     private final TransactionDAO transactionDAO = new TransactionDAO();
     private static final int MAX_VISIBLE_ROWS = 12;
     private static final double ROW_HEIGHT = 36;
+    private FilteredList<InventoryItem> filterPipeline;
+
 
     @FXML
     public void initialize() {
@@ -104,6 +111,11 @@ public class InventoryController {
                 new PropertyValueFactory<>("itemName")
         );
 
+        itemCodeCol.setCellValueFactory(
+                new PropertyValueFactory<>("itemCode")
+        );
+
+
         stockCol.setCellValueFactory(cell -> {
 
             InventoryItem item = cell.getValue();
@@ -153,6 +165,28 @@ public class InventoryController {
 
         loadInventory();
 
+        searchField.textProperty().addListener((obs, oldValue, newValue) -> {
+
+            if (filterPipeline == null) return;
+
+            filterPipeline.setPredicate(item -> {
+
+                if (newValue == null || newValue.isBlank()) {
+                    return true;
+                }
+
+                String keyword = newValue.toLowerCase();
+
+                return
+                        (item.getItemCode() != null &&
+                                item.getItemCode().toLowerCase().contains(keyword))
+                                ||
+                                (item.getItemName() != null &&
+                                        item.getItemName().toLowerCase().contains(keyword));
+            });
+        });
+
+
         Platform.runLater(() -> {
             Stage stage = (Stage) inventoryTable.getScene().getWindow();
             stage.sizeToScene();
@@ -168,12 +202,15 @@ public class InventoryController {
 
         List<InventoryItem> list = transactionDAO.getInventory();
 
-        inventoryTable.setItems(
-                FXCollections.observableArrayList(list)
+        filterPipeline = new FilteredList<>(
+                FXCollections.observableArrayList(list), p -> true
         );
+
+        inventoryTable.setItems(filterPipeline);
 
         totalItemsLabel.setText(String.valueOf(list.size()));
     }
+
 
     private void openAvailableInventory(String itemName) {
         try {

@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class AddTransactionController {
 
@@ -365,6 +366,17 @@ public class AddTransactionController {
             return null;
         }
 
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Save");
+        confirm.setHeaderText("Save Transaction?");
+        confirm.setContentText("Are you sure you want to save this transaction?");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return null;
+        }
+
         String buySell = buySellBox.getValue();
         String itemCondition = conditionBox.getValue();
         String plant = plantField.getText();
@@ -482,13 +494,9 @@ public class AddTransactionController {
         } else {
 
             if ("Sell".equalsIgnoreCase(buySell)) {
-
                 double currentStock = transactionDAO.getCurrentStock(itemName);
-
                 double sellQty = itemCount.doubleValue();
-
                 if (sellQty > currentStock) {
-
                     AlertUtil.showError(
                             "Stock Error",
                             "Not enough stock available.\n\n" +
@@ -498,7 +506,20 @@ public class AddTransactionController {
 
                     return null;
                 }
+                String serial = itemSerialField.getText();
+                if (serial != null && !serial.isBlank()) {
+                    boolean available = transactionDAO.isItemAvailable(serial);
+                    if (!available) {
+                        AlertUtil.showError(
+                                "Item Not Available",
+                                "This item is already issued or scrapped.\n\n" +
+                                        "Serial: " + serial
+                        );
+                        return null;
+                    }
+                }
             }
+
 
             transactionId = transactionDAO.createTransaction(
                     buySell,
@@ -729,6 +750,7 @@ public class AddTransactionController {
         if ("Buy".equalsIgnoreCase(type)) {
             hideBuyFields(true);
         } else {
+            statusBox.setValue("Issued");
             hideBuyFields(false);
         }
         changeLabelAndTitle(type);

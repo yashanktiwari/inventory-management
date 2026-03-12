@@ -48,6 +48,14 @@
 
         <VBox spacing="10" style="-fx-padding:30 25 25 25;">
 
+            <TextField fx:id="searchField"
+                       promptText="Search inventory..."
+                       style="-fx-background-radius:8;
+                  -fx-border-radius:8;
+                  -fx-border-color:#dfe6ee;
+                  -fx-padding:8 10;" />
+
+
             <TableView fx:id="inventoryTable"
                        VBox.vgrow="ALWAYS"
                        style="-fx-background-radius:10;
@@ -55,6 +63,11 @@
                               -fx-border-color:#dfe6ee;">
 
                 <columns>
+
+                    <TableColumn fx:id="itemCodeCol"
+                                 text="Item Code"
+                                 prefWidth="180" />
+
 
                     <TableColumn fx:id="itemNameCol"
                                  text="Item Name"

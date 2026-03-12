@@ -51,158 +51,80 @@ import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
 
-    @FXML
-    private TextField searchField;
-
-    @FXML
-    private TableView<TransactionHistory> historyTable;
-
-    @FXML
-    private TableColumn<TransactionHistory, Integer> serialColumn;
-
-    @FXML
-    private VBox tableContainer;
+    @FXML private TextField searchField;
+    @FXML private TableView<TransactionHistory> historyTable;
+    @FXML private TableColumn<TransactionHistory, Integer> serialColumn;
+    @FXML private VBox tableContainer;
 
     // 🔹 Transaction Info
-    @FXML
-    private TableColumn<TransactionHistory, String> buySellColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> plantColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> departmentColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> locationColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemLocationColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemCategoryColumn;
+    @FXML private TableColumn<TransactionHistory, String> buySellColumn;
+    @FXML private TableColumn<TransactionHistory, String> plantColumn;
+    @FXML private TableColumn<TransactionHistory, String> departmentColumn;
+    @FXML private TableColumn<TransactionHistory, String> locationColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemLocationColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemCategoryColumn;
 
     // 🔹 Employee Info
-    @FXML
-    private TableColumn<TransactionHistory, String> employeeCodeColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> employeeNameColumn;
+    @FXML private TableColumn<TransactionHistory, String> employeeCodeColumn;
+    @FXML private TableColumn<TransactionHistory, String> employeeNameColumn;
 
     // 🔹 Network / Device
-    @FXML
-    private TableColumn<TransactionHistory, String> ipAddressColumn;
+    @FXML private TableColumn<TransactionHistory, String> ipAddressColumn;
 
     // 🔹 Item Info
-    @FXML
-    private TableColumn<TransactionHistory, String> itemCodeColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemNameColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemMakeColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemModelColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemSerialColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> itemConditionColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, Double> itemCountColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> unitColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemCodeColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemNameColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemMakeColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemModelColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemSerialColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemConditionColumn;
+    @FXML private TableColumn<TransactionHistory, Double> itemCountColumn;
+    @FXML private TableColumn<TransactionHistory, String> unitColumn;
 
     // 🔹 SIM / IMEI
-    @FXML
-    private TableColumn<TransactionHistory, String> imeiColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> simColumn;
+    @FXML private TableColumn<TransactionHistory, String> imeiColumn;
+    @FXML private TableColumn<TransactionHistory, String> simColumn;
 
     // 🔹 Purchase Info
-    @FXML
-    private TableColumn<TransactionHistory, String> poColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> partyColumn;
+    @FXML private TableColumn<TransactionHistory, String> poColumn;
+    @FXML private TableColumn<TransactionHistory, String> partyColumn;
 
     // 🔹 Status
-    @FXML
-    private TableColumn<TransactionHistory, String> statusColumn;
+    @FXML private TableColumn<TransactionHistory, String> statusColumn;
 
     // 🔹 Dates
-    @FXML
-    private TableColumn<TransactionHistory, String> issuedColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> returnedColumn;
+    @FXML private TableColumn<TransactionHistory, String> issuedColumn;
+    @FXML private TableColumn<TransactionHistory, String> returnedColumn;
 
     // 🔹 Remarks
-    @FXML
-    private TableColumn<TransactionHistory, String> remarksColumn;
+    @FXML private TableColumn<TransactionHistory, String> remarksColumn;
 
     // 🔹 Actions
-    @FXML
-    private TableColumn<TransactionHistory, Void> actionColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, Void> deleteColumn;
-
-    @FXML
-    private TableColumn<TransactionHistory, String> auditColumn;
+    @FXML private TableColumn<TransactionHistory, Void> actionColumn;
+    @FXML private TableColumn<TransactionHistory, Void> deleteColumn;
+    @FXML private TableColumn<TransactionHistory, String> auditColumn;
 
     // 🔹 Connection Status
-    @FXML
-    private javafx.scene.shape.Circle statusDot;
-
-    @FXML
-    private Label statusLabel;
+    @FXML private javafx.scene.shape.Circle statusDot;
+    @FXML private Label statusLabel;
 
     // 🔹 Buttons
-    @FXML
-    private Button addTransactionButton;
-
-    @FXML
-    private Button exportExcelButton;
-
-    @FXML
-    private Button exportPDFButton;
-
-    @FXML
-    private Button refreshButton;
-
-    @FXML
-    private Button resetFiltersButton;
-
-    @FXML
-    private MenuItem freezeColumnsMenuItem;
-
-    @FXML
-    private MenuItem unfreezeColumnsMenuItem;
-
-    @FXML
-    private MenuItem changeAdminPasswordMenuItem;
-
-    @FXML
-    private MenuItem setupDatabase;
-
-    @FXML
-    private MenuItem backupDatabase;
-
-    @FXML
-    private MenuItem restoreDatabase;
-
-    @FXML
-    private TableColumn<TransactionHistory, Void> attachmentColumn;
-
-    @FXML
-    private Label recordCountLabel;
+    @FXML private Button addTransactionButton;
+    @FXML private Button exportExcelButton;
+    @FXML private Button exportPDFButton;
+    @FXML private Button refreshButton;
+    @FXML private Button resetFiltersButton;
+    @FXML private MenuItem freezeColumnsMenuItem;
+    @FXML private MenuItem unfreezeColumnsMenuItem;
+    @FXML private MenuItem changeAdminPasswordMenuItem;
+    @FXML private MenuItem setupDatabase;
+    @FXML private MenuItem backupDatabase;
+    @FXML private MenuItem restoreDatabase;
+    @FXML private TableColumn<TransactionHistory, Void> attachmentColumn;
+    @FXML private Label recordCountLabel;
+    @FXML private Label stockLabel;
+    @FXML private Label issuedLabel;
+    @FXML private Label scrapLabel;
 
 
     private ObservableList<TransactionHistory> masterData;
@@ -273,24 +195,27 @@ public class DashboardController {
 
                 // BUY → Sell + Edit
                 if ("Buy".equalsIgnoreCase(buySell)) {
-                    contextMenu.getItems().add(sellItem);
+
+                    if (newItem.isAvailable()) {
+                        contextMenu.getItems().add(sellItem);
+                    }
+
                     contextMenu.getItems().add(editItem);
-                    return;
                 }
+
+
 
                 // SELL logic
                 if ("Sell".equalsIgnoreCase(buySell)) {
 
-                    // Returned → Sell + Edit
-                    if ("Returned".equalsIgnoreCase(status)) {
+                    if ("Returned".equalsIgnoreCase(status) && newItem.isAvailable()) {
                         contextMenu.getItems().add(sellItem);
-                        contextMenu.getItems().add(editItem);
-                        return;
                     }
 
-                    // Scrap or Issued → Edit only
                     contextMenu.getItems().add(editItem);
                 }
+
+
             });
 
             row.contextMenuProperty().bind(
@@ -571,7 +496,7 @@ public class DashboardController {
                     setText(null);
                     setStyle("");
                 } else {
-                    setText(value);
+                    setText(value.toUpperCase());
                     setAlignment(Pos.CENTER);
                     if ("Buy".equalsIgnoreCase(value)) {
                         setStyle("-fx-background-color: #d4edda; -fx-text-fill: black;");
@@ -616,14 +541,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String plant, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(plant, empty);
 
-                if (empty || ip == null) {
+                if (empty || plant == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(plant.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -661,14 +586,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String department, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(department, empty);
 
-                if (empty || ip == null) {
+                if (empty || department == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(department.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -706,14 +631,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String location, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(location, empty);
 
-                if (empty || ip == null) {
+                if (empty || location == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(location.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -751,14 +676,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemLocation, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemLocation, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemLocation == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemLocation.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -796,14 +721,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemCategory, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemCategory, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemCategory == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemCategory.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -841,14 +766,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String employeeCode, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(employeeCode, empty);
 
-                if (empty || ip == null) {
+                if (empty || employeeCode == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(employeeCode.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -886,14 +811,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String employeeName, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(employeeName, empty);
 
-                if (empty || ip == null) {
+                if (empty || employeeName == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(employeeName.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -938,7 +863,7 @@ public class DashboardController {
                 if (empty || ip == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(ip.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -976,14 +901,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemCode, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemCode, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemCode == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemCode.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1021,14 +946,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemName, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemName, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemName == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemName.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1066,14 +991,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemMake, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemMake, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemMake == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemMake.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1111,14 +1036,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemModel, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemModel, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemModel == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemModel.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1156,14 +1081,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String itemSerial, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(itemSerial, empty);
 
-                if (empty || ip == null) {
+                if (empty || itemSerial == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(itemSerial.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1204,14 +1129,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String value, boolean empty) {
+            protected void updateItem(String itemCondition, boolean empty) {
 
-                super.updateItem(value, empty);
+                super.updateItem(itemCondition, empty);
 
-                if (empty || value == null) {
+                if (empty || itemCondition == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(value);
+                    link.setText(itemCondition.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1219,6 +1144,19 @@ public class DashboardController {
 
         itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
         unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));
+
+        unitColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected  void updateItem(String unit, boolean empty) {
+                super.updateItem(unit, empty);
+
+                if(empty || unit == null) {
+                    setText(null);
+                } else {
+                    setText(unit.toUpperCase());
+                }
+            }
+        });
 
         imeiColumn.setCellValueFactory(new PropertyValueFactory<>("imeiNo"));
         imeiColumn.setCellFactory(column -> new TableCell<>() {
@@ -1252,14 +1190,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String imei, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(imei, empty);
 
-                if (empty || ip == null) {
+                if (empty || imei == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(imei.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1298,14 +1236,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String sim, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(sim, empty);
 
-                if (empty || ip == null) {
+                if (empty || sim == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(sim.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1343,14 +1281,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String po, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(po, empty);
 
-                if (empty || ip == null) {
+                if (empty || po == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(po.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1388,14 +1326,14 @@ public class DashboardController {
             }
 
             @Override
-            protected void updateItem(String ip, boolean empty) {
+            protected void updateItem(String party, boolean empty) {
 
-                super.updateItem(ip, empty);
+                super.updateItem(party, empty);
 
-                if (empty || ip == null) {
+                if (empty || party == null) {
                     setGraphic(null);
                 } else {
-                    link.setText(ip);
+                    link.setText(party.toUpperCase());
                     setGraphic(link);
                 }
             }
@@ -1405,19 +1343,19 @@ public class DashboardController {
         statusColumn.setCellFactory(column -> new TableCell<>() {
 
             @Override
-            protected void updateItem(String value, boolean empty) {
+            protected void updateItem(String status, boolean empty) {
 
-                super.updateItem(value, empty);
+                super.updateItem(status, empty);
 
-                if (empty || value == null) {
+                if (empty || status == null) {
                     setText(null);
                     setStyle("");
                 } else {
 
-                    setText(value);
+                    setText(status.toUpperCase());
                     setAlignment(Pos.CENTER);
 
-                    switch (value.toLowerCase()) {
+                    switch (status.toLowerCase()) {
 
                         case "issued" ->
                                 setStyle("-fx-background-color:#d6eaff; -fx-text-fill: black;");
@@ -1481,8 +1419,8 @@ public class DashboardController {
                     return;
                 }
 
-                textLabel.setText(value);
-                tooltip.setText(value);
+                textLabel.setText(value.toUpperCase());
+                tooltip.setText(value.toUpperCase());
 
                 // show icon if text is long OR multi-line
                 if (value.length() > 20 || value.contains("\n")) {
@@ -1578,7 +1516,7 @@ public class DashboardController {
                 if (transaction.getAuditEntries() == null ||
                         transaction.getAuditEntries().isEmpty()) {
 
-                    setText(user); // no icon
+                    setText(user.toUpperCase()); // no icon
                     return;
                 }
 
@@ -1662,7 +1600,7 @@ public class DashboardController {
             LocalDateTime dateTime = history.getReturnedDateTime();
             // If Sell but not yet returned
             if (dateTime == null) {
-                return new SimpleStringProperty("Not Returned");
+                return new SimpleStringProperty("NOT RETURNED");
             }
             return new SimpleStringProperty(
                     dateTime.format(formatter)
@@ -1705,9 +1643,9 @@ public class DashboardController {
                         getTableView().getItems().get(getIndex());
                 if (history.getAttachmentFile() == null ||
                         history.getAttachmentFile().isBlank()) {
-                    btn.setText("📎 Attach"); // upload icon
+                    btn.setText("📎 ATTACH"); // upload icon
                 } else {
-                    btn.setText("👁 View"); // view icon
+                    btn.setText("👁 VIEW"); // view icon
                 }
                 setGraphic(btn);
             }
@@ -1763,9 +1701,6 @@ public class DashboardController {
 
         filterPipeline = new FilteredList<>(masterData, p -> true);
 
-        recordCountLabel.textProperty().bind(
-                Bindings.size(filterPipeline).asString()
-        );
 
         SortedList<TransactionHistory> sortedData =
                 new SortedList<>(filterPipeline);
@@ -1774,13 +1709,27 @@ public class DashboardController {
 
         historyTable.setItems(sortedData);
 
+        historyTable.getItems().addListener( (javafx.collections.ListChangeListener<TransactionHistory>) c -> updateSummary() );
+        updateSummary();
+
         loadHistory();
 
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
 
+            historyTable.itemsProperty().addListener((obs, oldList, newList) -> updateSummary());
+
+            historyTable.getItems().addListener(
+                    (javafx.collections.ListChangeListener<TransactionHistory>) c -> updateSummary()
+            );
+
+
             Platform.runLater(() -> {
                 restoreFilters();
+            });
+
+            historyTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+                Platform.runLater(this::updateSummary);
             });
 
             historyTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -1799,6 +1748,8 @@ public class DashboardController {
             });
         });
         unfreezeColumnsMenuItem.setDisable(true);
+
+//        historyTable.comparatorProperty().addListener((obs, o, n) -> updateSummary());
 
         startConnectionMonitor();
         ConnectionState.connectedProperty().addListener((obs, oldVal, connected) -> {
@@ -2762,36 +2713,46 @@ public class DashboardController {
                         db
                 );
 
-                // 🔥 DO NOT merge error stream (prevents corrupt backup)
+                // Dump SQL directly into the file
                 pb.redirectOutput(backupFile);
 
                 Process process = pb.start();
 
-                // 🔥 Read error stream separately
                 BufferedReader errorReader = new BufferedReader(
                         new InputStreamReader(process.getErrorStream())
                 );
 
                 StringBuilder errorOutput = new StringBuilder();
                 String line;
+
                 while ((line = errorReader.readLine()) != null) {
-                    errorOutput.append(line).append("\n");
+
+                    // Ignore insecure password warning
+                    if (!line.contains("Using a password on the command line interface can be insecure")) {
+                        errorOutput.append(line).append("\n");
+                    }
                 }
 
                 int exitCode = process.waitFor();
 
                 Platform.runLater(() -> {
+
                     historyTable.setDisable(false);
 
                     if (exitCode == 0) {
+
                         AlertUtil.showInfo(
                                 "Success",
                                 "Backup created:\n" + backupFile.getAbsolutePath()
                         );
+
                     } else {
+
                         AlertUtil.showError(
                                 "Backup Failed",
-                                errorOutput.toString()
+                                errorOutput.length() == 0 ?
+                                        "Unknown mysqldump error." :
+                                        errorOutput.toString()
                         );
                     }
                 });
@@ -2809,7 +2770,9 @@ public class DashboardController {
         }).start();
     }
 
+
     private void restoreBackup(String filePath) {
+        System.out.println("restore backup called");
 
         new Thread(() -> {
 
@@ -2818,6 +2781,7 @@ public class DashboardController {
                 Platform.runLater(() -> historyTable.setDisable(true));
 
                 String mysqlPath = AppConfig.getMysqlPath();
+                System.out.println("mysql path -> " + mysqlPath);
                 if (mysqlPath == null) {
                     Platform.runLater(() -> {
                         AlertUtil.showError("Error", "mysql path not configured.");
@@ -2832,6 +2796,12 @@ public class DashboardController {
                 String user = DBConnection.getUsername();
                 String pass = DBConnection.getPassword();
 
+                System.out.println("host -> " + host);
+                System.out.println("port -> " + port);
+                System.out.println("db -> " + db);
+                System.out.println("user -> " + user);
+                System.out.println("pass -> " + pass);
+
                 // 🔴 STEP 1 — Drop & recreate database
                 ProcessBuilder dropDb = new ProcessBuilder(
                         mysqlPath,
@@ -2843,11 +2813,18 @@ public class DashboardController {
                         "DROP DATABASE IF EXISTS " + db + "; CREATE DATABASE " + db + ";"
                 );
 
+                System.out.println("drop command -> " + dropDb);
+
                 Process dropProcess = dropDb.start();
 
                 BufferedReader dropReader = new BufferedReader(
                         new InputStreamReader(dropProcess.getErrorStream())
                 );
+
+                BufferedReader outputReader = new BufferedReader(
+                        new InputStreamReader(dropProcess.getInputStream())
+                );
+
 
                 StringBuilder dropErrors = new StringBuilder();
                 String line;
@@ -2855,10 +2832,17 @@ public class DashboardController {
                 while ((line = dropReader.readLine()) != null) {
                     dropErrors.append(line).append("\n");
                 }
+                while ((line = outputReader.readLine()) != null) {
+                    dropErrors.append(line).append("\n");
+                }
 
                 int dropExit = dropProcess.waitFor();
 
                 if (dropExit != 0) {
+                    System.out.println("Error in dropping -> " + dropErrors.toString());
+                    System.out.println("Exit code: " + dropExit);
+                    System.out.println("Output: " + dropErrors);
+
                     Platform.runLater(() -> {
                         historyTable.setDisable(false);
                         AlertUtil.showError("Drop Failed", dropErrors.toString());
@@ -2876,6 +2860,8 @@ public class DashboardController {
                         db
                 );
 
+                System.out.println("restore -> " + restorePb);
+
                 restorePb.redirectInput(new File(filePath));
 
                 Process restoreProcess = restorePb.start();
@@ -2883,10 +2869,15 @@ public class DashboardController {
                 BufferedReader restoreReader = new BufferedReader(
                         new InputStreamReader(restoreProcess.getErrorStream())
                 );
+                BufferedReader outputReader2 = new BufferedReader(
+                        new InputStreamReader(restoreProcess.getInputStream())
+                );
 
                 StringBuilder restoreErrors = new StringBuilder();
 
                 while ((line = restoreReader.readLine()) != null) {
+                    restoreErrors.append(line).append("\n");
+                }while ((line = outputReader2.readLine()) != null) {
                     restoreErrors.append(line).append("\n");
                 }
 
@@ -2897,16 +2888,16 @@ public class DashboardController {
                     historyTable.setDisable(false);
 
                     if (restoreExit == 0) {
-
+                        DBConnection.initializeDatabase();   // 🔥 add this
                         loadHistory();   // 🔥 Auto refresh
-
+                        DBConnection.initializeDatabase();   // 🔥 add this
                         AlertUtil.showInfo(
                                 "Success",
                                 "Database restored successfully."
                         );
 
                     } else {
-
+                        System.out.println("Restore error -> " + restoreErrors.toString());
                         AlertUtil.showError(
                                 "Restore Failed",
                                 restoreErrors.toString()
@@ -2915,7 +2906,7 @@ public class DashboardController {
                 });
 
             } catch (Exception e) {
-
+                System.out.println("error message -> " + e.getMessage());
                 e.printStackTrace();
 
                 Platform.runLater(() -> {
@@ -3338,4 +3329,67 @@ public class DashboardController {
 
         return item;
     }
+
+    private void updateSummary() {
+
+        double stock = 0;
+        double issued = 0;
+        double scrapped = 0;
+
+        int totalRecords = historyTable.getItems().size();
+
+        for (TransactionHistory t : historyTable.getItems()) {
+
+            double qty = t.getItemCount() == null ? 0 : t.getItemCount();
+
+            String type = t.getBuySell();
+            String status = t.getStatus();
+
+            if ("Buy".equalsIgnoreCase(type)) {
+                stock += qty;
+            }
+
+            else if ("Sell".equalsIgnoreCase(type)) {
+
+                if ("Issued".equalsIgnoreCase(status)) {
+                    stock -= qty;
+                    issued += qty;
+                }
+
+                else if ("Scrap".equalsIgnoreCase(status)
+                        || "Scrapped".equalsIgnoreCase(status)) {
+
+                    stock -= qty;
+                    scrapped += qty;
+                }
+            }
+        }
+
+        recordCountLabel.setText(String.valueOf(totalRecords));
+
+        if(stock >= 0) {
+            stockLabel.setText("In Stock: " + stock);
+        } else {
+            stockLabel.setText("In Stock: 0");
+        }
+
+        if(issued >= 0) {
+            issuedLabel.setText("Issued: " + issued);
+        } else {
+            issuedLabel.setText("Issued: 0");
+        }
+
+
+        if (scrapped > 0) {
+            scrapLabel.setText("Scrapped: " + scrapped);
+            scrapLabel.setVisible(true);
+            scrapLabel.setManaged(true);
+        } else {
+            scrapLabel.setVisible(false);
+            scrapLabel.setManaged(false);
+        }
+    }
+
+
+
 }
