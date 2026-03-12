@@ -5,6 +5,7 @@ import com.inventory.model.AuditEntry;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.AttachmentManager;
 import com.inventory.util.ExportUtil;
+import com.inventory.util.TableColumnPreferenceManager;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -18,6 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import javafx.collections.ListChangeListener;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
 public class ItemHistoryController {
 
@@ -54,6 +57,8 @@ public class ItemHistoryController {
     @FXML private TableColumn<TransactionHistory, String> itemModelColumn;
     @FXML private TableColumn<TransactionHistory, String> itemSerialColumn;
     @FXML private TableColumn<TransactionHistory, Double> itemCountColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemLocationColumn;
+    @FXML private TableColumn<TransactionHistory, String> itemCategoryColumn;
     @FXML private TableColumn<TransactionHistory, String> unitColumn;
 
     @FXML private TableColumn<TransactionHistory, String> imeiColumn;
@@ -71,6 +76,10 @@ public class ItemHistoryController {
     private final TransactionDAO transactionDAO = new TransactionDAO();
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
+    private final Preferences prefs =
+            Preferences.userNodeForPackage(ItemHistoryController.class);
+
+    private static final String COLUMN_ORDER_KEY = "itemHistoryColumnOrder";
     private AttachmentManager attachmentManager;
     private String currentField;
     private String currentValue;
@@ -78,6 +87,16 @@ public class ItemHistoryController {
 
     @FXML
     public void initialize() {
+        TableColumnPreferenceManager<TransactionHistory> columnPrefs =
+                new TableColumnPreferenceManager<>(
+                        itemHistoryTable,
+                        "itemHistoryColumnOrder",
+                        ItemHistoryController.class,
+                        null
+                );
+
+        columnPrefs.initialize();
+
         attachmentManager = new AttachmentManager();
         itemHistoryTable.setFixedCellSize(28);
 
@@ -126,6 +145,8 @@ public class ItemHistoryController {
         itemMakeColumn.setCellValueFactory(new PropertyValueFactory<>("itemMake"));
         itemModelColumn.setCellValueFactory(new PropertyValueFactory<>("itemModel"));
         itemSerialColumn.setCellValueFactory(new PropertyValueFactory<>("itemSerial"));
+        itemLocationColumn.setCellValueFactory(new PropertyValueFactory<>("itemLocation"));
+        itemCategoryColumn.setCellValueFactory(new PropertyValueFactory<>("itemCategory"));
 
         itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
         unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));

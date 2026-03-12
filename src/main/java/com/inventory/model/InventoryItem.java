@@ -5,11 +5,13 @@ public class InventoryItem {
     private String itemName;
     private double stock;
     private String unit;
+    private double minimumStock;
 
-    public InventoryItem(String itemName, double stock, String unit) {
+    public InventoryItem(String itemName, double stock, String unit, double minimumStock) {
         this.itemName = itemName;
         this.stock = stock;
         this.unit = unit;
+        this.minimumStock = minimumStock;
     }
 
     public String getItemName() {
@@ -22,6 +24,14 @@ public class InventoryItem {
 
     public String getUnit() {
         return unit;
+    }
+
+    public double getMinimumStock() {
+        return minimumStock;
+    }
+
+    public void setMinimumStock(double minimumStock) {
+        this.minimumStock = minimumStock;
     }
 
     public void setItemName(String itemName) {

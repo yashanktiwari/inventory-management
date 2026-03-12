@@ -182,6 +182,22 @@ public class DBConnection {
                         "    ADD COLUMN attachment_file VARCHAR(255)");
             } catch (SQLException ignored) {}
 
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN item_condition VARCHAR(50)");
+            } catch (SQLException ignored) {}
+
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN item_location VARCHAR(50)");
+            } catch (SQLException ignored) {}
+
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN item_category VARCHAR(50)");
+            } catch (SQLException ignored) {}
+
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN minimum_stock DOUBLE DEFAULT -1");
+            } catch (SQLException ignored) {}
+
             System.out.println("MySQL database initialized successfully.");
 
         } catch (SQLException e) {

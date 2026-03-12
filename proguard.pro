@@ -1,38 +1,70 @@
+# ==========================
+# INPUT / OUTPUT
+# ==========================
+
 -injars target/inventory-management-1.0-SNAPSHOT.jar
--outjars target/inventory-obfuscated.jar
+-outjars target/inventory-management-obfuscated.jar
 
--libraryjars <java.home>/jmods
+# ==========================
+# SAFE SETTINGS
+# ==========================
 
--dontwarn
--dontnote
+-dontshrink
 -dontoptimize
+-dontpreverify
 
-# Keep main class
+# ==========================
+# KEEP MAIN CLASS
+# ==========================
+
 -keep public class com.inventory.MainApp {
     public static void main(java.lang.String[]);
 }
 
-# Keep JavaFX framework
--keep class javafx.** { *; }
+# ==========================
+# KEEP JAVAFX APPLICATION
+# ==========================
 
-# Keep all controllers completely (important for FXML)
+-keep class com.inventory.MainApp extends javafx.application.Application
+
+# ==========================
+# KEEP CONTROLLERS
+# ==========================
+
 -keep class com.inventory.ui.controller.** { *; }
 
-# Keep models
--keep class com.inventory.model.** { *; }
+# ==========================
+# KEEP FXML FIELDS
+# ==========================
 
-# Keep all FXML injected fields and methods
 -keepclassmembers class * {
     @javafx.fxml.FXML *;
 }
 
-# Keep ALL controller methods (event handlers like handleBackupDatabase)
--keepclassmembers class com.inventory.ui.controller.** {
-    *;
-}
+# ==========================
+# KEEP MODEL CLASSES
+# ==========================
 
-# Keep FXML loader reflection
+-keep class com.inventory.model.** { *; }
+
+# ==========================
+# KEEP DAO
+# ==========================
+
+-keep class com.inventory.dao.** { *; }
+
+# ==========================
+# KEEP ATTRIBUTES (IMPORTANT FOR JAVAFX)
+# ==========================
+
 -keepattributes *Annotation*
 -keepattributes Signature
 -keepattributes InnerClasses
 -keepattributes EnclosingMethod
+
+# ==========================
+# IGNORE LIBRARY WARNINGS
+# ==========================
+
+-dontwarn
+-dontnote

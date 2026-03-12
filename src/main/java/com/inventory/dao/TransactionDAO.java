@@ -17,6 +17,7 @@ public class TransactionDAO {
 
     private static final DateTimeFormatter TABLE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
+    private static final Set<String> notifiedItems = new HashSet<>();
 
     private String safe(String value) {
         return value == null ? "" : value;
@@ -36,6 +37,8 @@ public class TransactionDAO {
             String itemMake,
             String itemModel,
             String itemSerial,
+            String itemCondition,
+            String itemLocation,
             String imeiNo,
             String simNo,
             String poNo,
@@ -61,6 +64,8 @@ public class TransactionDAO {
             item_make,
             item_model,
             item_serial,
+            item_condition,
+            item_location,
             imei_no,
             sim_no,
             po_no,
@@ -72,7 +77,7 @@ public class TransactionDAO {
             item_count,
             unit
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -96,34 +101,37 @@ public class TransactionDAO {
             pstmt.setString(10, itemMake);
             pstmt.setString(11, itemModel);
             pstmt.setString(12, itemSerial);
+            pstmt.setString(13, itemCondition);
+            pstmt.setString(14, itemLocation);
 
-            pstmt.setString(13, imeiNo);
-            pstmt.setString(14, simNo);
+            pstmt.setString(15, imeiNo);
+            pstmt.setString(16, simNo);
 
-            pstmt.setString(15, poNo);
-            pstmt.setString(16, partyName);
+            pstmt.setString(17, poNo);
+            pstmt.setString(18, partyName);
 
-            pstmt.setString(17, status);
+            pstmt.setString(19, status);
 
-            pstmt.setTimestamp(18, Timestamp.valueOf(transactionTime));
+            pstmt.setTimestamp(20, Timestamp.valueOf(transactionTime));
 
             if ("Scrap".equalsIgnoreCase(status)) {
-                pstmt.setTimestamp(19, Timestamp.valueOf(LocalDateTime.now()));
+                pstmt.setTimestamp(21, Timestamp.valueOf(LocalDateTime.now()));
             } else {
-                pstmt.setNull(19, Types.TIMESTAMP);
+                pstmt.setNull(21, Types.TIMESTAMP);
             }
 
-            pstmt.setString(20, remarks);
+            pstmt.setString(22, remarks);
 
             if (itemCount == null || itemCount.isBlank()) {
-                pstmt.setNull(21, Types.DOUBLE);
+                pstmt.setNull(23, Types.DOUBLE);
             } else {
-                pstmt.setDouble(21, Double.parseDouble(itemCount));
+                pstmt.setDouble(23, Double.parseDouble(itemCount));
             }
 
-            pstmt.setString(22, unit);
+            pstmt.setString(24, unit);
 
             pstmt.executeUpdate();
+            checkLowStock(itemName);
 
             ResultSet rs = pstmt.getGeneratedKeys();
 
@@ -166,6 +174,8 @@ public class TransactionDAO {
             String itemMake,
             String itemModel,
             String itemSerial,
+            String itemCondition,
+            String itemLocation,
             String imei,
             String sim,
             String po,
@@ -191,6 +201,8 @@ public class TransactionDAO {
             item_make = ?,
             item_model = ?,
             item_serial = ?,
+            item_condition = ?,
+            item_location = ?,
             imei_no = ?,
             sim_no = ?,
             po_no = ?,
@@ -230,6 +242,7 @@ public class TransactionDAO {
                     oldValues.put("item_make", rs.getString("item_make"));
                     oldValues.put("item_model", rs.getString("item_model"));
                     oldValues.put("item_serial", rs.getString("item_serial"));
+                    oldValues.put("item_condition", rs.getString("item_condition"));
                     oldValues.put("imei_no", rs.getString("imei_no"));
                     oldValues.put("sim_no", rs.getString("sim_no"));
                     oldValues.put("po_no", rs.getString("po_no"));
@@ -257,24 +270,28 @@ public class TransactionDAO {
                 ps.setString(10, itemMake);
                 ps.setString(11, itemModel);
                 ps.setString(12, itemSerial);
-                ps.setString(13, imei);
-                ps.setString(14, sim);
-                ps.setString(15, po);
-                ps.setString(16, party);
-                ps.setString(17, status);
-                ps.setString(18, remarks);
+                ps.setString(13, itemCondition);
+                ps.setString(14, itemLocation);
+                ps.setString(15, imei);
+                ps.setString(16, sim);
+                ps.setString(17, po);
+                ps.setString(18, party);
+                ps.setString(19, status);
+                ps.setString(20, remarks);
 
                 if (itemCount == null || itemCount.isBlank()) {
-                    ps.setNull(19, Types.DOUBLE);
+                    ps.setNull(21, Types.DOUBLE);
                 } else {
-                    ps.setDouble(19, Double.parseDouble(itemCount));
+                    ps.setDouble(21, Double.parseDouble(itemCount));
                 }
 
-                ps.setString(20, unit);
-                ps.setString(21, attachmentFile);
-                ps.setInt(22, transactionId);
+                ps.setString(22, unit);
+                ps.setString(23, attachmentFile);
+                ps.setInt(24, transactionId);
 
                 ps.executeUpdate();
+                checkLowStock(itemName);
+
                 String oldAttachment = oldValues.get("attachment_file");
 
                 if (oldAttachment != null && !oldAttachment.isBlank() &&
@@ -308,6 +325,8 @@ public class TransactionDAO {
             checkAndAudit(transactionId, currentUser, "item_name", oldValues.get("item_name"), itemName);
             checkAndAudit(transactionId, currentUser, "item_make", oldValues.get("item_make"), itemMake);
             checkAndAudit(transactionId, currentUser, "item_model", oldValues.get("item_model"), itemModel);
+            checkAndAudit(transactionId, currentUser, "item_condition", oldValues.get("item_condition"), itemCondition);
+            checkAndAudit(transactionId, currentUser, "item_location", oldValues.get("item_location"), itemLocation);
             checkAndAudit(transactionId, currentUser, "imei_no", oldValues.get("imei_no"), imei);
             checkAndAudit(transactionId, currentUser, "sim_no", oldValues.get("sim_no"), sim);
             checkAndAudit(transactionId, currentUser, "po_no", oldValues.get("po_no"), po);
@@ -316,8 +335,7 @@ public class TransactionDAO {
             checkAndAudit(transactionId, currentUser, "remarks", oldValues.get("remarks"), remarks);
             checkAndAudit(transactionId, currentUser, "item_count", oldValues.get("item_count"), itemCount);
             checkAndAudit(transactionId, currentUser, "unit", oldValues.get("unit"), unit);
-            checkAndAudit(transactionId, currentUser, "unit", oldValues.get("unit"), unit);
-//            checkAndAudit(transactionId, currentUser, "Attachment File", oldValues.get("attachment_file"), attachmentFile);
+            checkAndAudit(transactionId, currentUser, "Attachment File", oldValues.get("attachment_file"), attachmentFile);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -386,6 +404,9 @@ public class TransactionDAO {
                         safe(rs.getString("item_make")),
                         safe(rs.getString("item_model")),
                         safe(rs.getString("item_serial")),
+                        safe(rs.getString("item_condition")),
+                        safe(rs.getString("item_location")),
+                        safe(rs.getString("item_category")),
 
                         safe(rs.getString("imei_no")),
                         safe(rs.getString("sim_no")),
@@ -476,6 +497,9 @@ public class TransactionDAO {
                         safe(rs.getString("item_make")),
                         safe(rs.getString("item_model")),
                         safe(rs.getString("item_serial")),
+                        safe(rs.getString("item_condition")),
+                        safe(rs.getString("item_location")),
+                        safe(rs.getString("item_category")),
 
                         safe(rs.getString("imei_no")),
                         safe(rs.getString("sim_no")),
@@ -582,10 +606,12 @@ public class TransactionDAO {
                 stmt.setInt(4, transactionId);
 
                 stmt.executeUpdate();
+
             }
 
             // 2️⃣ Fetch NEW transaction
             TransactionHistory newT = getTransactionById(transactionId);
+            checkLowStock(newT.getItemName());
 
             // 3️⃣ Log audit differences
             logChanges(oldT, newT, UserUtil.getCurrentUser());
@@ -739,6 +765,9 @@ public class TransactionDAO {
                         safe(rs.getString("item_make")),
                         safe(rs.getString("item_model")),
                         safe(rs.getString("item_serial")),
+                        safe(rs.getString("item_condition")),
+                        safe(rs.getString("item_location")),
+                        safe(rs.getString("item_category")),
                         safe(rs.getString("imei_no")),
                         safe(rs.getString("sim_no")),
                         safe(rs.getString("po_no")),
@@ -807,14 +836,16 @@ public class TransactionDAO {
             SELECT
                 item_name,
                 unit,
+                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
                 SUM(
-                    CASE
-                        WHEN buy_sell = 'Buy' THEN item_count
-                        WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
-                        WHEN buy_sell = 'Sell' THEN -item_count
-                        ELSE 0
-                    END
-                ) AS stock
+                  CASE
+                      WHEN buy_sell = 'Buy' THEN item_count
+                      WHEN status = 'Issued' THEN -item_count
+                      WHEN status = 'Returned' THEN 0
+                      WHEN status = 'Scrap' THEN -item_count
+                      ELSE 0
+                  END
+              ) AS stock
             FROM transactions
             GROUP BY item_name, unit
             HAVING stock > 0
@@ -830,7 +861,8 @@ public class TransactionDAO {
                 inventory.add(new InventoryItem(
                         rs.getString("item_name"),
                         rs.getDouble("stock"),
-                        rs.getString("unit")
+                        rs.getString("unit"),
+                        rs.getDouble("minimum_stock")
                 ));
             }
 
@@ -871,18 +903,19 @@ public class TransactionDAO {
     public double getCurrentStock(String itemName) {
 
         String sql = """
-            SELECT
-            SUM(
-                CASE
-                    WHEN buy_sell = 'Buy' THEN item_count
-                    WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
-                    WHEN buy_sell = 'Sell' THEN -item_count
-                    ELSE 0
-                END
-            ) AS stock
-            FROM transactions
-            WHERE item_name = ?;
-        """;
+        SELECT
+        SUM(
+            CASE
+                WHEN buy_sell = 'Buy' THEN item_count
+                WHEN status = 'Issued' THEN -item_count
+                WHEN status = 'Returned' THEN 0
+                WHEN status = 'Scrap' THEN -item_count
+                ELSE 0
+            END
+        ) AS stock
+        FROM transactions
+        WHERE item_name = ?;
+    """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -902,34 +935,83 @@ public class TransactionDAO {
         return 0;
     }
 
-    public List<TransactionHistory> getAvailableSerialItems(String itemName) {
-        List<TransactionHistory> list = new ArrayList<>();
+
+    public double getMinimumStock(String itemName) {
+
         String sql = """
-        SELECT
-            item_serial,
-            item_make,
-            item_model,
-            unit,
-            MIN(issued_datetime) AS issued_datetime,
-            SUM(
-                CASE
-                    WHEN buy_sell = 'Buy' THEN item_count
-                    WHEN buy_sell = 'Sell' AND status = 'Returned' THEN 0
-                    WHEN buy_sell = 'Sell' THEN -item_count
-                    ELSE 0
-                END
-            ) AS remaining_count
+        SELECT COALESCE(MAX(minimum_stock), -1) AS minimum_stock
         FROM transactions
         WHERE item_name = ?
-        GROUP BY item_serial, item_make, item_model, unit
-        HAVING remaining_count > 0
-        ORDER BY issued_datetime;
-        """;
+    """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, itemName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getDouble("minimum_stock");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
+    public void checkLowStock(String itemName) {
+
+        double minimum = getMinimumStock(itemName);
+
+        if (minimum < 0) return;
+
+        double currentStock = getCurrentStock(itemName);
+
+        if (currentStock < minimum) {
+
+            if (!notifiedItems.contains(itemName)) {
+
+                com.inventory.util.NotificationUtil.showLowStockNotification(
+                        itemName,
+                        currentStock,
+                        minimum
+                );
+
+                notifiedItems.add(itemName);
+            }
+
+        } else {
+            notifiedItems.remove(itemName);
+        }
+    }
+
+    public List<TransactionHistory> getAvailableSerialItems(String itemName) {
+
+        List<TransactionHistory> list = new ArrayList<>();
+
+        String sql = """
+        SELECT t.*
+        FROM transactions t
+        INNER JOIN (
+            SELECT item_serial, MAX(transaction_id) AS latest_id
+            FROM transactions
+            WHERE item_name = ?
+            GROUP BY item_serial
+        ) latest
+        ON t.transaction_id = latest.latest_id
+        WHERE t.item_name = ?
+        AND (t.status IS NULL OR t.status NOT IN ('Issued','Scrap'))
+        ORDER BY t.issued_datetime;
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemName);
+            ps.setString(2, itemName);
 
             ResultSet rs = ps.executeQuery();
 
@@ -941,42 +1023,51 @@ public class TransactionDAO {
                         issuedTs != null ? issuedTs.toLocalDateTime() : null;
 
                 String serial = rs.getString("item_serial");
-                if (serial == null || serial.isEmpty()) {
-                    serial = "";
-                }
+                if (serial == null) serial = "";
 
                 TransactionHistory history = new TransactionHistory(
 
-                        0,                          // transaction_id (not needed here)
+                        rs.getInt("transaction_id"),
 
-                        "Buy",                      // buy_sell
-                        "", "", "",                 // plant, department, location
-                        "", "",                     // employee_id, employee_name
-                        "",                         // ip_address
+                        rs.getString("buy_sell"),
+                        "",
+                        "",
+                        "",
 
-                        "",                         // item_code
-                        itemName,                   // item_name
+                        "",
+                        "",
+
+                        "",
+
+                        rs.getString("item_code"),
+                        itemName,
 
                         rs.getString("item_make"),
                         rs.getString("item_model"),
                         serial,
+                        rs.getString("item_condition"),
+                        "",
+                        "",
 
-                        "", "",                     // imei_no, sim_no
-                        "", "",                     // po_no, party_name
+                        "",
+                        "",
 
-                        "",                         // status
+                        "",
+                        "",
+
+                        rs.getString("status"),
 
                         issued,
                         null,
 
-                        "",                         // remarks
+                        "",
 
-                        rs.getDouble("remaining_count"),
-
+                        rs.getDouble("item_count"),
                         rs.getString("unit"),
 
-                        "",                         // attachment
-                        "",                         // lastModifiedBy
+                        "",
+
+                        "",
                         new ArrayList<>()
                 );
 
@@ -989,6 +1080,7 @@ public class TransactionDAO {
 
         return list;
     }
+
 
     public boolean itemExistsInInventory(
             String itemCode,
@@ -1125,6 +1217,28 @@ public class TransactionDAO {
         // 🔹 Default comparison
         if (!oldVal.equals(newVal)) {
             insertAudit(transactionId, user, field, oldVal, newVal);
+        }
+    }
+
+    public void updateMinimumStock(String itemName, double minimum) {
+
+        String sql = """
+        UPDATE transactions
+        SET minimum_stock = ?
+        WHERE item_name = ?
+        LIMIT 1
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setDouble(1, minimum);
+            ps.setString(2, itemName);
+
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
