@@ -49,6 +49,7 @@ public class TransactionHistory {
     private List<AuditEntry> auditEntries;
     private boolean available;
 
+    private Integer parentTransactionId;
 
     public TransactionHistory() {
     }
@@ -82,10 +83,12 @@ public class TransactionHistory {
             String unit,
             String attachmentFile,
             String lastModifiedBy,
-            List<AuditEntry> auditEntries
+            List<AuditEntry> auditEntries,
+            int parentTransactionId
     ) {
 
         this.transactionId = transactionId;
+        this.parentTransactionId = parentTransactionId;
 
         this.buySell = buySell;
         this.plant = plant;
@@ -172,6 +175,14 @@ public class TransactionHistory {
     public List<AuditEntry> getAuditEntries() { return auditEntries; }
 
     public boolean isAvailable() { return available; }
+
+    public Integer getParentTransactionId() {
+        return parentTransactionId;
+    }
+
+    public void setParentTransactionId(Integer parentTransactionId) {
+        this.parentTransactionId = parentTransactionId;
+    }
 
     public void setAvailable(boolean available) { this.available = available; }
 }

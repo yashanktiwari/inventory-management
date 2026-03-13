@@ -151,24 +151,24 @@ public class AddTransactionController {
             }
 
             if ("Buy".equalsIgnoreCase(newVal)) {
-                statusBox.setItems(FXCollections.observableArrayList("In Stock"));
-                statusBox.setValue("In Stock");
+                statusBox.setItems(FXCollections.observableArrayList("IN STOCK"));
+                statusBox.setValue("IN STOCK");
                 statusBox.setDisable(true);
 
             } else {
-                statusBox.setItems(FXCollections.observableArrayList("Issued", "Scrap"));
+                statusBox.setItems(FXCollections.observableArrayList("ISSUED", "SCRAPPED"));
                 statusBox.setValue("Issued");
                 statusBox.setDisable(false);
             }
         });
 
         unitComboBox.getItems().addAll(
-                "Piece",
-                "Meter",
-                "Box",
-                "Kg"
+                "PIECE",
+                "METER",
+                "BOX",
+                "KG"
         );
-        unitComboBox.setValue("Piece");
+        unitComboBox.setValue("PIECE");
         setupEmployeeAutocomplete();
         setupItemAutocomplete();
         setupCategoryAutocomplete();
@@ -437,6 +437,9 @@ public class AddTransactionController {
         String party = partyField.getText();
 
         String status = statusBox.getValue();
+        if (status != null) {
+            status = status.toUpperCase();
+        }
         String remarks = remarksField.getText();
 
         String itemCountText = itemCountField.getText();
@@ -544,7 +547,7 @@ public class AddTransactionController {
                 }
                 String serial = itemSerialField.getText();
                 if (serial != null && !serial.isBlank()) {
-                    boolean available = transactionDAO.isItemAvailable(serial);
+                    boolean available = transactionDAO.isItemAvailableBySerial(serial);
                     if (!available) {
                         AlertUtil.showError(
                                 "Item Not Available",
@@ -558,6 +561,7 @@ public class AddTransactionController {
 
 
             transactionId = transactionDAO.createTransaction(
+                    null,
                     buySell,
                     plant,
                     department,
@@ -686,7 +690,7 @@ public class AddTransactionController {
         partyField.setText(safe(data.partyName));
 
         unitComboBox.setValue(safe(data.unit));
-        statusBox.setValue(safe(data.status));
+        statusBox.setValue(safe(data.status).toUpperCase());
 
         remarksField.setText(safe(data.remarks));
 
