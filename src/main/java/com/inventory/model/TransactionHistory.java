@@ -22,6 +22,9 @@ public class TransactionHistory {
     private String itemMake;
     private String itemModel;
     private String itemSerial;
+    private String itemCondition;
+    private String itemLocation;
+    private String itemCategory;
 
     private String imeiNo;
     private String simNo;
@@ -37,6 +40,7 @@ public class TransactionHistory {
     private String remarks;
 
     private Double itemCount;
+    private double minimumStock;
     private String unit;
 
     private String attachmentFile;
@@ -61,6 +65,9 @@ public class TransactionHistory {
             String itemMake,
             String itemModel,
             String itemSerial,
+            String itemCondition,
+            String itemLocation,
+            String itemCategory,
             String imeiNo,
             String simNo,
             String poNo,
@@ -93,6 +100,9 @@ public class TransactionHistory {
         this.itemMake = itemMake;
         this.itemModel = itemModel;
         this.itemSerial = itemSerial;
+        this.itemCondition = itemCondition;
+        this.itemLocation = itemLocation;
+        this.itemCategory = itemCategory;
 
         this.imeiNo = imeiNo;
         this.simNo = simNo;
@@ -116,6 +126,7 @@ public class TransactionHistory {
         this.auditEntries = auditEntries;
     }
 
+    public String getItemCondition() { return itemCondition; }
     public int getTransactionId() { return transactionId; }
 
     public String getBuySell() { return buySell; }
@@ -133,6 +144,8 @@ public class TransactionHistory {
     public String getItemMake() { return itemMake; }
     public String getItemModel() { return itemModel; }
     public String getItemSerial() { return itemSerial; }
+    public String getItemLocation() { return itemLocation; }
+    public String getItemCategory() { return itemCategory; }
 
     public String getImeiNo() { return imeiNo; }
     public String getSimNo() { return simNo; }
@@ -148,6 +161,7 @@ public class TransactionHistory {
     public String getRemarks() { return remarks; }
 
     public Double getItemCount() { return itemCount; }
+    public double getMinimumStock() { return minimumStock; }
     public String getUnit() { return unit; }
 
     public String getAttachmentFile() { return attachmentFile; }

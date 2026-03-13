@@ -23,6 +23,9 @@ public class AvailableInventoryController {
     private TableColumn<TransactionHistory, Void> rowNumberCol;
 
     @FXML
+    private TableColumn<TransactionHistory, String> itemConditionCol;
+
+    @FXML
     private TableColumn<TransactionHistory, String> serialCol;
 
     @FXML
@@ -72,14 +75,8 @@ public class AvailableInventoryController {
             }
         });
 
-        serialCol.setCellValueFactory(
-                new PropertyValueFactory<>("itemSerial"));
-
-        makeCol.setCellValueFactory(
-                new PropertyValueFactory<>("itemMake"));
-
-        modelCol.setCellValueFactory(
-                new PropertyValueFactory<>("itemModel"));
+        itemConditionCol.setCellValueFactory(
+                new PropertyValueFactory<>("itemCondition"));
 
         serialCol.setCellValueFactory(
                 new PropertyValueFactory<>("itemSerial"));

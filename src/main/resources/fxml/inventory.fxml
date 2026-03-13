@@ -64,6 +64,8 @@
                                  text="Quantity"
                                  prefWidth="200" />
 
+                    <TableColumn fx:id="minimumCol" text="Minimum"/>
+
                 </columns>
 
             </TableView>

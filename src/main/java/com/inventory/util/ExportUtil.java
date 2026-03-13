@@ -17,12 +17,17 @@ public class ExportUtil {
     // ===================== EXCEL =====================
     public static void exportToExcel(List<TransactionHistory> data, String filePath) {
 
+        System.out.println("ExportUtil called");
         try (Workbook workbook = new XSSFWorkbook()) {
+
+            System.out.println("Workbook created");
 
             DateTimeFormatter formatter =
                     DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
 
             Sheet sheet = workbook.createSheet("Transactions");
+            System.out.println("Sheet created");
+
 
             Row header = sheet.createRow(0);
 
@@ -103,10 +108,16 @@ public class ExportUtil {
 
             try (FileOutputStream fos = new FileOutputStream(filePath)) {
                 workbook.write(fos);
+                System.out.println("Writing in workbook");
             }
 
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("Error: " + e.getMessage());
+            AlertUtil.showError(
+                    "Export Failed",
+                    "Excel export failed:\n" + e.getMessage()
+            );
         }
     }
 

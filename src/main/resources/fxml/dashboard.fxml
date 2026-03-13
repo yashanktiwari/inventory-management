@@ -66,6 +66,11 @@
                 <TextField fx:id="searchField"
                            promptText="Search"
                            prefWidth="450"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Label text="Total Records:" style="-fx-font-size:14px"/>
+                <Label fx:id="recordCountLabel" text="0" style="-fx-font-size:14px"/>
             </HBox>
             <VBox fx:id="tableContainer" VBox.vgrow="ALWAYS" spacing="0">
                 <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
@@ -91,6 +96,10 @@
                         <TableColumn fx:id="itemMakeColumn" text="Item Make" prefWidth="120"/>
                         <TableColumn fx:id="itemModelColumn" text="Item Model" prefWidth="120"/>
                         <TableColumn fx:id="itemSerialColumn" text="Item Serial No." prefWidth="150"/>
+                        <TableColumn fx:id="itemLocationColumn" text="Item Location" prefWidth="120"/>
+                        <TableColumn fx:id="itemCategoryColumn" text="Item Category" prefWidth="120"/>
+
+                        <TableColumn fx:id="itemConditionColumn" text="Item Condition" prefWidth="120"/>
 
                         <TableColumn fx:id="itemCountColumn" text="Qty" prefWidth="90"/>
                         <TableColumn fx:id="unitColumn" text="Unit" prefWidth="80"/>

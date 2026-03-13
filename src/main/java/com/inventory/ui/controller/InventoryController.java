@@ -14,9 +14,11 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.converter.DoubleStringConverter;
 
 import java.util.List;
 
@@ -32,6 +34,9 @@ public class InventoryController {
     private TableColumn<InventoryItem, String> stockCol;
 
     @FXML
+    private TableColumn<InventoryItem, Double> minimumCol;
+
+    @FXML
     private Label totalItemsLabel;
 
     private final TransactionDAO transactionDAO = new TransactionDAO();
@@ -45,6 +50,40 @@ public class InventoryController {
         );
 
         inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        inventoryTable.setRowFactory(tv -> {
+
+            TableRow<InventoryItem> row = new TableRow<>() {
+
+                @Override
+                protected void updateItem(InventoryItem item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    if (empty || item == null) {
+                        setStyle("");
+                    }
+                    else if (item.getMinimumStock() >= 0 &&
+                            item.getStock() < item.getMinimumStock()) {
+
+                        setStyle("-fx-background-color: #ffe6e6;");
+                    }
+                    else {
+                        setStyle("");
+                    }
+                }
+            };
+
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    InventoryItem item = row.getItem();
+                    openAvailableInventory(item.getItemName());
+                }
+            });
+
+            return row;
+        });
+
+
 
         Label text = new Label("No inventory items available");
         text.setStyle(
@@ -81,22 +120,47 @@ public class InventoryController {
             );
         });
 
-        loadInventory();
+        minimumCol.setCellValueFactory(
+                new PropertyValueFactory<>("minimumStock")
+        );
 
-        inventoryTable.setRowFactory(tv -> {
-            TableRow<InventoryItem> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    InventoryItem item = row.getItem();
-                    openAvailableInventory(item.getItemName());
+        minimumCol.setCellFactory(col -> {
+
+            TextFieldTableCell<InventoryItem, Double> cell =
+                    new TextFieldTableCell<>(new DoubleStringConverter());
+
+            cell.focusedProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal && cell.isEditing()) {
+                    cell.commitEdit(cell.getItem());
                 }
             });
-            return row;
+
+            return cell;
         });
+
+        minimumCol.setOnEditCommit(event -> {
+
+            InventoryItem item = event.getRowValue();
+
+            double newValue = event.getNewValue();
+
+            item.setMinimumStock(newValue);
+
+            transactionDAO.updateMinimumStock(item.getItemName(), newValue);
+        });
+
+        inventoryTable.setEditable(true);
+
+        loadInventory();
 
         Platform.runLater(() -> {
             Stage stage = (Stage) inventoryTable.getScene().getWindow();
             stage.sizeToScene();
+            inventoryTable.refresh();
+            inventoryTable.getColumns().forEach(col -> {
+                col.setPrefWidth(col.getWidth());
+            });
+
         });
     }
 

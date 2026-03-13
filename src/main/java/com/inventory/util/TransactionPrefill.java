@@ -18,6 +18,8 @@ public class TransactionPrefill {
     public String itemModel;
     public String itemSerial;
     public Double itemCount;
+    public String itemCondition;
+    public String itemLocation;
 
     public String imeiNo;
     public String simNo;
@@ -25,6 +27,8 @@ public class TransactionPrefill {
     public String poNo;
     public String partyName;
 
+    public String status;
     public String unit;
     public String attachmentFile;
+    public String remarks;
 }

@@ -1,5 +1,6 @@
 package com.inventory;
 
+import com.inventory.util.NotificationUtil;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -14,6 +15,13 @@ import com.inventory.util.StoragePathDialog;
 
 
 public class MainApp extends Application {
+
+    private static Stage primaryStage;
+
+    public static Stage getPrimaryStage() {
+        return primaryStage;
+    }
+
     @Override
     public void start(Stage stage) throws Exception {
 
@@ -21,6 +29,7 @@ public class MainApp extends Application {
 //        java.util.prefs.Preferences.userNodeForPackage(
 //                com.inventory.ui.controller.DashboardController.class
 //        ).removeNode();
+        primaryStage = stage;
         boolean loaded = AppConfig.loadDatabaseConfig();
 
         if (loaded) {
@@ -52,12 +61,15 @@ public class MainApp extends Application {
         stage.setOnCloseRequest(event -> {
             if (controller != null) {
                 controller.saveFilters();
-                controller.saveColumnOrder();
                 controller.shutdownConnectionMonitor();
+                Platform.exit();
+                System.exit(0);
             }
         });
 
         stage.show();
+
+//        NotificationUtil.showLowStockNotification("Mouse", 3, 5);
 
         Platform.runLater(() -> {
             String attachmentPath = AppConfig.getAttachmentPath();

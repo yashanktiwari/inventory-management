@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Objects;
 
 public class AddTransactionController {
 
@@ -34,6 +35,7 @@ public class AddTransactionController {
     @FXML private TextField departmentField;
     @FXML private TextArea remarksField;
     @FXML private ComboBox<String> buySellBox;
+    @FXML private ComboBox<String> conditionBox;
     @FXML private TextField plantField;
     @FXML private TextField locationField;
 
@@ -46,6 +48,7 @@ public class AddTransactionController {
     @FXML private TextField itemMakeField;
     @FXML private TextField itemModelField;
     @FXML private TextField itemSerialField;
+    @FXML private TextField itemLocationField;
 
     @FXML private TextField imeiField;
     @FXML private TextField simField;
@@ -65,6 +68,7 @@ public class AddTransactionController {
     @FXML private ComboBox<String> ampmBox;
 
     @FXML private Button saveAndAddAnotherButton;
+    @FXML private Label titleLabel;
 
     private File selectedAttachment;
     private ObservableList<String> masterItemList;
@@ -120,6 +124,12 @@ public class AddTransactionController {
                         .distinct()
                         .toList()
         );
+
+        conditionBox.setItems(FXCollections.observableArrayList(
+                "New",
+                "Old and Used"
+        ));
+
         buySellBox.setItems(FXCollections.observableArrayList(
                 "Buy",
                 "Sell"
@@ -185,20 +195,14 @@ public class AddTransactionController {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select Attachment");
         chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("PDF Files", "*.pdf"),
-                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg")
+                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+
         );
         File file = chooser.showOpenDialog(
                 attachmentField.getScene().getWindow()
         );
         if (file == null) return;
-        if (file.length() > 204800) {
-            AlertUtil.showError(
-                    "File Too Large",
-                    "Maximum allowed size is 200KB"
-            );
-            return;
-        }
         selectedAttachment = file;
         attachmentField.setText(file.getName());
     }
@@ -362,6 +366,7 @@ public class AddTransactionController {
         }
 
         String buySell = buySellBox.getValue();
+        String itemCondition = conditionBox.getValue();
         String plant = plantField.getText();
         String department = departmentField.getText();
         String location = locationField.getText();
@@ -376,6 +381,7 @@ public class AddTransactionController {
         String itemMake = itemMakeField.getText();
         String itemModel = itemModelField.getText();
         String itemSerial = itemSerialField.getText();
+        String itemLocation = itemLocationField.getText();
 
         String imei = imeiField.getText();
         String sim = simField.getText();
@@ -391,6 +397,16 @@ public class AddTransactionController {
 
         if (buySell == null) {
             AlertUtil.showError("Validation Error", "Please mention BUY OR SELL");
+            return null;
+        }
+
+        if (itemCondition == null) {
+            AlertUtil.showError("Validation Error", "Please mention item condition");
+            return null;
+        }
+
+        if(status == null || status.isEmpty()) {
+            AlertUtil.showError("Validation Error", "Please mention the status");
             return null;
         }
 
@@ -426,10 +442,14 @@ public class AddTransactionController {
 
         if (editTransactionId != null) {
 
-            String attachmentToSave =
-                    selectedAttachment != null
-                            ? selectedAttachment.getName()
-                            : existingAttachmentFile;
+            String attachmentToSave = existingAttachmentFile;
+
+            if(selectedAttachment != null) {
+                String newFileName = copyAttachmentFile(editTransactionId, selectedAttachment);
+                if(newFileName != null) {
+                    attachmentToSave = newFileName;
+                }
+            }
             transactionDAO.updateTransaction(
                     editTransactionId,
                     buySell,
@@ -444,6 +464,8 @@ public class AddTransactionController {
                     itemMake,
                     itemModel,
                     itemSerial,
+                    itemCondition,
+                    itemLocation,
                     imei,
                     sim,
                     po,
@@ -459,6 +481,25 @@ public class AddTransactionController {
 
         } else {
 
+            if ("Sell".equalsIgnoreCase(buySell)) {
+
+                double currentStock = transactionDAO.getCurrentStock(itemName);
+
+                double sellQty = itemCount.doubleValue();
+
+                if (sellQty > currentStock) {
+
+                    AlertUtil.showError(
+                            "Stock Error",
+                            "Not enough stock available.\n\n" +
+                                    "Available: " + currentStock + " " + unit +
+                                    "\nRequested: " + sellQty + " " + unit
+                    );
+
+                    return null;
+                }
+            }
+
             transactionId = transactionDAO.createTransaction(
                     buySell,
                     plant,
@@ -472,6 +513,8 @@ public class AddTransactionController {
                     itemMake,
                     itemModel,
                     itemSerial,
+                    itemCondition,
+                    itemLocation,
                     imei,
                     sim,
                     po,
@@ -484,21 +527,20 @@ public class AddTransactionController {
             );
         }
 
-        saveAttachment(transactionId);
 
+        if(selectedAttachment != null && editTransactionId == null) {
+            String newFileName = copyAttachmentFile(transactionId, selectedAttachment);
+            if(newFileName != null) {
+                transactionDAO.updateAttachment(transactionId, newFileName);
+            }
+        }
         return transactionId;
     }
 
-    private void applySelection(String selected) {
-        itemNameField.setText(selected);
-        itemNameField.positionCaret(selected.length());
-        suggestionsPopup.hide();
-        itemNameField.requestFocus();
-    }
-
-    private void saveAttachment(int transactionId) {
-
-        if (selectedAttachment == null) return;
+    private String copyAttachmentFile(int transactionId, File file) {
+        if (file == null) {
+            return null;
+        }
 
         try {
 
@@ -521,11 +563,11 @@ public class AddTransactionController {
             );
 
             java.nio.file.Files.copy(
-                    selectedAttachment.toPath(),
+                    file.toPath(),
                     target.toPath()
             );
 
-            transactionDAO.updateAttachment(transactionId, newName);
+            return newName;
 
         } catch (Exception e) {
 
@@ -533,9 +575,17 @@ public class AddTransactionController {
 
             AlertUtil.showError(
                     "Attachment Error",
-                    "Transaction saved but attachment failed."
+                    "Failed to copy attachment file."
             );
+            return null;
         }
+    }
+
+    private void applySelection(String selected) {
+        itemNameField.setText(selected);
+        itemNameField.positionCaret(selected.length());
+        suggestionsPopup.hide();
+        itemNameField.requestFocus();
     }
 
     public void prefill(TransactionPrefill data) {
@@ -558,8 +608,13 @@ public class AddTransactionController {
         itemMakeField.setText(safe(data.itemMake));
         itemModelField.setText(safe(data.itemModel));
         itemCountField.setText(data.itemCount == null ? "" : data.itemCount + "");
-
         itemSerialField.setText(safe(data.itemSerial));
+        itemLocationField.setText(safe(data.itemLocation));
+
+        if(data.itemCondition != null && !data.itemCondition.isEmpty()) {
+            conditionBox.setValue(safe(data.itemCondition));
+            conditionBox.setDisable(true);
+        }
 
         imeiField.setText(safe(data.imeiNo));
         simField.setText(safe(data.simNo));
@@ -568,6 +623,9 @@ public class AddTransactionController {
         partyField.setText(safe(data.partyName));
 
         unitComboBox.setValue(safe(data.unit));
+        statusBox.setValue(safe(data.status));
+
+        remarksField.setText(safe(data.remarks));
 
         if (data.attachmentFile != null && !data.attachmentFile.isBlank()) {
             attachmentField.setText(data.attachmentFile);
@@ -583,7 +641,6 @@ public class AddTransactionController {
         buySellBox.setValue("Sell");
         buySellBox.setDisable(true);
 
-        itemCountField.setDisable(true);
         itemCodeField.setDisable(true);
         itemNameField.setDisable(true);
         itemMakeField.setDisable(true);
@@ -603,7 +660,6 @@ public class AddTransactionController {
 
     public void setEditTransactionId(int id) {
         this.editTransactionId = id;
-
         if (saveAndAddAnotherButton != null) {
             buySellBox.setDisable(true);
             saveAndAddAnotherButton.setVisible(false);
@@ -655,5 +711,41 @@ public class AddTransactionController {
         });
 
         return alert.showAndWait().orElse(cancelBtn) == deleteBtn;
+    }
+
+    public void hideSaveAndAddAnotherButton() {
+        if (saveAndAddAnotherButton != null) {
+            buySellBox.setDisable(true);
+            saveAndAddAnotherButton.setVisible(false);
+            saveAndAddAnotherButton.setManaged(false);
+        }
+    }
+
+    public void setTransactionType(String type) {
+
+        buySellBox.setValue(type);
+        buySellBox.setDisable(true);
+
+        if ("Buy".equalsIgnoreCase(type)) {
+            hideBuyFields(true);
+        } else {
+            hideBuyFields(false);
+        }
+        changeLabelAndTitle(type);
+    }
+
+    public void changeLabelAndTitle(String type) {
+        // Update label inside window
+        if (titleLabel != null) {
+            titleLabel.setText(type + " Item");
+        }
+
+        // Update window title
+        Platform.runLater(() -> {
+            Stage stage = (Stage) buySellBox.getScene().getWindow();
+            if (stage != null) {
+                stage.setTitle(type + " Item");
+            }
+        });
     }
 }

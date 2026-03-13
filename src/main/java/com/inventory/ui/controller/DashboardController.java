@@ -76,6 +76,12 @@ public class DashboardController {
     @FXML
     private TableColumn<TransactionHistory, String> locationColumn;
 
+    @FXML
+    private TableColumn<TransactionHistory, String> itemLocationColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> itemCategoryColumn;
+
     // 🔹 Employee Info
     @FXML
     private TableColumn<TransactionHistory, String> employeeCodeColumn;
@@ -102,6 +108,9 @@ public class DashboardController {
 
     @FXML
     private TableColumn<TransactionHistory, String> itemSerialColumn;
+
+    @FXML
+    private TableColumn<TransactionHistory, String> itemConditionColumn;
 
     @FXML
     private TableColumn<TransactionHistory, Double> itemCountColumn;
@@ -192,6 +201,9 @@ public class DashboardController {
     @FXML
     private TableColumn<TransactionHistory, Void> attachmentColumn;
 
+    @FXML
+    private Label recordCountLabel;
+
 
     private ObservableList<TransactionHistory> masterData;
     private final TransactionDAO transactionDAO = new TransactionDAO();
@@ -203,7 +215,7 @@ public class DashboardController {
     private boolean columnsFrozen = false;
     private Node originalCenter;
     private boolean lastConnectionState = false;
-    private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
+//    private static final String COLUMN_ORDER_KEY = "dashboardColumnOrder";
     private TableFreezeManager<TransactionHistory> freezeManager;
     private BorderPane rootPane;
     private TableFilter<TransactionHistory> tableFilter;
@@ -214,6 +226,16 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
+        TableColumnPreferenceManager<TransactionHistory> columnPrefs =
+                new TableColumnPreferenceManager<>(
+                        historyTable,
+                        "dashboardColumnOrder",
+                        DashboardController.class,
+                        () -> !columnsFrozen
+                );
+
+        columnPrefs.initialize();
+
         attachmentManager = new AttachmentManager();
         historyTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 
@@ -246,11 +268,29 @@ public class DashboardController {
 
                 if (newItem == null) return;
 
-                if ("Buy".equalsIgnoreCase(newItem.getBuySell())) {
+                String buySell = newItem.getBuySell();
+                String status = newItem.getStatus();
+
+                // BUY → Sell + Edit
+                if ("Buy".equalsIgnoreCase(buySell)) {
                     contextMenu.getItems().add(sellItem);
+                    contextMenu.getItems().add(editItem);
+                    return;
                 }
 
-                contextMenu.getItems().add(editItem);
+                // SELL logic
+                if ("Sell".equalsIgnoreCase(buySell)) {
+
+                    // Returned → Sell + Edit
+                    if ("Returned".equalsIgnoreCase(status)) {
+                        contextMenu.getItems().add(sellItem);
+                        contextMenu.getItems().add(editItem);
+                        return;
+                    }
+
+                    // Scrap or Issued → Edit only
+                    contextMenu.getItems().add(editItem);
+                }
             });
 
             row.contextMenuProperty().bind(
@@ -303,18 +343,9 @@ public class DashboardController {
         Platform.runLater(() -> {
             rootPane = (BorderPane) historyTable.getScene().getRoot();
             originalCenter = rootPane.getCenter();
-            restoreColumnOrder();
         });
 
         historyTable.setFixedCellSize(28);
-        historyTable.getColumns().addListener(
-                (javafx.collections.ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
-                    if (!columnsFrozen) {
-                        saveColumnOrder();
-                    }
-                }
-
-        );
         centerAllColumns(historyTable);
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
@@ -660,6 +691,96 @@ public class DashboardController {
                             "location",
                             row.getLocation(),
                             row.getLocation()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
+        itemLocationColumn.setCellValueFactory(new PropertyValueFactory<>("itemLocation"));
+        itemLocationColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_location",
+                            row.getItemLocation(),
+                            row.getItemLocation()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String ip, boolean empty) {
+
+                super.updateItem(ip, empty);
+
+                if (empty || ip == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(ip);
+                    setGraphic(link);
+                }
+            }
+        });
+
+        itemCategoryColumn.setCellValueFactory(new PropertyValueFactory<>("itemCategory"));
+        itemCategoryColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+                link.setOnAction(event -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openHistoryPage(
+                            "item_category",
+                            row.getItemCategory(),
+                            row.getItemCategory()
                     );
                 });
 
@@ -1048,6 +1169,54 @@ public class DashboardController {
             }
         });
 
+        itemConditionColumn.setCellValueFactory(
+                new PropertyValueFactory<>("itemCondition")
+        );
+        itemConditionColumn.setCellFactory(column -> new TableCell<>() {
+
+            private final Hyperlink link = new Hyperlink();
+
+            {
+                link.setStyle("-fx-text-fill: black; -fx-underline: false;");
+                link.setCursor(javafx.scene.Cursor.HAND);
+
+                link.setOnAction(event -> {
+
+                    TransactionHistory row = getTableRow().getItem();
+                    if (row == null) return;
+
+                    openHistoryPage(
+                            "item_condition",
+                            row.getItemCondition(),
+                            row.getItemCondition()
+                    );
+                });
+
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null) {
+                        link.textFillProperty().bind(
+                                javafx.beans.binding.Bindings.when(newRow.selectedProperty())
+                                        .then(javafx.scene.paint.Color.WHITE)
+                                        .otherwise(javafx.scene.paint.Color.web("#000000"))
+                        );
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setGraphic(null);
+                } else {
+                    link.setText(value);
+                    setGraphic(link);
+                }
+            }
+        });
+
         itemCountColumn.setCellValueFactory(new PropertyValueFactory<>("itemCount"));
         unitColumn.setCellValueFactory(new PropertyValueFactory<>("unit"));
 
@@ -1157,8 +1326,8 @@ public class DashboardController {
 
                     openHistoryPage(
                             "po_no",
-                            row.getSimNo(),
-                            row.getSimNo()
+                            row.getPoNo(),
+                            row.getPoNo()
                     );
                 });
 
@@ -1316,7 +1485,7 @@ public class DashboardController {
                 tooltip.setText(value);
 
                 // show icon if text is long OR multi-line
-                if (value.length() > 25 || value.contains("\n")) {
+                if (value.length() > 20 || value.contains("\n")) {
                     iconLabel.setVisible(true);
                     setTooltip(tooltip);
                 } else {
@@ -1338,10 +1507,22 @@ public class DashboardController {
             private final VBox container = new VBox(12);
             private final ScrollPane scrollPane = new ScrollPane(container);
 
+
             {
+                scrollPane.setPrefWidth(420);
+                scrollPane.setMinWidth(420);
+                scrollPane.setMaxWidth(420);
+
                 popup.setAutoHide(true);
 
-                container.setStyle("-fx-padding: 10;");
+//                container.setStyle("-fx-padding: 10;");
+                container.setStyle(
+                        "-fx-padding: 12;" +
+                                "-fx-background-color: white;" +
+                                "-fx-background-radius: 8;" +
+                                "-fx-border-radius: 8;" +
+                                "-fx-border-color: #d0d0d0;"
+                );
 
                 scrollPane.setFitToWidth(true);
                 scrollPane.setMaxHeight(400);
@@ -1424,6 +1605,8 @@ public class DashboardController {
                                     first.getModifiedAt().format(formatter)
                     );
 
+                    header.setWrapText(true);
+                    header.setMaxWidth(400);
                     header.setStyle(
                             "-fx-font-weight: bold;" +
                                     "-fx-font-size: 14px;"
@@ -1440,8 +1623,9 @@ public class DashboardController {
                                         " → " +
                                         e.getNewValue()
                         );
-
+                        line.setMaxWidth(400);
                         line.setStyle("-fx-font-size: 13px;");
+                        line.setWrapText(true);
                         block.getChildren().add(line);
                     }
 
@@ -1579,6 +1763,10 @@ public class DashboardController {
 
         filterPipeline = new FilteredList<>(masterData, p -> true);
 
+        recordCountLabel.textProperty().bind(
+                Bindings.size(filterPipeline).asString()
+        );
+
         SortedList<TransactionHistory> sortedData =
                 new SortedList<>(filterPipeline);
 
@@ -1632,7 +1820,6 @@ public class DashboardController {
         updateUIState(ConnectionState.isConnected());
     }
 
-
     @FXML
     private void handleRefresh() {
 //        captureFilters();
@@ -1678,6 +1865,8 @@ public class DashboardController {
             AddTransactionController controller = loader.getController();
             controller.setOnTransactionSaved(this::loadHistory);
 
+            controller.setTransactionType("Buy");
+
             scene.getRoot().disableProperty().bind(
                     ConnectionState.connectedProperty().not()
             );
@@ -1699,20 +1888,70 @@ public class DashboardController {
     @FXML
     private void handleExportExcel() {
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Save Excel File");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
-        );
+        System.out.println("Excel export started");
 
-        File file = fileChooser.showSaveDialog(historyTable.getScene().getWindow());
+        try {
 
-        if (file != null) {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Save Excel File");
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
+            );
+
+            File file = fileChooser.showSaveDialog(historyTable.getScene().getWindow());
+
+            if (file == null) {
+                System.out.println("Export cancelled by user");
+                return;
+            }
+
+            System.out.println("Export path: " + file.getAbsolutePath());
+
             ExportUtil.exportToExcel(
                     historyTable.getItems(),
                     file.getAbsolutePath()
             );
+
+            System.out.println("Excel export finished");
+
+            AlertUtil.showInfo("Export Completed", "Excel file exported successfully.");
+
+        } catch (Exception e) {
+
+            System.out.println("Excel export FAILED");
+            e.printStackTrace();
+
+            AlertUtil.showError(
+                    "Export Failed",
+                    e.getClass().getSimpleName() + "\n" + e.getMessage()
+            );
         }
+    }
+
+    private void showExportSuccessDialog(String type, String path) {
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+        alert.setTitle("Export Completed");
+        alert.setHeaderText(type + " export completed successfully");
+
+        alert.setContentText(
+                "File saved at:\n\n" + path
+        );
+
+        Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
+
+        okButton.setStyle(
+                "-fx-background-color:#2ecc71;" +
+                        "-fx-text-fill:white;" +
+                        "-fx-font-weight:bold;"
+        );
+
+        alert.getDialogPane().setStyle(
+                "-fx-font-size:14px;"
+        );
+
+        alert.showAndWait();
     }
 
     @FXML
@@ -1726,10 +1965,32 @@ public class DashboardController {
 
         File file = fileChooser.showSaveDialog(historyTable.getScene().getWindow());
 
-        if (file != null) {
+        if (file == null) {
+            return;
+        }
+
+        String path = file.getAbsolutePath();
+
+        if (!path.toLowerCase().endsWith(".pdf")) {
+            path += ".pdf";
+        }
+
+        try {
+
             ExportUtil.exportToPDF(
                     historyTable.getItems(),
-                    file.getAbsolutePath()
+                    path
+            );
+
+            showExportSuccessDialog("PDF", path);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            AlertUtil.showError(
+                    "Export Failed",
+                    "Unable to export PDF file."
             );
         }
     }
@@ -2189,7 +2450,7 @@ public class DashboardController {
             Parent root = loader.load();
             Stage stage = new Stage();
             stage.setTitle("Inventory");
-            stage.setScene(new Scene(root, 700, 600));
+            stage.setScene(new Scene(root, 950, 650));
             stage.initOwner(stage.getOwner());
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
@@ -2772,45 +3033,6 @@ public class DashboardController {
         }
     }
 
-    private void restoreColumnOrder() {
-
-        String order = prefs.get(COLUMN_ORDER_KEY, null);
-
-        if (order == null) return;
-
-        String[] ids = order.split(",");
-
-        ObservableList<TableColumn<TransactionHistory, ?>> columns =
-                historyTable.getColumns();
-
-        for (String id : ids) {
-
-            columns.stream()
-                    .filter(c -> id.equals(c.getId()))
-                    .findFirst()
-                    .ifPresent(col -> {
-
-                        columns.remove(col);
-                        columns.add(col);
-
-                    });
-        }
-    }
-
-    public void saveColumnOrder() {
-
-        StringBuilder order = new StringBuilder();
-
-        for (TableColumn<?, ?> column : historyTable.getColumns()) {
-
-            if (column.getId() != null) {
-                order.append(column.getId()).append(",");
-            }
-        }
-
-        prefs.put(COLUMN_ORDER_KEY, order.toString());
-    }
-
     public void saveFilters() {
 
         if (tableFilter == null) return;
@@ -2982,6 +3204,8 @@ public class DashboardController {
         p.itemModel = t.getItemModel();
         p.itemSerial = t.getItemSerial();
         p.itemCount = t.getItemCount();
+        p.itemCondition = t.getItemCondition();
+        p.itemLocation = t.getItemLocation();
 
         p.imeiNo = t.getImeiNo();
         p.simNo = t.getSimNo();
@@ -2990,7 +3214,7 @@ public class DashboardController {
         p.partyName = t.getPartyName();
 
         p.unit = t.getUnit();
-        p.attachmentFile = t.getAttachmentFile();
+        p.remarks = t.getRemarks();
 
         return p;
     }
@@ -3016,6 +3240,8 @@ public class DashboardController {
         p.itemModel = t.getItemModel();
         p.itemSerial = t.getItemSerial();
         p.itemCount = t.getItemCount();
+        p.itemCondition = t.getItemCondition();
+        p.itemLocation = t.getItemLocation();
 
         p.imeiNo = t.getImeiNo();
         p.simNo = t.getSimNo();
@@ -3023,8 +3249,11 @@ public class DashboardController {
         p.poNo = t.getPoNo();
         p.partyName = t.getPartyName();
 
+        p.status = t.getStatus();
         p.unit = t.getUnit();
         p.attachmentFile = t.getAttachmentFile();
+
+        p.remarks = t.getRemarks();
 
         return p;
     }
@@ -3044,7 +3273,8 @@ public class DashboardController {
             TransactionPrefill prefill = convertToSellPrefill(t);
 
             controller.prefillSell(prefill);
-            controller.setEditTransactionId(t.getTransactionId()); // ⭐ IMPORTANT
+            controller.hideSaveAndAddAnotherButton();
+            controller.setTransactionType("Sell");
 
             Stage stage = new Stage();
             stage.setTitle("Sell Item");
@@ -3077,6 +3307,7 @@ public class DashboardController {
 
             controller.hideFieldsIfBuyTransaction(t);
             controller.setEditTransactionId(t.getTransactionId()); // ⭐ IMPORTANT
+            controller.changeLabelAndTitle("Edit");
 
             Stage stage = new Stage();
             stage.setTitle("Edit Transaction");

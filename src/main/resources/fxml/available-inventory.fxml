@@ -21,6 +21,10 @@
                              text="#"
                              prefWidth="60"/>
 
+                <TableColumn fx:id="itemConditionCol"
+                             text="Item Condition"
+                             prefWidth="150"/>
+
                 <TableColumn fx:id="serialCol"
                              text="Serial"
                              prefWidth="150"/>

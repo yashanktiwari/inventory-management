@@ -3,21 +3,27 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox spacing="15"
+<VBox spacing="8"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.inventory.ui.controller.AddTransactionController"
       style="-fx-padding: 25; -fx-background-color: #f4f6f8;">
 
-    <Label text="Issue Item"
+    <Label fx:id="titleLabel"
+           text="Issue Item"
            style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
     <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: transparent;">
 
-        <VBox spacing="12" style="-fx-padding:20">
+        <VBox spacing="6" style="-fx-padding:20">
 
             <HBox spacing="12" alignment="CENTER_LEFT">
                 <Label text="Buy / Sell:" minWidth="160" prefWidth="160"/>
                 <ComboBox fx:id="buySellBox" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Condition:" minWidth="160" prefWidth="160"/>
+                <ComboBox fx:id="conditionBox" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
             </HBox>
 
             <VBox fx:id="sellFieldsContainer" spacing="12">
@@ -70,6 +76,11 @@
             <HBox spacing="12" alignment="CENTER_LEFT">
                 <Label text="Item Serial:" minWidth="160" prefWidth="160"/>
                 <TextField fx:id="itemSerialField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Location:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemLocationField" HBox.hgrow="ALWAYS"/>
             </HBox>
 
             <HBox spacing="12" alignment="CENTER_LEFT">
