@@ -429,6 +429,9 @@ public class TransactionDAO {
                         auditEntries
                 );
 
+                boolean available = isItemAvailable(history.getItemSerial());
+                history.setAvailable(available);
+
                 historyList.add(history);
             }
 
@@ -834,22 +837,23 @@ public class TransactionDAO {
 
         String sql = """
             SELECT
-                item_name,
-                unit,
-                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
-                SUM(
-                  CASE
-                      WHEN buy_sell = 'Buy' THEN item_count
-                      WHEN status = 'Issued' THEN -item_count
-                      WHEN status = 'Returned' THEN 0
-                      WHEN status = 'Scrap' THEN -item_count
-                      ELSE 0
-                  END
-              ) AS stock
-            FROM transactions
-            GROUP BY item_name, unit
-            HAVING stock > 0
-            ORDER BY item_name;
+               item_code,
+               item_name,
+               unit,
+               COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
+               SUM(
+                   CASE
+                       WHEN buy_sell = 'Buy' THEN item_count
+                       WHEN status = 'Issued' THEN -item_count
+                       WHEN status = 'Returned' THEN 0
+                       WHEN status = 'Scrap' THEN -item_count
+                       ELSE 0
+                   END
+               ) AS stock
+           FROM transactions
+           GROUP BY item_code, item_name, unit
+           HAVING stock > 0
+           ORDER BY item_name
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -860,6 +864,7 @@ public class TransactionDAO {
 
                 inventory.add(new InventoryItem(
                         rs.getString("item_name"),
+                        rs.getString("item_code"),
                         rs.getDouble("stock"),
                         rs.getString("unit"),
                         rs.getDouble("minimum_stock")
@@ -972,21 +977,14 @@ public class TransactionDAO {
 
         if (currentStock < minimum) {
 
-            if (!notifiedItems.contains(itemName)) {
-
-                com.inventory.util.NotificationUtil.showLowStockNotification(
-                        itemName,
-                        currentStock,
-                        minimum
-                );
-
-                notifiedItems.add(itemName);
-            }
-
-        } else {
-            notifiedItems.remove(itemName);
+            com.inventory.util.NotificationUtil.showLowStockNotification(
+                    itemName,
+                    currentStock,
+                    minimum
+            );
         }
     }
+
 
     public List<TransactionHistory> getAvailableSerialItems(String itemName) {
 
@@ -1241,4 +1239,43 @@ public class TransactionDAO {
             e.printStackTrace();
         }
     }
+
+    public boolean isItemAvailable(String itemSerial) {
+
+        String sql = """
+        SELECT buy_sell, status
+        FROM transactions
+        WHERE item_serial = ?
+        ORDER BY transaction_id DESC
+        LIMIT 1
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, itemSerial);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                String buySell = rs.getString("buy_sell");
+                String status = rs.getString("status");
+                if ("Buy".equalsIgnoreCase(buySell)) {
+                    return true;
+                }
+                if ("Sell".equalsIgnoreCase(buySell)) {
+                    if ("Returned".equalsIgnoreCase(status)) {
+                        return true;
+                    }
+                    if ("Issued".equalsIgnoreCase(status)
+                            || "Scrap".equalsIgnoreCase(status)
+                            || "Scrapped".equalsIgnoreCase(status)) {
+                        return false;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
 }

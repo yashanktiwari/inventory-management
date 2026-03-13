@@ -3,12 +3,14 @@ package com.inventory.model;
 public class InventoryItem {
 
     private String itemName;
+    private String itemCode;
     private double stock;
     private String unit;
     private double minimumStock;
 
-    public InventoryItem(String itemName, double stock, String unit, double minimumStock) {
+    public InventoryItem(String itemName, String itemCode, double stock, String unit, double minimumStock) {
         this.itemName = itemName;
+        this.itemCode = itemCode;
         this.stock = stock;
         this.unit = unit;
         this.minimumStock = minimumStock;
@@ -28,6 +30,14 @@ public class InventoryItem {
 
     public double getMinimumStock() {
         return minimumStock;
+    }
+
+    public String getItemCode() {
+        return itemCode;
+    }
+
+    public void setItemCode(String itemCode) {
+        this.itemCode = itemCode;
     }
 
     public void setMinimumStock(double minimumStock) {
