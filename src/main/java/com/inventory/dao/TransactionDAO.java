@@ -9,9 +9,7 @@ import com.inventory.util.UserUtil;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class TransactionDAO {
 
@@ -150,6 +148,156 @@ public class TransactionDAO {
             e.printStackTrace();
         }
         return -1;
+    }
+
+    public void updateTransaction(
+            int transactionId,
+            String buySell,
+            String plant,
+            String department,
+            String location,
+            String employeeCode,
+            String employeeName,
+            String ip,
+            String itemCode,
+            String itemName,
+            String itemMake,
+            String itemModel,
+            String itemSerial,
+            String imei,
+            String sim,
+            String po,
+            String party,
+            String status,
+            String remarks,
+            String itemCount,
+            String unit
+    ) {
+
+        String updateSql = """
+        UPDATE transactions SET
+            buy_sell = ?,
+            plant = ?,
+            department = ?,
+            location = ?,
+            employee_id = ?,
+            employee_name = ?,
+            ip_address = ?,
+            item_code = ?,
+            item_name = ?,
+            item_make = ?,
+            item_model = ?,
+            item_serial = ?,
+            imei_no = ?,
+            sim_no = ?,
+            po_no = ?,
+            party_name = ?,
+            status = ?,
+            remarks = ?,
+            item_count = ?,
+            unit = ?
+        WHERE transaction_id = ?
+    """;
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            // 🔹 Step 1: Fetch existing values
+            Map<String, String> oldValues = new HashMap<>();
+
+            String fetchSql = "SELECT * FROM transactions WHERE transaction_id = ?";
+
+            try (PreparedStatement fetchStmt = conn.prepareStatement(fetchSql)) {
+
+                fetchStmt.setInt(1, transactionId);
+
+                ResultSet rs = fetchStmt.executeQuery();
+
+                if (rs.next()) {
+
+                    oldValues.put("buy_sell", rs.getString("buy_sell"));
+                    oldValues.put("plant", rs.getString("plant"));
+                    oldValues.put("department", rs.getString("department"));
+                    oldValues.put("location", rs.getString("location"));
+                    oldValues.put("employee_id", rs.getString("employee_id"));
+                    oldValues.put("employee_name", rs.getString("employee_name"));
+                    oldValues.put("ip_address", rs.getString("ip_address"));
+                    oldValues.put("item_code", rs.getString("item_code"));
+                    oldValues.put("item_name", rs.getString("item_name"));
+                    oldValues.put("item_make", rs.getString("item_make"));
+                    oldValues.put("item_model", rs.getString("item_model"));
+                    oldValues.put("item_serial", rs.getString("item_serial"));
+                    oldValues.put("imei_no", rs.getString("imei_no"));
+                    oldValues.put("sim_no", rs.getString("sim_no"));
+                    oldValues.put("po_no", rs.getString("po_no"));
+                    oldValues.put("party_name", rs.getString("party_name"));
+                    oldValues.put("status", rs.getString("status"));
+                    oldValues.put("remarks", rs.getString("remarks"));
+                    oldValues.put("item_count", rs.getString("item_count"));
+                    oldValues.put("unit", rs.getString("unit"));
+                }
+            }
+
+            // 🔹 Step 2: Update transaction
+            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+
+                ps.setString(1, buySell);
+                ps.setString(2, plant);
+                ps.setString(3, department);
+                ps.setString(4, location);
+                ps.setString(5, employeeCode);
+                ps.setString(6, employeeName);
+                ps.setString(7, ip);
+                ps.setString(8, itemCode);
+                ps.setString(9, itemName);
+                ps.setString(10, itemMake);
+                ps.setString(11, itemModel);
+                ps.setString(12, itemSerial);
+                ps.setString(13, imei);
+                ps.setString(14, sim);
+                ps.setString(15, po);
+                ps.setString(16, party);
+                ps.setString(17, status);
+                ps.setString(18, remarks);
+
+                if (itemCount == null || itemCount.isBlank()) {
+                    ps.setNull(19, Types.DOUBLE);
+                } else {
+                    ps.setDouble(19, Double.parseDouble(itemCount));
+                }
+
+                ps.setString(20, unit);
+                ps.setInt(21, transactionId);
+
+                ps.executeUpdate();
+            }
+
+            // 🔹 Step 3: Insert audit records
+            String currentUser = UserUtil.getCurrentUser();
+
+            checkAndAudit(transactionId, currentUser, "buy_sell", oldValues.get("buy_sell"), buySell);
+            checkAndAudit(transactionId, currentUser, "plant", oldValues.get("plant"), plant);
+            checkAndAudit(transactionId, currentUser, "department", oldValues.get("department"), department);
+            checkAndAudit(transactionId, currentUser, "location", oldValues.get("location"), location);
+            checkAndAudit(transactionId, currentUser, "employee_id", oldValues.get("employee_id"), employeeCode);
+            checkAndAudit(transactionId, currentUser, "employee_name", oldValues.get("employee_name"), employeeName);
+            checkAndAudit(transactionId, currentUser, "ip_address", oldValues.get("ip_address"), ip);
+            checkAndAudit(transactionId, currentUser, "item_code", oldValues.get("item_code"), itemCode);
+            checkAndAudit(transactionId, currentUser, "item_name", oldValues.get("item_name"), itemName);
+            checkAndAudit(transactionId, currentUser, "item_make", oldValues.get("item_make"), itemMake);
+            checkAndAudit(transactionId, currentUser, "item_model", oldValues.get("item_model"), itemModel);
+            checkAndAudit(transactionId, currentUser, "imei_no", oldValues.get("imei_no"), imei);
+            checkAndAudit(transactionId, currentUser, "sim_no", oldValues.get("sim_no"), sim);
+            checkAndAudit(transactionId, currentUser, "po_no", oldValues.get("po_no"), po);
+            checkAndAudit(transactionId, currentUser, "party_name", oldValues.get("party_name"), party);
+            checkAndAudit(transactionId, currentUser, "status", oldValues.get("status"), status);
+            checkAndAudit(transactionId, currentUser, "remarks", oldValues.get("remarks"), remarks);
+            checkAndAudit(transactionId, currentUser, "item_count", oldValues.get("item_count"), itemCount);
+            checkAndAudit(transactionId, currentUser, "unit", oldValues.get("unit"), unit);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to update transaction.");
+        }
     }
 
     // 🔹 Get All Transactions
@@ -825,52 +973,78 @@ public class TransactionDAO {
         return false;
     }
 
-    public boolean isSerialAvailable(
-            String itemCode,
-            String itemName,
-            String itemMake,
-            String itemModel,
-            String itemSerial
-    ) {
-
-        String sql = """
-        SELECT
-            SUM(
-                CASE
-                    WHEN buy_sell = 'Buy' THEN 1
-                    WHEN buy_sell = 'Sell' AND status = 'Issued' THEN -1
-                    WHEN buy_sell = 'Sell' AND status = 'Scrap' THEN -1
-                    ELSE 0
-                END
-            ) AS balance
-        FROM transactions
-        WHERE item_name = ?
-        AND (? IS NULL OR item_code = ?)
-        AND (? IS NULL OR item_make = ?)
-        AND (? IS NULL OR item_model = ?)
-        AND (? IS NULL OR item_serial = ?)
-    """;
+    public boolean isDemoLimitReached() {
+        String sql = "SELECT COUNT(*) FROM transactions";
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, itemCode);
-            ps.setString(2, itemName);
-            ps.setString(3, itemMake);
-            ps.setString(4, itemModel);
-            ps.setString(5, itemSerial);
-
-            ResultSet rs = ps.executeQuery();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             if (rs.next()) {
-                int balance = rs.getInt(1);
-                return balance > 0;
+                return rs.getInt(1) >= 100;
             }
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
 
         return false;
+    }
+
+    public boolean serialExists(String itemSerial) {
+        String sql = "SELECT COUNT(*) FROM transactions WHERE item_serial = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemSerial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private void checkAndAudit(
+            int transactionId,
+            String user,
+            String field,
+            String oldValue,
+            String newValue
+    ) {
+
+        String oldVal = oldValue == null ? "" : oldValue;
+        String newVal = newValue == null ? "" : newValue;
+
+        // Special handling for numeric fields
+        if ("item_count".equals(field)) {
+            try {
+                double oldNum = oldVal.isBlank() ? 0 : Double.parseDouble(oldVal);
+                double newNum = newVal.isBlank() ? 0 : Double.parseDouble(newVal);
+
+                if (Double.compare(oldNum, newNum) != 0) {
+                    insertAudit(transactionId, user, field, oldVal, newVal);
+                }
+
+            } catch (Exception e) {
+                if (!oldVal.equals(newVal)) {
+                    insertAudit(transactionId, user, field, oldVal, newVal);
+                }
+            }
+
+            return;
+        }
+
+        // Default comparison
+        if (!oldVal.equals(newVal)) {
+            insertAudit(transactionId, user, field, oldVal, newVal);
+        }
     }
 }

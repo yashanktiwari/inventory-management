@@ -81,7 +81,7 @@
                         <TableColumn fx:id="departmentColumn" text="Department" prefWidth="120"/>
                         <TableColumn fx:id="locationColumn" text="Location" prefWidth="120"/>
 
-                        <TableColumn fx:id="employeeIdColumn" text="Emp. Code" prefWidth="120"/>
+                        <TableColumn fx:id="employeeCodeColumn" text="Emp. Code" prefWidth="120"/>
                         <TableColumn fx:id="employeeNameColumn" text="Emp. Name" prefWidth="150"/>
 
                         <TableColumn fx:id="ipAddressColumn" text="IP Address" prefWidth="120"/>

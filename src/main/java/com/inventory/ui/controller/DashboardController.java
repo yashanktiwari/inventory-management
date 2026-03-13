@@ -8,15 +8,17 @@ import com.inventory.model.AuditEntry;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.*;
 import com.inventory.util.TableFreezeManager;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
-import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
+import javafx.stage.*;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.collections.FXCollections;
@@ -30,7 +32,6 @@ import javafx.scene.control.SplitPane;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -42,8 +43,6 @@ import java.util.concurrent.TimeUnit;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.util.Duration;
@@ -79,7 +78,7 @@ public class DashboardController {
 
     // 🔹 Employee Info
     @FXML
-    private TableColumn<TransactionHistory, String> employeeIdColumn;
+    private TableColumn<TransactionHistory, String> employeeCodeColumn;
 
     @FXML
     private TableColumn<TransactionHistory, String> employeeNameColumn;
@@ -215,6 +214,130 @@ public class DashboardController {
     @FXML
     public void initialize() {
         historyTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+
+//        historyTable.setRowFactory(table -> {
+//            TableRow<TransactionHistory> row = new TableRow<>();
+//
+//            ContextMenu contextMenu = new ContextMenu();
+//
+//            MenuItem sellItem = createMenuItem("Sell");
+//            MenuItem editItem = createMenuItem("Edit");
+//
+//            sellItem.setOnAction(e -> {
+//                TransactionHistory transaction = row.getItem();
+//                if (transaction != null) {
+//                    openSellTransaction(transaction);
+//                }
+//            });
+//
+//            editItem.setOnAction(e -> {
+//                TransactionHistory transaction = row.getItem();
+//                if (transaction != null) {
+//                    openEditTransaction(transaction);
+//                }
+//            });
+//
+//            row.itemProperty().addListener((obs, oldItem, newItem) -> {
+//
+//                contextMenu.getItems().clear();
+//
+//                if (newItem == null) return;
+//
+//                // Sell only for BUY
+//                if ("Buy".equalsIgnoreCase(newItem.getBuySell())) {
+//                    contextMenu.getItems().add(sellItem);
+//                }
+//
+//                contextMenu.getItems().add(editItem);
+//            });
+//
+//            row.contextMenuProperty().bind(
+//                    Bindings.when(row.emptyProperty())
+//                            .then((ContextMenu) null)
+//                            .otherwise(contextMenu)
+//            );
+//
+//            return row;
+//        });
+
+        historyTable.setRowFactory(table -> {
+
+            TableRow<TransactionHistory> row = new TableRow<>();
+
+            ContextMenu contextMenu = new ContextMenu();
+
+            MenuItem sellItem = createMenuItem("Sell");
+            MenuItem editItem = createMenuItem("Edit");
+
+            sellItem.setOnAction(e -> {
+                TransactionHistory transaction = row.getItem();
+                if (transaction != null) {
+                    openSellTransaction(transaction);
+                }
+            });
+
+            editItem.setOnAction(e -> {
+                TransactionHistory transaction = row.getItem();
+                if (transaction != null) {
+                    openEditTransaction(transaction);
+                }
+            });
+
+            row.itemProperty().addListener((obs, oldItem, newItem) -> {
+
+                contextMenu.getItems().clear();
+
+                if (newItem == null) return;
+
+                if ("Buy".equalsIgnoreCase(newItem.getBuySell())) {
+                    contextMenu.getItems().add(sellItem);
+                }
+
+                contextMenu.getItems().add(editItem);
+            });
+
+            row.contextMenuProperty().bind(
+                    Bindings.when(row.emptyProperty())
+                            .then((ContextMenu) null)
+                            .otherwise(contextMenu)
+            );
+
+            // ⭐ DOUBLE CLICK SELECT CELL VALUE
+            row.setOnMouseClicked(event -> {
+
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+
+                    TablePosition<?, ?> pos = historyTable.getSelectionModel().getSelectedCells().get(0);
+
+                    TableColumn<?, ?> column = pos.getTableColumn();
+
+                    Object value = column.getCellData(row.getIndex());
+
+                    if (value != null) {
+
+                        ClipboardContent content = new ClipboardContent();
+                        content.putString(value.toString());
+                        Clipboard.getSystemClipboard().setContent(content);
+
+                        // ⭐ show copied notification
+                        Tooltip copiedTip = new Tooltip("Copied!");
+                        copiedTip.setAutoHide(true);
+
+                        copiedTip.show(
+                                historyTable.getScene().getWindow(),
+                                event.getScreenX(),
+                                event.getScreenY()
+                        );
+
+                        PauseTransition delay = new PauseTransition(Duration.seconds(1));
+                        delay.setOnFinished(e -> copiedTip.hide());
+                        delay.play();
+                    }
+                }
+            });
+
+            return row;
+        });
 
         freezeManager = new TableFreezeManager<>(historyTable);
 
@@ -606,8 +729,8 @@ public class DashboardController {
             }
         });
 
-        employeeIdColumn.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
-        employeeIdColumn.setCellFactory(column -> new TableCell<>() {
+        employeeCodeColumn.setCellValueFactory(new PropertyValueFactory<>("employeeCode"));
+        employeeCodeColumn.setCellFactory(column -> new TableCell<>() {
 
             private final Hyperlink link = new Hyperlink();
 
@@ -621,8 +744,8 @@ public class DashboardController {
 
                     openHistoryPage(
                             "employee_id",
-                            row.getEmployeeId(),
-                            row.getEmployeeId()
+                            row.getEmployeeCode(),
+                            row.getEmployeeCode()
                     );
                 });
 
@@ -1190,8 +1313,8 @@ public class DashboardController {
                 textLabel.setText(value);
                 tooltip.setText(value);
 
-                // show icon only if text is long
-                if (value.length() > 25) {
+                // show icon if text is long OR multi-line
+                if (value.length() > 25 || value.contains("\n")) {
                     iconLabel.setVisible(true);
                     setTooltip(tooltip);
                 } else {
@@ -1209,34 +1332,77 @@ public class DashboardController {
                 ));
         auditColumn.setCellFactory(col -> new TableCell<>() {
 
-            private final Tooltip tooltip = new Tooltip();
+            private final Popup popup = new Popup();
+            private final VBox container = new VBox(12);
+            private final ScrollPane scrollPane = new ScrollPane(container);
+
+            {
+                popup.setAutoHide(true);
+
+                container.setStyle("-fx-padding: 10;");
+
+                scrollPane.setFitToWidth(true);
+                scrollPane.setMaxHeight(400);
+                scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+                popup.getContent().add(scrollPane);
+
+                // Hide popup when leaving popup area
+                scrollPane.setOnMouseExited(e -> popup.hide());
+
+                // Show popup when entering cell
+                setOnMouseEntered(e -> {
+
+                    if (container.getChildren().isEmpty()) {
+                        return; // no audit entries -> no popup
+                    }
+
+                    if (!popup.isShowing() && getScene() != null) {
+
+                        popup.show(
+                                getScene().getWindow(),
+                                e.getScreenX() + 10,
+                                e.getScreenY() + 10
+                        );
+                    }
+                });
+
+                // Hide popup when leaving cell (unless hovering popup)
+                setOnMouseExited(e -> {
+
+                    if (!scrollPane.isHover()) {
+                        popup.hide();
+                    }
+                });
+            }
 
             @Override
             protected void updateItem(String user, boolean empty) {
 
                 super.updateItem(user, empty);
 
+                popup.hide();
+                container.getChildren().clear();
+
                 if (empty || user == null) {
                     setText(null);
-                    setTooltip(null);
+                    return;
+                }
+
+                TransactionHistory transaction =
+                        getTableView().getItems().get(getIndex());
+
+                if (transaction.getAuditEntries() == null ||
+                        transaction.getAuditEntries().isEmpty()) {
+
+                    setText(user); // no icon
                     return;
                 }
 
                 setText(user + " ⓘ");
 
-                TransactionHistory transaction =
-                        getTableView().getItems().get(getIndex());
-
-                if (transaction.getAuditEntries() == null) {
-                    return;
-                }
-
-                VBox container = new VBox(12);
-                container.setStyle("-fx-padding: 10;");
-
                 Map<String, List<AuditEntry>> grouped = new LinkedHashMap<>();
 
-                // Group entries by user + timestamp
                 for (AuditEntry entry : transaction.getAuditEntries()) {
 
                     String key = entry.getModifiedBy() + "|" + entry.getModifiedAt();
@@ -1274,39 +1440,26 @@ public class DashboardController {
                         );
 
                         line.setStyle("-fx-font-size: 13px;");
-
                         block.getChildren().add(line);
                     }
 
                     container.getChildren().add(block);
+
                     Separator separator = new Separator();
                     separator.setStyle(
                             "-fx-background-color: #bbbbbb;" +
                                     "-fx-opacity: 0.6;"
-                    );separator.setStyle(
-                            "-fx-background-color: #bbbbbb;" +
-                                    "-fx-opacity: 0.6;"
                     );
+
                     container.getChildren().add(separator);
                 }
 
                 if (!container.getChildren().isEmpty()) {
                     container.getChildren().remove(container.getChildren().size() - 1);
                 }
-
-                tooltip.setGraphic(container);
-                tooltip.setWrapText(true);
-                tooltip.setMaxWidth(500);
-
-                tooltip.setShowDelay(Duration.millis(100));
-                tooltip.setShowDuration(Duration.INDEFINITE);
-                tooltip.setHideDelay(Duration.millis(100));
-
-                setTooltip(tooltip);
             }
         });
 
-        // 🔹 Date Formatting
         issuedColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(
                         data.getValue().getIssuedDateTime() == null
@@ -1391,8 +1544,8 @@ public class DashboardController {
                                 history.getDepartment().toLowerCase().contains(keyword))
                                 ||      (history.getLocation() != null &&
                                 history.getLocation().toLowerCase().contains(keyword))
-                                || (history.getEmployeeId() != null &&
-                                history.getEmployeeId().toLowerCase().contains(keyword))
+                                || (history.getEmployeeCode() != null &&
+                                history.getEmployeeCode().toLowerCase().contains(keyword))
                                 ||      (history.getEmployeeName() != null &&
                                 history.getEmployeeName().toLowerCase().contains(keyword))
                                 || (history.getIpAddress() != null &&
@@ -1517,13 +1670,19 @@ public class DashboardController {
                     getClass().getResource("/fxml/add-transaction.fxml")
             );
 
-            Scene scene = new Scene(loader.load(), 700, 650);
+//            Scene scene = new Scene(loader.load(), 700, 650);
+            Scene scene = new Scene(loader.load());
+
+            AddTransactionController controller = loader.getController();
+            controller.setOnTransactionSaved(this::loadHistory);
+
             scene.getRoot().disableProperty().bind(
                     ConnectionState.connectedProperty().not()
             );
             Stage stage = new Stage();
             stage.setTitle("Add Transaction");
             stage.setScene(scene);
+            stage.sizeToScene();
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -2799,16 +2958,13 @@ public class DashboardController {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select Attachment");
         chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("PDF", "*.pdf"),
-                new FileChooser.ExtensionFilter("Images", "*.png","*.jpg","*.jpeg")
+                new FileChooser.ExtensionFilter("Images", "*.png","*.jpg","*.jpeg"),
+                new FileChooser.ExtensionFilter("PDF", "*.pdf")
         );
 
         File file = chooser.showOpenDialog(stage);
         if (file == null) return;
-        if (file.length() > 204800) {
-            AlertUtil.showError("File Too Large", "Max size allowed is 200KB");
-            return;
-        }
+
         String extension =
                 file.getName().substring(file.getName().lastIndexOf("."));
         String newName =
@@ -2861,5 +3017,147 @@ public class DashboardController {
         }
     }
 
+    private TransactionPrefill convertToSellPrefill(TransactionHistory t) {
+        TransactionPrefill p = new TransactionPrefill();
 
+        p.buySell = "Sell";
+
+        p.plant = t.getPlant();
+        p.department = t.getDepartment();
+        p.location = t.getLocation();
+
+        p.employeeCode = t.getEmployeeCode();
+        p.employeeName = t.getEmployeeName();
+
+        p.ipAddress = t.getIpAddress();
+
+        p.itemCode = t.getItemCode();
+        p.itemName = t.getItemName();
+        p.itemMake = t.getItemMake();
+        p.itemModel = t.getItemModel();
+        p.itemSerial = t.getItemSerial();
+        p.itemCount = t.getItemCount();
+
+        p.imeiNo = t.getImeiNo();
+        p.simNo = t.getSimNo();
+
+        p.poNo = t.getPoNo();
+        p.partyName = t.getPartyName();
+
+        p.unit = t.getUnit();
+
+        return p;
+    }
+
+    private TransactionPrefill convertToPrefill(TransactionHistory t) {
+
+        TransactionPrefill p = new TransactionPrefill();
+
+        p.buySell = t.getBuySell();
+
+        p.plant = t.getPlant();
+        p.department = t.getDepartment();
+        p.location = t.getLocation();
+
+        p.employeeCode = t.getEmployeeCode();
+        p.employeeName = t.getEmployeeName();
+
+        p.ipAddress = t.getIpAddress();
+
+        p.itemCode = t.getItemCode();
+        p.itemName = t.getItemName();
+        p.itemMake = t.getItemMake();
+        p.itemModel = t.getItemModel();
+        p.itemSerial = t.getItemSerial();
+        p.itemCount = t.getItemCount();
+
+        p.imeiNo = t.getImeiNo();
+        p.simNo = t.getSimNo();
+
+        p.poNo = t.getPoNo();
+        p.partyName = t.getPartyName();
+
+        p.unit = t.getUnit();
+
+        return p;
+    }
+
+    private void openSellTransaction(TransactionHistory t) {
+
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/add-transaction.fxml")
+            );
+
+            Scene scene = new Scene(loader.load());
+
+            AddTransactionController controller = loader.getController();
+
+            TransactionPrefill prefill = convertToSellPrefill(t);
+
+            controller.prefillSell(prefill);
+            controller.setEditTransactionId(t.getTransactionId()); // ⭐ IMPORTANT
+
+            Stage stage = new Stage();
+            stage.setTitle("Sell Item");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+
+            loadHistory();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void openEditTransaction(TransactionHistory t) {
+
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/add-transaction.fxml")
+            );
+
+            Scene scene = new Scene(loader.load());
+
+            AddTransactionController controller = loader.getController();
+
+            TransactionPrefill prefill = convertToPrefill(t);
+
+            controller.prefill(prefill);
+
+            controller.hideFieldsIfBuyTransaction(t);
+            controller.setEditTransactionId(t.getTransactionId()); // ⭐ IMPORTANT
+
+            Stage stage = new Stage();
+            stage.setTitle("Edit Transaction");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+
+            loadHistory();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private MenuItem createMenuItem(String text) {
+
+        Label textLabel = new Label(text);
+        textLabel.setStyle("-fx-font-size: 13px;");
+
+        HBox box = new HBox(10, textLabel);
+        box.setAlignment(Pos.CENTER_LEFT);
+
+        // padding left/right for nicer spacing
+        box.setPadding(new Insets(4, 18, 4, 18));
+
+        MenuItem item = new MenuItem();
+        item.setGraphic(box);
+
+        return item;
+    }
 }

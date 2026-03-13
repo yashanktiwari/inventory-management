@@ -11,112 +11,133 @@
     <Label text="Issue Item"
            style="-fx-font-size: 20px; -fx-font-weight: bold;" />
 
-    <ScrollPane fitToWidth="true" prefViewportHeight="600">
+    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: transparent;">
 
-        <GridPane hgap="12" vgap="10" style="-fx-padding:20">
+        <VBox spacing="12" style="-fx-padding:20">
 
-            <columnConstraints>
-                <ColumnConstraints percentWidth="35"/>
-                <ColumnConstraints percentWidth="65"/>
-            </columnConstraints>
-
-            <Label text="Buy / Sell:" GridPane.rowIndex="0"/>
-            <ComboBox fx:id="buySellBox" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity"/>
-
-            <Label text="Plant:" GridPane.rowIndex="1"/>
-            <TextField fx:id="plantField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-            <Label text="Department:" GridPane.rowIndex="2"/>
-            <TextField fx:id="departmentField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-
-            <Label text="Location:" GridPane.rowIndex="3"/>
-            <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-
-            <Label text="Employee Code:" GridPane.rowIndex="4"/>
-            <TextField fx:id="employeeCodeField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
-
-            <Label text="Employee Name:" GridPane.rowIndex="5"/>
-            <TextField fx:id="employeeNameField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
-
-            <Label text="IP Address:" GridPane.rowIndex="6"/>
-            <TextField fx:id="ipField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
-
-            <Label text="Item Code:" GridPane.rowIndex="7"/>
-            <TextField fx:id="itemCodeField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
-
-            <Label text="Item Name:" GridPane.rowIndex="8"/>
-            <TextField fx:id="itemNameField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
-
-            <Label text="Item Make:" GridPane.rowIndex="9"/>
-            <TextField fx:id="itemMakeField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
-
-            <Label text="Item Model:" GridPane.rowIndex="10"/>
-            <TextField fx:id="itemModelField" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
-
-            <Label text="Item Serial:" GridPane.rowIndex="11"/>
-            <TextField fx:id="itemSerialField" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
-
-            <!-- NEW QUANTITY ROW -->
-
-            <Label text="Quantity:" GridPane.rowIndex="12"/>
-            <HBox spacing="10" GridPane.rowIndex="12" GridPane.columnIndex="1">
-                <TextField fx:id="itemCountField" prefWidth="120"/>
-                <ComboBox fx:id="unitComboBox" maxWidth="Infinity"/>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Buy / Sell:" minWidth="160" prefWidth="160"/>
+                <ComboBox fx:id="buySellBox" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
             </HBox>
 
-            <Label text="Transaction Date:" GridPane.rowIndex="13"/>
-            <HBox spacing="10" GridPane.rowIndex="13" GridPane.columnIndex="1">
-                <DatePicker fx:id="transactionDatePicker" prefWidth="150"/>
-                <Spinner fx:id="hourSpinner" prefWidth="70"/>
-                <Label text=":"/>
-                <Spinner fx:id="minuteSpinner" prefWidth="70"/>
-                <ComboBox fx:id="ampmBox" prefWidth="80"/>
+            <VBox fx:id="sellFieldsContainer" spacing="12">
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="Plant:" minWidth="160" prefWidth="160"/>
+                    <TextField fx:id="plantField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="Department:" minWidth="160" prefWidth="160"/>
+                    <TextField fx:id="departmentField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="Location:" minWidth="160" prefWidth="160"/>
+                    <TextField fx:id="locationField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="Employee Code:" minWidth="160" prefWidth="160"/>
+                    <TextField fx:id="employeeCodeField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="Employee Name:" minWidth="160" prefWidth="160"/>
+                    <TextField fx:id="employeeNameField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="IP Address:" minWidth="160" prefWidth="160"/>
+                    <TextField fx:id="ipField" HBox.hgrow="ALWAYS"/>
+                </HBox>
+            </VBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Code:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemCodeField" HBox.hgrow="ALWAYS"/>
             </HBox>
 
-            <!-- SHIFTED ROWS -->
-
-            <Label text="IMEI:" GridPane.rowIndex="14"/>
-            <TextField fx:id="imeiField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
-
-            <Label text="SIM No:" GridPane.rowIndex="15"/>
-            <TextField fx:id="simField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
-
-            <Label text="PO No:" GridPane.rowIndex="16"/>
-            <TextField fx:id="poField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
-
-            <Label text="Party Name:" GridPane.rowIndex="17"/>
-            <TextField fx:id="partyField" GridPane.rowIndex="17" GridPane.columnIndex="1"/>
-
-            <Label text="Status:" GridPane.rowIndex="18"/>
-            <ComboBox fx:id="statusBox" GridPane.rowIndex="18" GridPane.columnIndex="1" maxWidth="Infinity"/>
-
-            <Label text="Attachment:" GridPane.rowIndex="19"/>
-            <HBox spacing="10" GridPane.rowIndex="19" GridPane.columnIndex="1">
-                <TextField fx:id="attachmentField"
-                           promptText="No file selected"
-                           editable="false"
-                           prefWidth="250"/>
-
-                <Button text="Browse"
-                        onAction="#handleBrowseAttachment"/>
-
-                <Button text="Clear"
-                        onAction="#handleClearAttachment"/>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Name:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemNameField" HBox.hgrow="ALWAYS"/>
             </HBox>
 
-            <Label text="Remarks:" GridPane.rowIndex="20"/>
-            <TextArea fx:id="remarksField" prefRowCount="3"
-                      GridPane.rowIndex="20" GridPane.columnIndex="1"/>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Make:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemMakeField" HBox.hgrow="ALWAYS"/>
+            </HBox>
 
-        </GridPane>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Model:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemModelField" HBox.hgrow="ALWAYS"/>
+            </HBox>
 
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Serial:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemSerialField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Quantity:" minWidth="160" prefWidth="160"/>
+                <HBox spacing="10" HBox.hgrow="ALWAYS">
+                    <TextField fx:id="itemCountField" prefWidth="120"/>
+                    <ComboBox fx:id="unitComboBox" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                </HBox>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Transaction Date:" minWidth="160" prefWidth="160"/>
+                <HBox spacing="5" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                    <DatePicker fx:id="transactionDatePicker" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                    <Spinner fx:id="hourSpinner" prefWidth="70" minWidth="70"/>
+                    <Label text=":"/>
+                    <Spinner fx:id="minuteSpinner" prefWidth="70" minWidth="70"/>
+                    <ComboBox fx:id="ampmBox" prefWidth="85"/>
+                </HBox>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="IMEI:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="imeiField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="SIM No:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="simField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="PO No:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="poField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Party Name:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="partyField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Status:" minWidth="160" prefWidth="160"/>
+                <ComboBox fx:id="statusBox" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Attachment:" minWidth="160" prefWidth="160"/>
+                <HBox spacing="10" HBox.hgrow="ALWAYS">
+                    <TextField fx:id="attachmentField" promptText="No file selected" editable="false" HBox.hgrow="ALWAYS"/>
+                    <Button text="Browse" onAction="#handleBrowseAttachment"/>
+                    <Button text="Clear" onAction="#handleClearAttachment"/>
+                </HBox>
+            </HBox>
+
+            <HBox spacing="12" alignment="TOP_LEFT">
+                <Label text="Remarks:" minWidth="160" prefWidth="160"/>
+                <TextArea fx:id="remarksField" prefRowCount="3" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+        </VBox>
     </ScrollPane>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Cancel" onAction="#handleCancel"/>
-        <Button text="Save"
-                style="-fx-background-color: #2e7d32; -fx-text-fill: white;"
-                onAction="#handleSave"/>
+        <Button fx:id="saveAndAddAnotherButton" text="Save &amp; Add Another"
+                style="-fx-background-color: #1565c0; -fx-text-fill: white;" onAction="#handleSaveAndAddAnother"/>
+        <Button text="Save" style="-fx-background-color: #2e7d32; -fx-text-fill: white;" onAction="#handleSave"/>
     </HBox>
 
 </VBox>
