@@ -49,6 +49,7 @@ import javafx.collections.transformation.SortedList;
 import javafx.collections.ListChangeListener;
 import javafx.util.Duration;
 import javafx.util.Pair;
+import org.controlsfx.control.table.ColumnFilter;
 import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
@@ -214,6 +215,7 @@ public class DashboardController {
                         }
                     }
 
+                    searchField.clear();
                     loadHistory();
                 });
 
@@ -2621,10 +2623,21 @@ public class DashboardController {
             masterData.setAll(data);
 
             if (tableFilter != null) {
+                tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
                 tableFilter.executeFilter();
             }
 
+            if(columnsFrozen) {
+                TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+                TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+                if(scrollTable != null && frozenTable != null) {
+                    frozenTable.setItems(scrollTable.getItems());
+                }
+            }
+
             historyTable.refresh();
+
+            Platform.runLater(this::updateSummary);
         });
     }
 
