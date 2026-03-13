@@ -1,11 +1,14 @@
 package com.inventory.ui.controller;
 
+import com.inventory.cache.MasterCache;
 import com.inventory.dao.ItemDAO;
 import com.inventory.dao.PersonDAO;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.database.AppConfig;
 import com.inventory.model.Item;
 import com.inventory.model.TransactionHistory;
+import com.inventory.model.master.EmployeeMaster;
+import com.inventory.model.master.ItemMaster;
 import com.inventory.util.AlertUtil;
 import com.inventory.util.StoragePathDialog;
 import com.inventory.util.TransactionPrefill;
@@ -13,8 +16,8 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Point2D;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
@@ -25,7 +28,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 public class AddTransactionController {
@@ -50,6 +52,8 @@ public class AddTransactionController {
     @FXML private TextField itemModelField;
     @FXML private TextField itemSerialField;
     @FXML private TextField itemLocationField;
+    @FXML private TextField itemCategoryField;
+
 
     @FXML private TextField imeiField;
     @FXML private TextField simField;
@@ -83,6 +87,9 @@ public class AddTransactionController {
 
     private Integer editTransactionId = null;
     private String existingAttachmentFile;
+    private Popup categoryPopup;
+    private ListView<String> categoryListView;
+
 
     @FXML
     public void initialize() {
@@ -162,7 +169,32 @@ public class AddTransactionController {
                 "Kg"
         );
         unitComboBox.setValue("Piece");
+        setupEmployeeAutocomplete();
+        setupItemAutocomplete();
+        setupCategoryAutocomplete();
         setupAutoComplete();
+
+        // Force uppercase input
+        enforceUpperCase(employeeCodeField);
+        enforceUpperCase(employeeNameField);
+
+        enforceUpperCase(itemCodeField);
+        enforceUpperCase(itemNameField);
+        enforceUpperCase(itemMakeField);
+        enforceUpperCase(itemModelField);
+        enforceUpperCase(itemSerialField);
+        enforceUpperCase(itemCategoryField);
+
+        enforceUpperCase(plantField);
+        enforceUpperCase(departmentField);
+        enforceUpperCase(locationField);
+
+        enforceUpperCase(ipField);
+        enforceUpperCase(poField);
+        enforceUpperCase(partyField);
+        enforceUpperCase(simField);
+        enforceUpperCase(imeiField);
+
     }
 
     // ================= SAVE =================
@@ -742,6 +774,210 @@ public class AddTransactionController {
         }
     }
 
+    private void setupEmployeeAutocomplete() {
+
+        List<String> employeeCodes =
+                MasterCache.employeeCache.keySet().stream().toList();
+
+        setupSuggestionField(
+                employeeCodeField,
+                employeeCodes,
+                code -> {
+
+                    EmployeeMaster emp =
+                            MasterCache.employeeCache.get(code.toLowerCase());
+
+                    if (emp != null) {
+                        employeeNameField.setText(emp.getEmployeeName());
+                    }
+                }
+        );
+    }
+
+
+    private void setupItemAutocomplete() {
+
+        List<String> itemCodes =
+                MasterCache.itemCache.keySet().stream().toList();
+
+        setupSuggestionField(
+                itemCodeField,
+                itemCodes,
+                code -> {
+
+                    ItemMaster item =
+                            MasterCache.itemCache.get(code.toLowerCase());
+
+                    if (item != null) {
+
+                        itemNameField.setText(item.getItemName());
+                        itemMakeField.setText(item.getItemMake());
+                        itemModelField.setText(item.getItemModel());
+
+                        if(item.getItemCategory() != null) {
+                            itemCategoryField.setText(item.getItemCategory());
+                        }
+                    }
+                }
+        );
+    }
+
+
+
+    private void setupCategoryAutocomplete() {
+        List<String> categories =
+                MasterCache.categoryCache.values()
+                        .stream()
+                        .map(c -> c.getCategoryName())
+                        .toList();
+
+        setupSuggestionField(
+                itemCategoryField,
+                categories,
+                category -> {}
+        );
+    }
+
+
+    private void setupSuggestionField(
+            TextField field,
+            List<String> data,
+            java.util.function.Consumer<String> onSelect
+    ) {
+
+        Popup popup = new Popup();
+        popup.setAutoHide(true);
+
+        ListView<String> listView = new ListView<>();
+        listView.setFocusTraversable(false);
+
+        popup.getContent().add(listView);
+
+        field.textProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (newVal == null || newVal.isBlank()) {
+                popup.hide();
+                return;
+            }
+
+            List<String> filtered = data.stream()
+                    .filter(v -> v.toLowerCase().contains(newVal.toLowerCase()))
+                    .sorted()
+                    .toList();
+
+            if (filtered.isEmpty()) {
+                popup.hide();
+                return;
+            }
+
+            listView.getItems().setAll(filtered);
+
+            int visibleRows = Math.min(filtered.size(), 6);
+            listView.setPrefHeight(visibleRows * 26 + 2);
+            listView.setPrefWidth(field.getWidth());
+
+            if (!popup.isShowing()) {
+
+                popup.show(
+                        field,
+                        field.localToScreen(0, field.getHeight()).getX(),
+                        field.localToScreen(0, field.getHeight()).getY()
+                );
+            }
+        });
+
+        // ======================
+        // Mouse Selection
+        // ======================
+
+        listView.setOnMouseClicked(e -> {
+
+            String selected = listView.getSelectionModel().getSelectedItem();
+
+            if (selected != null) {
+
+                field.setText(selected);
+                popup.hide();
+
+                onSelect.accept(selected);
+            }
+        });
+
+        // ======================
+        // Keyboard Navigation
+        // ======================
+
+        field.setOnKeyPressed(event -> {
+
+            switch (event.getCode()) {
+
+                case DOWN -> {
+
+                    if (popup.isShowing() && !listView.getItems().isEmpty()) {
+
+                        listView.requestFocus();
+
+                        if (listView.getSelectionModel().isEmpty()) {
+                            listView.getSelectionModel().selectFirst();
+                        }
+                    }
+                }
+
+                case ESCAPE -> popup.hide();
+            }
+        });
+
+        listView.setOnKeyPressed(event -> {
+
+            switch (event.getCode()) {
+
+                case ENTER -> {
+
+                    String selected =
+                            listView.getSelectionModel().getSelectedItem();
+
+                    if (selected != null) {
+
+                        field.setText(selected);
+                        popup.hide();
+
+                        onSelect.accept(selected);
+                        field.requestFocus();
+                    }
+                }
+
+                case ESCAPE -> {
+
+                    popup.hide();
+                    field.requestFocus();
+                }
+            }
+        });
+
+        // ======================
+        // Popup reposition
+        // ======================
+
+        field.caretPositionProperty().addListener((obs, o, n) -> {
+
+            if (popup.isShowing()) {
+
+                popup.hide();
+
+                Point2D p = field.localToScreen(0, field.getHeight());
+
+                if (p == null) {
+                    return;
+                }
+
+                popup.show(field, p.getX(), p.getY());
+
+            }
+        });
+    }
+
+
+
     public void setTransactionType(String type) {
 
         buySellBox.setValue(type);
@@ -770,4 +1006,19 @@ public class AddTransactionController {
             }
         });
     }
+
+    private void enforceUpperCase(TextField field) {
+
+        field.textProperty().addListener((obs, oldVal, newVal) -> {
+
+            if (newVal == null) return;
+
+            String upper = newVal.toUpperCase();
+
+            if (!upper.equals(newVal)) {
+                field.setText(upper);
+            }
+        });
+    }
+
 }

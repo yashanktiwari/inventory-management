@@ -38,6 +38,12 @@
                               disable="true"/>
                 </Menu>
 
+                <Menu text="Master">
+                    <MenuItem text="Manage Master Data"
+                              onAction="#handleOpenMasterDialog"/>
+                </Menu>
+
+
                 <Menu text="Settings">
                     <MenuItem text="Change Attachment Path"
                               onAction="#handleChangeAttachmentPath"/>

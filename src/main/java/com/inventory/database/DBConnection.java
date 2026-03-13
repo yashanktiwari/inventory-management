@@ -165,10 +165,38 @@ public class DBConnection {
                 )
             """;
 
+            String createMasterItems = """
+            CREATE TABLE IF NOT EXISTS master_items (
+                item_code VARCHAR(100) PRIMARY KEY,
+                item_name VARCHAR(255),
+                item_make VARCHAR(255),
+                item_model VARCHAR(255),
+                item_category VARCHAR(100)
+            )
+            """;
+
+            String createMasterEmployees = """
+            CREATE TABLE IF NOT EXISTS master_employees (
+                employee_code VARCHAR(100) PRIMARY KEY,
+                employee_name VARCHAR(255)
+            )
+            """;
+
+            String createMasterCategories = """
+            CREATE TABLE IF NOT EXISTS master_categories (
+                category_name VARCHAR(100) PRIMARY KEY
+            )
+            """;
+
+
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
             stmt.execute(createTransactionsTable);
             stmt.execute(createAuditTable);
+            stmt.execute(createMasterItems);
+            stmt.execute(createMasterEmployees);
+            stmt.execute(createMasterCategories);
+
             try {
                 stmt.execute("ALTER TABLE transactions ADD COLUMN item_count DOUBLE");
             } catch (SQLException ignored) {}

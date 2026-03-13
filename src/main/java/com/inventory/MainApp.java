@@ -1,5 +1,6 @@
 package com.inventory;
 
+import com.inventory.cache.MasterCache;
 import com.inventory.util.NotificationUtil;
 import javafx.application.Application;
 import javafx.scene.Parent;
@@ -36,6 +37,7 @@ public class MainApp extends Application {
             try {
                 DBConnection.createDatabaseIfNotExists();
                 DBConnection.initializeDatabase();
+                MasterCache.loadCache();
             } catch (Exception ignored) {}
         }
 

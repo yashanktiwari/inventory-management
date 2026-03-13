@@ -2618,7 +2618,7 @@ public class DashboardController {
         Label appName = new Label("Inventory Management System");
         appName.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        Label version = new Label("Version 1.0");
+        Label version = new Label("Version 1.2.0");
         version.setStyle("-fx-font-size: 13px;");
 
         Label author = new Label("Developed by Yashank Tiwari");
@@ -3390,6 +3390,27 @@ public class DashboardController {
         }
     }
 
+    @FXML
+    private void handleOpenMasterDialog() {
+
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/master-dialog.fxml")
+            );
+
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Master Data Management");
+            stage.setScene(new Scene(root, 650, 450));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
 
 }
