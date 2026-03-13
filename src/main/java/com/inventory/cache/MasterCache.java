@@ -1,9 +1,7 @@
 package com.inventory.cache;
 
 import com.inventory.dao.MasterDAO;
-import com.inventory.model.master.CategoryMaster;
-import com.inventory.model.master.EmployeeMaster;
-import com.inventory.model.master.ItemMaster;
+import com.inventory.model.master.*;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +14,8 @@ public class MasterCache {
     public static Map<String, ItemMaster> itemCache = new HashMap<>();
     public static Map<String, EmployeeMaster> employeeCache = new HashMap<>();
     public static Map<String, CategoryMaster> categoryCache = new HashMap<>();
+    public static Map<String, PlantMaster> plantCache = new HashMap<>();
+    public static Map<String, DepartmentMaster> departmentCache = new HashMap<>();
 
 
     public static void loadCache() {
@@ -23,6 +23,8 @@ public class MasterCache {
         itemCache.clear();
         employeeCache.clear();
         categoryCache.clear();
+        plantCache.clear();
+        departmentCache.clear();
 
         List<ItemMaster> items = masterDAO.getAllItems();
         for(ItemMaster item : items) {
@@ -39,7 +41,15 @@ public class MasterCache {
             categoryCache.put(c.getCategoryName().toLowerCase(), c);
         }
 
+        for(PlantMaster plant : masterDAO.getAllPlants()) {
+            plantCache.put(plant.getPlantName().toLowerCase(), plant);
+        }
 
-        System.out.println("Master cache loaded");
+        for (DepartmentMaster d : masterDAO.getAllDepartments()) {
+            departmentCache.put(
+                    d.getDepartmentName().toLowerCase(),
+                    d
+            );
+        }
     }
 }

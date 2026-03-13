@@ -172,6 +172,8 @@ public class AddTransactionController {
         setupEmployeeAutocomplete();
         setupItemAutocomplete();
         setupCategoryAutocomplete();
+        setupPlantAutocomplete();
+        setupDepartmentAutocomplete();
         setupAutoComplete();
 
         // Force uppercase input
@@ -426,6 +428,7 @@ public class AddTransactionController {
         String itemModel = itemModelField.getText();
         String itemSerial = itemSerialField.getText();
         String itemLocation = itemLocationField.getText();
+        String itemCategory = itemCategoryField.getText();
 
         String imei = imeiField.getText();
         String sim = simField.getText();
@@ -510,6 +513,7 @@ public class AddTransactionController {
                     itemSerial,
                     itemCondition,
                     itemLocation,
+                    itemCategory,
                     imei,
                     sim,
                     po,
@@ -568,6 +572,7 @@ public class AddTransactionController {
                     itemSerial,
                     itemCondition,
                     itemLocation,
+                    itemCategory,
                     imei,
                     sim,
                     po,
@@ -663,6 +668,11 @@ public class AddTransactionController {
         itemCountField.setText(data.itemCount == null ? "" : data.itemCount + "");
         itemSerialField.setText(safe(data.itemSerial));
         itemLocationField.setText(safe(data.itemLocation));
+
+        if(data.itemCategory != null && !data.itemCategory.isEmpty()) {
+            itemCategoryField.setText(safe(data.itemCategory));
+            itemCategoryField.setDisable(true);
+        }
 
         if(data.itemCondition != null && !data.itemCondition.isEmpty()) {
             conditionBox.setValue(safe(data.itemCondition));
@@ -811,8 +821,6 @@ public class AddTransactionController {
                     if (item != null) {
 
                         itemNameField.setText(item.getItemName());
-                        itemMakeField.setText(item.getItemMake());
-                        itemModelField.setText(item.getItemModel());
 
                         if(item.getItemCategory() != null) {
                             itemCategoryField.setText(item.getItemCategory());
@@ -822,7 +830,20 @@ public class AddTransactionController {
         );
     }
 
+    private void setupPlantAutocomplete() {
 
+        List<String> plants =
+                MasterCache.plantCache.values()
+                        .stream()
+                        .map(p -> p.getPlantName())
+                        .toList();
+
+        setupSuggestionField(
+                plantField,
+                plants,
+                plant -> {}
+        );
+    }
 
     private void setupCategoryAutocomplete() {
         List<String> categories =
@@ -835,6 +856,21 @@ public class AddTransactionController {
                 itemCategoryField,
                 categories,
                 category -> {}
+        );
+    }
+
+    private void setupDepartmentAutocomplete() {
+
+        List<String> departments =
+                MasterCache.departmentCache.values()
+                        .stream()
+                        .map(d -> d.getDepartmentName())
+                        .toList();
+
+        setupSuggestionField(
+                departmentField,
+                departments,
+                department -> {}
         );
     }
 
@@ -878,11 +914,13 @@ public class AddTransactionController {
 
             if (!popup.isShowing()) {
 
-                popup.show(
-                        field,
-                        field.localToScreen(0, field.getHeight()).getX(),
-                        field.localToScreen(0, field.getHeight()).getY()
-                );
+                Point2D p = field.localToScreen(0, field.getHeight());
+
+                if (p == null) {
+                    return;
+                }
+
+                popup.show(field, p.getX(), p.getY());
             }
         });
 

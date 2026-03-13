@@ -39,6 +39,7 @@ public class TransactionDAO {
             String itemSerial,
             String itemCondition,
             String itemLocation,
+            String itemCategory,
             String imeiNo,
             String simNo,
             String poNo,
@@ -66,6 +67,7 @@ public class TransactionDAO {
             item_serial,
             item_condition,
             item_location,
+            item_category,
             imei_no,
             sim_no,
             po_no,
@@ -77,7 +79,7 @@ public class TransactionDAO {
             item_count,
             unit
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -103,32 +105,33 @@ public class TransactionDAO {
             pstmt.setString(12, itemSerial);
             pstmt.setString(13, itemCondition);
             pstmt.setString(14, itemLocation);
+            pstmt.setString(15, itemCategory);
 
-            pstmt.setString(15, imeiNo);
-            pstmt.setString(16, simNo);
+            pstmt.setString(16, imeiNo);
+            pstmt.setString(17, simNo);
 
-            pstmt.setString(17, poNo);
-            pstmt.setString(18, partyName);
+            pstmt.setString(18, poNo);
+            pstmt.setString(19, partyName);
 
-            pstmt.setString(19, status);
+            pstmt.setString(20, status);
 
-            pstmt.setTimestamp(20, Timestamp.valueOf(transactionTime));
+            pstmt.setTimestamp(21, Timestamp.valueOf(transactionTime));
 
             if ("Scrap".equalsIgnoreCase(status)) {
-                pstmt.setTimestamp(21, Timestamp.valueOf(LocalDateTime.now()));
+                pstmt.setTimestamp(22, Timestamp.valueOf(LocalDateTime.now()));
             } else {
-                pstmt.setNull(21, Types.TIMESTAMP);
+                pstmt.setNull(22, Types.TIMESTAMP);
             }
 
-            pstmt.setString(22, remarks);
+            pstmt.setString(23, remarks);
 
             if (itemCount == null || itemCount.isBlank()) {
-                pstmt.setNull(23, Types.DOUBLE);
+                pstmt.setNull(24, Types.DOUBLE);
             } else {
-                pstmt.setDouble(23, Double.parseDouble(itemCount));
+                pstmt.setDouble(24, Double.parseDouble(itemCount));
             }
 
-            pstmt.setString(24, unit);
+            pstmt.setString(25, unit);
 
             pstmt.executeUpdate();
             checkLowStock(itemName);
@@ -176,6 +179,7 @@ public class TransactionDAO {
             String itemSerial,
             String itemCondition,
             String itemLocation,
+            String itemCategory,
             String imei,
             String sim,
             String po,
@@ -203,6 +207,7 @@ public class TransactionDAO {
             item_serial = ?,
             item_condition = ?,
             item_location = ?,
+            item_category = ?,
             imei_no = ?,
             sim_no = ?,
             po_no = ?,
@@ -243,6 +248,7 @@ public class TransactionDAO {
                     oldValues.put("item_model", rs.getString("item_model"));
                     oldValues.put("item_serial", rs.getString("item_serial"));
                     oldValues.put("item_condition", rs.getString("item_condition"));
+                    oldValues.put("item_category", rs.getString("item_category"));
                     oldValues.put("imei_no", rs.getString("imei_no"));
                     oldValues.put("sim_no", rs.getString("sim_no"));
                     oldValues.put("po_no", rs.getString("po_no"));
@@ -272,22 +278,23 @@ public class TransactionDAO {
                 ps.setString(12, itemSerial);
                 ps.setString(13, itemCondition);
                 ps.setString(14, itemLocation);
-                ps.setString(15, imei);
-                ps.setString(16, sim);
-                ps.setString(17, po);
-                ps.setString(18, party);
-                ps.setString(19, status);
-                ps.setString(20, remarks);
+                ps.setString(15, itemCategory);
+                ps.setString(16, imei);
+                ps.setString(17, sim);
+                ps.setString(18, po);
+                ps.setString(19, party);
+                ps.setString(20, status);
+                ps.setString(21, remarks);
 
                 if (itemCount == null || itemCount.isBlank()) {
-                    ps.setNull(21, Types.DOUBLE);
+                    ps.setNull(22, Types.DOUBLE);
                 } else {
-                    ps.setDouble(21, Double.parseDouble(itemCount));
+                    ps.setDouble(22, Double.parseDouble(itemCount));
                 }
 
-                ps.setString(22, unit);
-                ps.setString(23, attachmentFile);
-                ps.setInt(24, transactionId);
+                ps.setString(23, unit);
+                ps.setString(24, attachmentFile);
+                ps.setInt(25, transactionId);
 
                 ps.executeUpdate();
                 checkLowStock(itemName);
@@ -327,6 +334,7 @@ public class TransactionDAO {
             checkAndAudit(transactionId, currentUser, "item_model", oldValues.get("item_model"), itemModel);
             checkAndAudit(transactionId, currentUser, "item_condition", oldValues.get("item_condition"), itemCondition);
             checkAndAudit(transactionId, currentUser, "item_location", oldValues.get("item_location"), itemLocation);
+            checkAndAudit(transactionId, currentUser, "item_category", oldValues.get("item_category"), itemCategory);
             checkAndAudit(transactionId, currentUser, "imei_no", oldValues.get("imei_no"), imei);
             checkAndAudit(transactionId, currentUser, "sim_no", oldValues.get("sim_no"), sim);
             checkAndAudit(transactionId, currentUser, "po_no", oldValues.get("po_no"), po);
