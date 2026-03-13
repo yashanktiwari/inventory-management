@@ -1,9 +1,7 @@
 package com.inventory.dao;
 
 import com.inventory.database.DBConnection;
-import com.inventory.model.master.CategoryMaster;
-import com.inventory.model.master.EmployeeMaster;
-import com.inventory.model.master.ItemMaster;
+import com.inventory.model.master.*;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -26,8 +24,6 @@ public class MasterDAO {
                 list.add(new ItemMaster(
                         rs.getString("item_code"),
                         rs.getString("item_name"),
-                        rs.getString("item_make"),
-                        rs.getString("item_model"),
                         rs.getString("item_category")
                 ));
             }
@@ -87,22 +83,65 @@ public class MasterDAO {
         return list;
     }
 
+    public List<PlantMaster> getAllPlants() {
+
+        List<PlantMaster> list = new ArrayList<>();
+
+        String sql = "SELECT plant_name FROM master_plants";
+
+        try(Connection conn = DBConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+
+            while(rs.next()) {
+                list.add(new PlantMaster(
+                        rs.getString("plant_name")
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public List<DepartmentMaster> getAllDepartments() {
+
+        List<DepartmentMaster> list = new ArrayList<>();
+
+        String sql = "SELECT department_name FROM master_departments";
+
+        try(Connection conn = DBConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+
+            while(rs.next()) {
+                list.add(new DepartmentMaster(
+                        rs.getString("department_name")
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
     public void addItem(ItemMaster item) {
 
         String sql = """
         INSERT INTO master_items
-        (item_code, item_name, item_make, item_model, item_category)
-        VALUES (?, ?, ?, ?, ?)
-    """;
+        (item_code, item_name)
+        VALUES (?, ?)
+        """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, item.getItemCode());
             ps.setString(2, item.getItemName());
-            ps.setString(3, item.getItemMake());
-            ps.setString(4, item.getItemModel());
-            ps.setString(5, item.getItemCategory());
 
             ps.executeUpdate();
 
@@ -189,6 +228,74 @@ public class MasterDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, category);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addPlant(String plant) {
+
+        String sql = """
+        INSERT INTO master_plants
+        (plant_name)
+        VALUES (?)
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, plant);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deletePlant(String plant) {
+
+        String sql = "DELETE FROM master_plants WHERE plant_name = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, plant);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addDepartment(String department) {
+
+        String sql = """
+        INSERT INTO master_departments
+        (department_name)
+        VALUES (?)
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, department);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteDepartment(String department) {
+
+        String sql = "DELETE FROM master_departments WHERE department_name = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, department);
             ps.executeUpdate();
 
         } catch (Exception e) {

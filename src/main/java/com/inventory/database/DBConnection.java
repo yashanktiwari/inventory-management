@@ -188,6 +188,18 @@ public class DBConnection {
             )
             """;
 
+            String createMasterPlants = """
+            CREATE TABLE IF NOT EXISTS master_plants (
+                plant_name VARCHAR(100) PRIMARY KEY
+            )
+            """;
+
+            String createMasterDepartments = """
+            CREATE TABLE IF NOT EXISTS master_departments (
+                department_name VARCHAR(100) PRIMARY KEY
+            )
+            """;
+
 
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
@@ -196,6 +208,8 @@ public class DBConnection {
             stmt.execute(createMasterItems);
             stmt.execute(createMasterEmployees);
             stmt.execute(createMasterCategories);
+            stmt.execute(createMasterPlants);
+            stmt.execute(createMasterDepartments);
 
             try {
                 stmt.execute("ALTER TABLE transactions ADD COLUMN item_count DOUBLE");

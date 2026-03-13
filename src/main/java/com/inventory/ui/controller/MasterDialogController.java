@@ -2,9 +2,7 @@ package com.inventory.ui.controller;
 
 import com.inventory.cache.MasterCache;
 import com.inventory.dao.MasterDAO;
-import com.inventory.model.master.CategoryMaster;
-import com.inventory.model.master.EmployeeMaster;
-import com.inventory.model.master.ItemMaster;
+import com.inventory.model.master.*;
 import com.inventory.util.AlertUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -40,7 +38,9 @@ public class MasterDialogController {
         typeComboBox.setItems(FXCollections.observableArrayList(
                 "Item Code",
                 "Employee Code",
-                "Category"
+                "Category",
+                "Plant",
+                "Department"
         ));
 
         typeComboBox.setValue("Item Code");
@@ -115,19 +115,7 @@ public class MasterDialogController {
                         new javafx.beans.property.SimpleStringProperty(
                                 data.getValue().getItemName()));
 
-                TableColumn<ItemMaster, String> makeCol =
-                        new TableColumn<>("Make");
-                makeCol.setCellValueFactory(data ->
-                        new javafx.beans.property.SimpleStringProperty(
-                                data.getValue().getItemMake()));
-
-                TableColumn<ItemMaster, String> modelCol =
-                        new TableColumn<>("Model");
-                modelCol.setCellValueFactory(data ->
-                        new javafx.beans.property.SimpleStringProperty(
-                                data.getValue().getItemModel()));
-
-                masterTable.getColumns().addAll(codeCol, nameCol, makeCol, modelCol);
+                masterTable.getColumns().addAll(codeCol, nameCol);
 
                 masterTable.setItems(
                         FXCollections.observableArrayList(masterDAO.getAllItems())
@@ -150,6 +138,39 @@ public class MasterDialogController {
                 );
             }
 
+            case "Plant" -> {
+
+                TableColumn<PlantMaster, String> plantCol =
+                        new TableColumn<>("Plant");
+
+                plantCol.setCellValueFactory(data ->
+                        new SimpleStringProperty(
+                                data.getValue().getPlantName()
+                        ));
+
+                masterTable.getColumns().add(plantCol);
+
+                masterTable.setItems(
+                        FXCollections.observableArrayList(masterDAO.getAllPlants())
+                );
+            }
+
+            case "Department" -> {
+
+                TableColumn<DepartmentMaster, String> depCol =
+                        new TableColumn<>("Department");
+
+                depCol.setCellValueFactory(data ->
+                        new SimpleStringProperty(
+                                data.getValue().getDepartmentName()
+                        ));
+
+                masterTable.getColumns().add(depCol);
+
+                masterTable.setItems(
+                        FXCollections.observableArrayList(masterDAO.getAllDepartments())
+                );
+            }
         }
     }
 
@@ -172,8 +193,6 @@ public class MasterDialogController {
                 ItemMaster item = new ItemMaster(
                         codeField.getText().trim().toUpperCase(),
                         nameField.getText().trim().toUpperCase(),
-                        makeField.getText().trim().toUpperCase(),
-                        modelField.getText().trim().toUpperCase(),
                         null
                 );
                 masterDAO.addItem(item);
@@ -189,6 +208,14 @@ public class MasterDialogController {
 
             case "Category" -> {
                 masterDAO.addCategory(codeField.getText().trim().toUpperCase());
+            }
+
+            case "Plant" -> {
+                masterDAO.addPlant(codeField.getText().trim().toUpperCase());
+            }
+
+            case "Department" -> {
+                masterDAO.addDepartment(codeField.getText().trim().toUpperCase());
             }
         }
         MasterCache.loadCache();
@@ -231,8 +258,18 @@ public class MasterDialogController {
             }
 
             case "Category" -> {
-                String category = selected.toString();
-                masterDAO.deleteCategory(category);
+                CategoryMaster category = (CategoryMaster) selected;
+                masterDAO.deleteCategory(category.getCategoryName());
+            }
+
+            case "Plant" -> {
+                PlantMaster plant = (PlantMaster) selected;
+                masterDAO.deletePlant(plant.getPlantName());
+            }
+
+            case "Department" -> {
+                DepartmentMaster dep = (DepartmentMaster) selected;
+                masterDAO.deleteDepartment(dep.getDepartmentName());
             }
         }
         // Reload cache
@@ -251,7 +288,7 @@ public class MasterDialogController {
 
     private void updateFieldVisibility(String type) {
         switch (type) {
-            case "Employee Code" -> {
+            case "Employee Code", "Item Code" -> {
                 codeBox.setVisible(true);
                 codeBox.setManaged(true);
 
@@ -265,21 +302,7 @@ public class MasterDialogController {
                 modelBox.setManaged(false);
             }
 
-            case "Item Code" -> {
-                codeBox.setVisible(true);
-                codeBox.setManaged(true);
-
-                nameBox.setVisible(true);
-                nameBox.setManaged(true);
-
-                makeBox.setVisible(true);
-                makeBox.setManaged(true);
-
-                modelBox.setVisible(true);
-                modelBox.setManaged(true);
-            }
-
-            case "Category" -> {
+            case "Category", "Plant", "Department" -> {
                 codeBox.setVisible(true);
                 codeBox.setManaged(true);
 
@@ -292,6 +315,7 @@ public class MasterDialogController {
                 modelBox.setVisible(false);
                 modelBox.setManaged(false);
             }
+
         }
     }
 
@@ -307,12 +331,20 @@ public class MasterDialogController {
             case "Item Code" -> {
                 codeField.setPromptText("Item Code");
                 nameField.setPromptText("Item Name");
-                makeField.setPromptText("Item Make");
-                modelField.setPromptText("Item Model");
+//                makeField.setPromptText("Item Make");
+//                modelField.setPromptText("Item Model");
             }
 
             case "Category" -> {
                 codeField.setPromptText("Category Name");
+            }
+
+            case "Plant" -> {
+                codeField.setPromptText("Plant Name");
+            }
+
+            case "Department" -> {
+                codeField.setPromptText("Department Name");
             }
         }
     }
@@ -347,21 +379,35 @@ public class MasterDialogController {
                     AlertUtil.showError("Validation Error", "Item name cannot be empty.");
                     return false;
                 }
-
-                if (make.isEmpty()) {
-                    AlertUtil.showError("Validation Error", "Item make cannot be empty.");
-                    return false;
-                }
-
-                if (model.isEmpty()) {
-                    AlertUtil.showError("Validation Error", "Item model cannot be empty.");
-                    return false;
-                }
+//
+//                if (make.isEmpty()) {
+//                    AlertUtil.showError("Validation Error", "Item make cannot be empty.");
+//                    return false;
+//                }
+//
+//                if (model.isEmpty()) {
+//                    AlertUtil.showError("Validation Error", "Item model cannot be empty.");
+//                    return false;
+//                }
             }
 
             case "Category" -> {
                 if (code.isEmpty()) {
                     AlertUtil.showError("Validation Error", "Category name cannot be empty.");
+                    return false;
+                }
+            }
+
+            case "Plant" -> {
+                if (code.isEmpty()) {
+                    AlertUtil.showError("Validation Error", "Plant name cannot be empty.");
+                    return false;
+                }
+            }
+
+            case "Department" -> {
+                if (code.isEmpty()) {
+                    AlertUtil.showError("Validation Error", "Department name cannot be empty.");
                     return false;
                 }
             }

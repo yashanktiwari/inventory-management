@@ -3197,6 +3197,7 @@ public class DashboardController {
         p.itemCount = t.getItemCount();
         p.itemCondition = t.getItemCondition();
         p.itemLocation = t.getItemLocation();
+        p.itemCategory = t.getItemCategory();
 
         p.imeiNo = t.getImeiNo();
         p.simNo = t.getSimNo();
@@ -3233,6 +3234,7 @@ public class DashboardController {
         p.itemCount = t.getItemCount();
         p.itemCondition = t.getItemCondition();
         p.itemLocation = t.getItemLocation();
+        p.itemCategory = t.getItemCategory();
 
         p.imeiNo = t.getImeiNo();
         p.simNo = t.getSimNo();

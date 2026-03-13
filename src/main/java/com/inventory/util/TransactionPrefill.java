@@ -20,6 +20,7 @@ public class TransactionPrefill {
     public Double itemCount;
     public String itemCondition;
     public String itemLocation;
+    public String itemCategory;
 
     public String imeiNo;
     public String simNo;
