@@ -54,6 +54,11 @@
             </VBox>
 
             <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Item Category:" minWidth="160" prefWidth="160"/>
+                <TextField fx:id="itemCategoryField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
                 <Label text="Item Code:" minWidth="160" prefWidth="160"/>
                 <TextField fx:id="itemCodeField" HBox.hgrow="ALWAYS"/>
             </HBox>

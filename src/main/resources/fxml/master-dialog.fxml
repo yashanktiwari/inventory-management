@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Button?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="12"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.inventory.ui.controller.MasterDialogController"
+      prefWidth="650"
+      prefHeight="450">
+
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <HBox spacing="10">
+        <Label text="Master Type"/>
+        <ComboBox fx:id="typeComboBox" prefWidth="200"/>
+    </HBox>
+
+    <TableView fx:id="masterTable" VBox.vgrow="ALWAYS"/>
+
+    <HBox spacing="10">
+
+        <HBox spacing="10" fx:id="codeBox">
+            <TextField fx:id="codeField" promptText="Code / Category"/>
+        </HBox>
+
+        <HBox spacing="10" fx:id="nameBox">
+            <TextField fx:id="nameField" promptText="Name"/>
+        </HBox>
+
+        <HBox spacing="10" fx:id="makeBox">
+            <TextField fx:id="makeField" promptText="Make"/>
+        </HBox>
+
+        <HBox spacing="10" fx:id="modelBox">
+            <TextField fx:id="modelField" promptText="Model"/>
+        </HBox>
+
+    </HBox>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Add" onAction="#handleAdd"/>
+        <Button fx:id="deleteButton" text="Delete" onAction="#handleDelete"/>
+    </HBox>
+
+</VBox>
