@@ -28,15 +28,7 @@ import java.util.List;
 
 public class AddTransactionController {
 
-    @FXML private HBox plantRow;
-    @FXML private HBox departmentRow;
-    @FXML private HBox locationRow;
-    @FXML private HBox employeeCodeRow;
-    @FXML private HBox employeeNameRow;
-    @FXML private HBox ipRow;
-
     @FXML private VBox sellFieldsContainer;
-
 
     @FXML private TextField itemNameField;
     @FXML private TextField departmentField;
@@ -85,6 +77,7 @@ public class AddTransactionController {
     private Runnable onTransactionSaved;
 
     private Integer editTransactionId = null;
+    private String existingAttachmentFile;
 
     @FXML
     public void initialize() {
@@ -214,7 +207,12 @@ public class AddTransactionController {
     @FXML
     private void handleClearAttachment() {
 
+        boolean confirm = showDeleteAttachmentDialog();
+
+        if (!confirm) return;
+
         selectedAttachment = null;
+        existingAttachmentFile = null;
         attachmentField.clear();
     }
 
@@ -428,6 +426,10 @@ public class AddTransactionController {
 
         if (editTransactionId != null) {
 
+            String attachmentToSave =
+                    selectedAttachment != null
+                            ? selectedAttachment.getName()
+                            : existingAttachmentFile;
             transactionDAO.updateTransaction(
                     editTransactionId,
                     buySell,
@@ -449,7 +451,8 @@ public class AddTransactionController {
                     status,
                     remarks,
                     itemCountText,
-                    unit
+                    unit,
+                    attachmentToSave
             );
 
             transactionId = editTransactionId;
@@ -565,6 +568,12 @@ public class AddTransactionController {
         partyField.setText(safe(data.partyName));
 
         unitComboBox.setValue(safe(data.unit));
+
+        if (data.attachmentFile != null && !data.attachmentFile.isBlank()) {
+            attachmentField.setText(data.attachmentFile);
+            existingAttachmentFile = data.attachmentFile;
+        }
+
     }
 
     public void prefillSell(TransactionPrefill data) {
@@ -624,5 +633,27 @@ public class AddTransactionController {
 
     public void setOnTransactionSaved(Runnable callback) {
         this.onTransactionSaved = callback;
+    }
+
+    private boolean showDeleteAttachmentDialog() {
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+
+        alert.setTitle("Delete Attachment");
+        alert.setHeaderText("Remove existing attachment?");
+        alert.setContentText("This will permanently delete the attachment from the system.");
+
+        ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType deleteBtn = new ButtonType("Delete", ButtonBar.ButtonData.OK_DONE);
+
+        alert.getButtonTypes().setAll(cancelBtn, deleteBtn);
+
+        // Style delete button red
+        Platform.runLater(() -> {
+            Button deleteButton = (Button) alert.getDialogPane().lookupButton(deleteBtn);
+            deleteButton.setStyle("-fx-background-color:#e74c3c; -fx-text-fill:white;");
+        });
+
+        return alert.showAndWait().orElse(cancelBtn) == deleteBtn;
     }
 }

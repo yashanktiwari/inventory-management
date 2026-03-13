@@ -1,11 +1,13 @@
 package com.inventory.dao;
 
+import com.inventory.database.AppConfig;
 import com.inventory.database.DBConnection;
 import com.inventory.model.AuditEntry;
 import com.inventory.model.InventoryItem;
 import com.inventory.model.TransactionHistory;
 import com.inventory.util.UserUtil;
 
+import java.io.File;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -171,7 +173,8 @@ public class TransactionDAO {
             String status,
             String remarks,
             String itemCount,
-            String unit
+            String unit,
+            String attachmentFile
     ) {
 
         String updateSql = """
@@ -195,7 +198,8 @@ public class TransactionDAO {
             status = ?,
             remarks = ?,
             item_count = ?,
-            unit = ?
+            unit = ?,
+            attachment_file = ?
         WHERE transaction_id = ?
     """;
 
@@ -234,6 +238,7 @@ public class TransactionDAO {
                     oldValues.put("remarks", rs.getString("remarks"));
                     oldValues.put("item_count", rs.getString("item_count"));
                     oldValues.put("unit", rs.getString("unit"));
+                    oldValues.put("attachment_file", rs.getString("attachment_file"));
                 }
             }
 
@@ -266,9 +271,27 @@ public class TransactionDAO {
                 }
 
                 ps.setString(20, unit);
-                ps.setInt(21, transactionId);
+                ps.setString(21, attachmentFile);
+                ps.setInt(22, transactionId);
 
                 ps.executeUpdate();
+                String oldAttachment = oldValues.get("attachment_file");
+
+                if (oldAttachment != null && !oldAttachment.isBlank() &&
+                        !Objects.equals(oldAttachment, attachmentFile)) {
+
+                    File file = new File(
+                            AppConfig.getAttachmentPath()
+                                    + File.separator +
+                                    "transactions" +
+                                    File.separator +
+                                    oldAttachment
+                    );
+
+                    if (file.exists()) {
+                        file.delete();
+                    }
+                }
             }
 
             // 🔹 Step 3: Insert audit records
@@ -293,6 +316,8 @@ public class TransactionDAO {
             checkAndAudit(transactionId, currentUser, "remarks", oldValues.get("remarks"), remarks);
             checkAndAudit(transactionId, currentUser, "item_count", oldValues.get("item_count"), itemCount);
             checkAndAudit(transactionId, currentUser, "unit", oldValues.get("unit"), unit);
+            checkAndAudit(transactionId, currentUser, "unit", oldValues.get("unit"), unit);
+//            checkAndAudit(transactionId, currentUser, "Attachment File", oldValues.get("attachment_file"), attachmentFile);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -571,13 +596,46 @@ public class TransactionDAO {
     }
 
     public void updateAttachment(int transactionId, String fileName) {
-        String sql =
+
+        String fetchSql =
+                "SELECT attachment_file FROM transactions WHERE transaction_id = ?";
+
+        String updateSql =
                 "UPDATE transactions SET attachment_file=? WHERE transaction_id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, fileName);
-            ps.setInt(2, transactionId);
-            ps.executeUpdate();
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            String oldAttachment = null;
+
+            // 🔹 Step 1: Fetch old attachment
+            try (PreparedStatement ps = conn.prepareStatement(fetchSql)) {
+
+                ps.setInt(1, transactionId);
+
+                ResultSet rs = ps.executeQuery();
+
+                if (rs.next()) {
+                    oldAttachment = rs.getString("attachment_file");
+                }
+            }
+
+            // 🔹 Step 2: Update DB
+            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+
+                if (fileName == null || fileName.isBlank()) {
+                    ps.setNull(1, Types.VARCHAR);
+                } else {
+                    ps.setString(1, fileName);
+                }
+
+                ps.setInt(2, transactionId);
+                ps.executeUpdate();
+            }
+
+
+            // 🔹 Step 3: Audit
+            checkAndAudit(transactionId, UserUtil.getCurrentUser(), "Attachment File", oldAttachment, fileName);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1023,9 +1081,11 @@ public class TransactionDAO {
         String oldVal = oldValue == null ? "" : oldValue;
         String newVal = newValue == null ? "" : newValue;
 
-        // Special handling for numeric fields
+        // 🔹 Special handling for numeric fields
         if ("item_count".equals(field)) {
+
             try {
+
                 double oldNum = oldVal.isBlank() ? 0 : Double.parseDouble(oldVal);
                 double newNum = newVal.isBlank() ? 0 : Double.parseDouble(newVal);
 
@@ -1034,6 +1094,7 @@ public class TransactionDAO {
                 }
 
             } catch (Exception e) {
+
                 if (!oldVal.equals(newVal)) {
                     insertAudit(transactionId, user, field, oldVal, newVal);
                 }
@@ -1042,7 +1103,26 @@ public class TransactionDAO {
             return;
         }
 
-        // Default comparison
+        // 🔹 Special handling for Attachment
+        if ("Attachment File".equals(field)) {
+
+            String oldDisplay = oldVal.isBlank() ? "Empty" : oldVal;
+            String newDisplay;
+
+            if (newVal.isBlank()) {
+                newDisplay = oldVal.isBlank() ? "Empty" : "Deleted";
+            } else {
+                newDisplay = newVal;
+            }
+
+            if (!oldDisplay.equals(newDisplay)) {
+                insertAudit(transactionId, user, field, oldDisplay, newDisplay);
+            }
+
+            return;
+        }
+
+        // 🔹 Default comparison
         if (!oldVal.equals(newVal)) {
             insertAudit(transactionId, user, field, oldVal, newVal);
         }

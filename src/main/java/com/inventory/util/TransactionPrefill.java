@@ -26,4 +26,5 @@ public class TransactionPrefill {
     public String partyName;
 
     public String unit;
+    public String attachmentFile;
 }
