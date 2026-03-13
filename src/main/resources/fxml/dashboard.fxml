@@ -67,34 +67,41 @@
     <center>
         <VBox spacing="10" style="-fx-padding: 10;"
               VBox.vgrow="ALWAYS">
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Search:"/>
-                <TextField fx:id="searchField"
-                           promptText="Search"
-                           prefWidth="450"/>
+            <VBox spacing="6">
 
-                <Region HBox.hgrow="ALWAYS"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Search:"/>
+                    <TextField fx:id="searchField"
+                               promptText="Search"
+                               prefWidth="450"/>
 
-                <Label text="Total Records:" style="-fx-font-size:14px"/>
-                <Label fx:id="recordCountLabel" text="0" style="-fx-font-size:14px"/>
+                    <Region HBox.hgrow="ALWAYS"/>
 
-                <Separator orientation="VERTICAL"/>
+                    <Label text="Total Records:" style="-fx-font-size:14px"/>
+                    <Label fx:id="recordCountLabel" text="0" style="-fx-font-size:14px"/>
+                </HBox>
 
-                <Label fx:id="stockLabel" text="In Stock: 0"
-                       style="-fx-font-size:14px; -fx-text-fill:#1e7e34;"/>
-                <Separator orientation="VERTICAL"/>
+                <TabPane fx:id="dashboardTabs"
+                         tabClosingPolicy="UNAVAILABLE"
+                        styleClass="inventory.css">
 
-                <Label fx:id="issuedLabel" text="Issued: 0"
-                       style="-fx-font-size:14px; -fx-text-fill:#1f4e79;"/>
-                <Separator orientation="VERTICAL"/>
+                    <tabs>
 
-                <Label fx:id="scrapLabel" text="Scrapped: 0"
-                       style="-fx-font-size:14px; -fx-text-fill:#8b1e1e;"
-                       visible="false"
-                       managed="false"/>
+                        <Tab text="Buy"/>
 
+                        <Tab text="In Stock"/>
 
-            </HBox>
+                        <Tab text="Issued"/>
+
+                        <Tab text="Scrapped"/>
+
+                        <Tab text="Returned"/>
+
+                    </tabs>
+
+                </TabPane>
+
+            </VBox>
             <VBox fx:id="tableContainer" VBox.vgrow="ALWAYS" spacing="0">
                 <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
                     <columnResizePolicy>

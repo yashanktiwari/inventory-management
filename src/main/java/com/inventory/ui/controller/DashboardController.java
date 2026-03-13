@@ -11,6 +11,7 @@ import com.inventory.util.TableFreezeManager;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -45,8 +46,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.collections.ListChangeListener;
 import javafx.util.Duration;
 import javafx.util.Pair;
+import org.controlsfx.control.table.ColumnFilter;
 import org.controlsfx.control.table.TableFilter;
 
 public class DashboardController {
@@ -122,9 +125,16 @@ public class DashboardController {
     @FXML private MenuItem restoreDatabase;
     @FXML private TableColumn<TransactionHistory, Void> attachmentColumn;
     @FXML private Label recordCountLabel;
-    @FXML private Label stockLabel;
-    @FXML private Label issuedLabel;
-    @FXML private Label scrapLabel;
+
+    @FXML private TabPane dashboardTabs;
+
+//    @FXML private ToggleButton buyTab;
+//    @FXML private ToggleButton stockTab;
+//    @FXML private ToggleButton issuedTab;
+//    @FXML private ToggleButton scrapTab;
+//    @FXML private ToggleButton returnedTab;
+
+    private String currentTab = "BUY";
 
 
     private ObservableList<TransactionHistory> masterData;
@@ -145,6 +155,19 @@ public class DashboardController {
     private final Map<String, Set<String>> activeFilters = new HashMap<>();
     private FilteredList<TransactionHistory> filterPipeline;
     private AttachmentManager attachmentManager;
+    private TableView<TransactionHistory> summarySourceTable;
+    private final ListChangeListener<TransactionHistory> summaryListListener =
+            change -> updateSummary();
+    private final ChangeListener<ObservableList<TransactionHistory>> summaryItemsListener =
+            (obs, oldItems, newItems) -> {
+                if (oldItems != null) {
+                    oldItems.removeListener(summaryListListener);
+                }
+                if (newItems != null) {
+                    newItems.addListener(summaryListListener);
+                }
+                updateSummary();
+            };
 
     @FXML
     public void initialize() {
@@ -157,6 +180,62 @@ public class DashboardController {
                 );
 
         columnPrefs.initialize();
+
+        ToggleGroup tabGroup = new ToggleGroup();
+
+        dashboardTabs.getSelectionModel()
+                .selectedIndexProperty()
+                .addListener((obs, oldVal, newVal) -> {
+
+                    switch (newVal.intValue()) {
+
+                        case 0 -> {
+                            currentTab = "BUY";
+                            showBuySellColumn(true);
+                        }
+
+                        case 1 -> {
+                            currentTab = "IN STOCK";
+                            showBuySellColumn(false);   // 🔥 hide
+                        }
+
+                        case 2 -> {
+                            currentTab = "ISSUED";
+                            showBuySellColumn(true);
+                        }
+
+                        case 3 -> {
+                            currentTab = "SCRAPPED";
+                            showBuySellColumn(true);
+                        }
+
+                        case 4 -> {
+                            currentTab = "RETURNED";
+                            showBuySellColumn(true);
+                        }
+                    }
+
+                    searchField.clear();
+                    loadHistory();
+                });
+
+        dashboardTabs.widthProperty().addListener((obs, oldVal, newVal) -> {
+
+            int tabCount = dashboardTabs.getTabs().size();
+
+            double tabWidth = newVal.doubleValue() / tabCount;
+
+            dashboardTabs.setTabMinWidth(tabWidth);
+            dashboardTabs.setTabMaxWidth(tabWidth);
+
+        });
+//        buyTab.setToggleGroup(tabGroup);
+//        stockTab.setToggleGroup(tabGroup);
+//        issuedTab.setToggleGroup(tabGroup);
+//        scrapTab.setToggleGroup(tabGroup);
+//        returnedTab.setToggleGroup(tabGroup);
+
+//        buyTab.setSelected(true);
 
         attachmentManager = new AttachmentManager();
         historyTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
@@ -171,10 +250,14 @@ public class DashboardController {
             MenuItem editItem = createMenuItem("Edit");
 
             sellItem.setOnAction(e -> {
+
                 TransactionHistory transaction = row.getItem();
-                if (transaction != null) {
-                    openSellTransaction(transaction);
-                }
+
+                if (transaction == null) return;
+
+                if (!"IN STOCK".equals(currentTab)) return;
+
+                openSellTransaction(transaction);
             });
 
             editItem.setOnAction(e -> {
@@ -190,29 +273,32 @@ public class DashboardController {
 
                 if (newItem == null) return;
 
-                String buySell = newItem.getBuySell();
-                String status = newItem.getStatus();
+                switch (currentTab) {
 
-                // BUY → Sell + Edit
-                if ("Buy".equalsIgnoreCase(buySell)) {
-
-                    if (newItem.isAvailable()) {
-                        contextMenu.getItems().add(sellItem);
+                    case "BUY" -> {
+                        // Only edit allowed
+                        contextMenu.getItems().add(editItem);
                     }
 
-                    contextMenu.getItems().add(editItem);
-                }
+                    case "IN STOCK" -> {
+                        if (newItem.isAvailable()) {
+                            contextMenu.getItems().add(sellItem);
+                        }
 
-
-
-                // SELL logic
-                if ("Sell".equalsIgnoreCase(buySell)) {
-
-                    if ("Returned".equalsIgnoreCase(status) && newItem.isAvailable()) {
-                        contextMenu.getItems().add(sellItem);
+                        contextMenu.getItems().add(editItem);
                     }
 
-                    contextMenu.getItems().add(editItem);
+                    case "ISSUED" -> {
+                        contextMenu.getItems().add(editItem);
+                    }
+
+                    case "SCRAPPED" -> {
+                        contextMenu.getItems().add(editItem);
+                    }
+
+                    case "RETURNED" -> {
+                        contextMenu.getItems().add(editItem);
+                    }
                 }
 
 
@@ -283,7 +369,7 @@ public class DashboardController {
                     TransactionHistory history =
                             getTableView().getItems().get(getIndex());
 
-                    if (!"Sell".equalsIgnoreCase(history.getBuySell())) {
+                    if (!"ISSUED".equals(currentTab)) {
                         return;
                     }
 
@@ -295,7 +381,7 @@ public class DashboardController {
                     dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
 
                     ChoiceBox<String> statusChoice = new ChoiceBox<>();
-                    statusChoice.getItems().addAll("Returned", "Scrap");
+                    statusChoice.getItems().addAll("RETURNED", "SCRAPPED");
 
                     // Set current status from DB
                     statusChoice.setValue(history.getStatus());
@@ -356,23 +442,23 @@ public class DashboardController {
                 // BUY → always disabled
                 if ("Buy".equalsIgnoreCase(buySell)) {
                     updateBtn.setDisable(true);
-                    updateBtn.setText("In Stock");
+                    updateBtn.setText("IN STOCK");
 
                 }
                 // SELL → depends on status
                 else if ("Sell".equalsIgnoreCase(buySell)) {
-                    if ("Issued".equalsIgnoreCase(status)) {
+
+                    if ("ISSUED".equalsIgnoreCase(status)) {
                         updateBtn.setDisable(false);
-                        updateBtn.setText("Issued");
-                    } else if ("Returned".equalsIgnoreCase(status)) {
+                        updateBtn.setText("ISSUED");
+                    }
+                    else if ("RETURNED".equalsIgnoreCase(status)) {
                         updateBtn.setDisable(true);
-                        updateBtn.setText("Returned");
-                    } else if ("Scrap".equalsIgnoreCase(status) || "Scrapped".equalsIgnoreCase(status)) {
+                        updateBtn.setText("RETURNED");
+                    }
+                    else if ("SCRAPPED".equalsIgnoreCase(status)) {
                         updateBtn.setDisable(true);
-                        updateBtn.setText("Scrapped");
-                    } else {
-                        updateBtn.setDisable(true);
-                        updateBtn.setText(status);
+                        updateBtn.setText("SCRAPPED");
                     }
                 }
                 setGraphic(updateBtn);
@@ -1355,18 +1441,18 @@ public class DashboardController {
                     setText(status.toUpperCase());
                     setAlignment(Pos.CENTER);
 
-                    switch (status.toLowerCase()) {
+                    switch (status) {
 
-                        case "issued" ->
+                        case "ISSUED" ->
                                 setStyle("-fx-background-color:#d6eaff; -fx-text-fill: black;");
 
-                        case "returned" ->
+                        case "RETURNED" ->
                                 setStyle("-fx-background-color:#d4edda; -fx-text-fill: black;");
 
-                        case "scrap" ->
+                        case "SCRAPPED" ->
                                 setStyle("-fx-background-color:#e0e0e0; -fx-text-fill: black;");
 
-                        case "in stock" ->
+                        case "IN STOCK" ->
                                 setStyle("-fx-background-color:#fff3cd; -fx-text-fill: black;");
                     }
                 }
@@ -1709,20 +1795,13 @@ public class DashboardController {
 
         historyTable.setItems(sortedData);
 
-        historyTable.getItems().addListener( (javafx.collections.ListChangeListener<TransactionHistory>) c -> updateSummary() );
+        attachSummaryListeners(historyTable);
         updateSummary();
 
         loadHistory();
 
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
-
-            historyTable.itemsProperty().addListener((obs, oldList, newList) -> updateSummary());
-
-            historyTable.getItems().addListener(
-                    (javafx.collections.ListChangeListener<TransactionHistory>) c -> updateSummary()
-            );
-
 
             Platform.runLater(() -> {
                 restoreFilters();
@@ -1749,7 +1828,7 @@ public class DashboardController {
         });
         unfreezeColumnsMenuItem.setDisable(true);
 
-//        historyTable.comparatorProperty().addListener((obs, o, n) -> updateSummary());
+        historyTable.comparatorProperty().addListener((obs, o, n) -> updateSummary());
 
         startConnectionMonitor();
         ConnectionState.connectedProperty().addListener((obs, oldVal, connected) -> {
@@ -2410,6 +2489,61 @@ public class DashboardController {
         }
     }
 
+//    @FXML
+//    private void handleBuyTab() {
+//
+//        currentTab = "BUY";
+//
+//        buySellColumn.setVisible(true);
+//        actionColumn.setVisible(false);
+//
+//        loadHistory();
+//    }
+//
+//    @FXML
+//    private void handleStockTab() {
+//
+//        currentTab = "STOCK";
+//
+//        buySellColumn.setVisible(false);
+//        actionColumn.setVisible(false);
+//
+//        loadHistory();
+//    }
+//
+//    @FXML
+//    private void handleIssuedTab() {
+//
+//        currentTab = "ISSUED";
+//
+//        buySellColumn.setVisible(false);
+//        actionColumn.setVisible(true);
+//
+//        loadHistory();
+//    }
+//
+//    @FXML
+//    private void handleScrapTab() {
+//
+//        currentTab = "SCRAP";
+//
+//        buySellColumn.setVisible(false);
+//        actionColumn.setVisible(false);
+//
+//        loadHistory();
+//    }
+//
+//    @FXML
+//    private void handleReturnedTab() {
+//
+//        currentTab = "RETURNED";
+//
+//        buySellColumn.setVisible(true);
+//        actionColumn.setVisible(false);
+//
+//        loadHistory();
+//    }
+
     private void rebuildTableFilter() {
         if (columnsFrozen) {
             // Apply TableFilter only to scroll table
@@ -2419,6 +2553,7 @@ public class DashboardController {
             if (scrollTable != null && frozenTable != null) {
                 // Apply filter to scroll table only
                 tableFilter = TableFilter.forTableView(scrollTable).apply();
+                attachSummaryListeners(scrollTable);
 
                 frozenTable.setItems(scrollTable.getItems());
 
@@ -2444,22 +2579,65 @@ public class DashboardController {
             // Normal mode - single table
             historyTable.refresh();
             tableFilter = TableFilter.forTableView(historyTable).apply();
+            attachSummaryListeners(historyTable);
             restoreFilters();
             tableFilter.executeFilter();
         }
     }
 
-    private void loadHistory() {
-        if (!DBConnection.isDatabaseSet()) {
+    private void attachSummaryListeners(TableView<TransactionHistory> table) {
+        if (summarySourceTable == table) {
             return;
         }
-        List<TransactionHistory> data = transactionDAO.getAllTransactions();
+
+        if (summarySourceTable != null) {
+            summarySourceTable.itemsProperty().removeListener(summaryItemsListener);
+            ObservableList<TransactionHistory> oldItems = summarySourceTable.getItems();
+            if (oldItems != null) {
+                oldItems.removeListener(summaryListListener);
+            }
+        }
+
+        summarySourceTable = table;
+        table.itemsProperty().addListener(summaryItemsListener);
+
+        ObservableList<TransactionHistory> items = table.getItems();
+        if (items != null) {
+            items.addListener(summaryListListener);
+        }
+    }
+
+    private void loadHistory() {
+        if (!DBConnection.isDatabaseSet()) return;
+        List<TransactionHistory> data;
+        switch (currentTab) {
+            case "BUY" -> data = transactionDAO.getBuyTransactions();
+            case "IN STOCK" -> data = transactionDAO.getInStockTransactions();
+            case "ISSUED" -> data = transactionDAO.getIssuedTransactions();
+            case "SCRAPPED" -> data = transactionDAO.getScrappedTransactions();
+            case "RETURNED" -> data = transactionDAO.getReturnedTransactions();
+            default -> data = transactionDAO.getAllTransactions();
+        }
+
         Platform.runLater(() -> {
             masterData.setAll(data);
+
             if (tableFilter != null) {
+                tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
                 tableFilter.executeFilter();
             }
+
+            if(columnsFrozen) {
+                TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+                TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+                if(scrollTable != null && frozenTable != null) {
+                    frozenTable.setItems(scrollTable.getItems());
+                }
+            }
+
             historyTable.refresh();
+
+            Platform.runLater(this::updateSummary);
         });
     }
 
@@ -3333,63 +3511,20 @@ public class DashboardController {
     }
 
     private void updateSummary() {
+        ObservableList<TransactionHistory> visibleItems = null;
 
-        double stock = 0;
-        double issued = 0;
-        double scrapped = 0;
-
-        int totalRecords = historyTable.getItems().size();
-
-        for (TransactionHistory t : historyTable.getItems()) {
-
-            double qty = t.getItemCount() == null ? 0 : t.getItemCount();
-
-            String type = t.getBuySell();
-            String status = t.getStatus();
-
-            if ("Buy".equalsIgnoreCase(type)) {
-                stock += qty;
+        if (columnsFrozen) {
+            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+            if (scrollTable != null) {
+                visibleItems = scrollTable.getItems();
             }
-
-            else if ("Sell".equalsIgnoreCase(type)) {
-
-                if ("Issued".equalsIgnoreCase(status)) {
-                    stock -= qty;
-                    issued += qty;
-                }
-
-                else if ("Scrap".equalsIgnoreCase(status)
-                        || "Scrapped".equalsIgnoreCase(status)) {
-
-                    stock -= qty;
-                    scrapped += qty;
-                }
-            }
+        } else if (historyTable != null) {
+            visibleItems = historyTable.getItems();
         }
+
+        int totalRecords = visibleItems == null ? 0 : visibleItems.size();
 
         recordCountLabel.setText(String.valueOf(totalRecords));
-
-        if(stock >= 0) {
-            stockLabel.setText("In Stock: " + stock);
-        } else {
-            stockLabel.setText("In Stock: 0");
-        }
-
-        if(issued >= 0) {
-            issuedLabel.setText("Issued: " + issued);
-        } else {
-            issuedLabel.setText("Issued: 0");
-        }
-
-
-        if (scrapped > 0) {
-            scrapLabel.setText("Scrapped: " + scrapped);
-            scrapLabel.setVisible(true);
-            scrapLabel.setManaged(true);
-        } else {
-            scrapLabel.setVisible(false);
-            scrapLabel.setManaged(false);
-        }
     }
 
     @FXML
@@ -3414,5 +3549,22 @@ public class DashboardController {
         }
     }
 
+    private void showBuySellColumn(boolean visible) {
+        buySellColumn.setVisible(visible);
+//        buySellColumn.setManaged(visible);
+    }
 
+    private void spreadTabsEvenly() {
+
+        int tabCount = dashboardTabs.getTabs().size();
+
+        double tabPaneWidth = dashboardTabs.getWidth();
+
+        double tabWidth = tabPaneWidth / tabCount;
+
+        dashboardTabs.lookupAll(".tab").forEach(node -> {
+            node.setStyle("-fx-pref-width: " + tabWidth + ";");
+        });
+
+    }
 }

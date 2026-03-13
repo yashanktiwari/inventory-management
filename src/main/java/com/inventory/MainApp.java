@@ -45,6 +45,7 @@ public class MainApp extends Application {
                 getClass().getResource("/fxml/dashboard.fxml")
         );
 
+        Application.setUserAgentStylesheet(null);
         Parent root = loader.load();   // 🔹 LOAD ONLY ONCE
 
         DashboardController controller = loader.getController();
@@ -54,6 +55,7 @@ public class MainApp extends Application {
         scene.getStylesheets().add(
                 getClass().getResource("/css/table-filter.css").toExternalForm()
         );
+
         stage.setTitle("Inventory Management System");
         stage.setScene(scene);
 

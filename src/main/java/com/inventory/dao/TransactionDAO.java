@@ -25,6 +25,7 @@ public class TransactionDAO {
 
     // 🔹 Insert Transaction
     public int createTransaction(
+            Integer parentTransactionId,
             String buySell,
             String plant,
             String department,
@@ -53,6 +54,7 @@ public class TransactionDAO {
 
         String sql = """
         INSERT INTO transactions (
+            parent_transaction_id,
             buy_sell,
             plant,
             department,
@@ -77,9 +79,10 @@ public class TransactionDAO {
             returned_datetime,
             remarks,
             item_count,
-            unit
+            unit,
+            is_available
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -88,50 +91,52 @@ public class TransactionDAO {
                      Statement.RETURN_GENERATED_KEYS
              )) {
 
-            pstmt.setString(1, buySell);
-            pstmt.setString(2, plant);
-            pstmt.setString(3, department);
-            pstmt.setString(4, location);
+            pstmt.setObject(1, parentTransactionId);
+            pstmt.setString(2, buySell);
+            pstmt.setString(3, plant);
+            pstmt.setString(4, department);
+            pstmt.setString(5, location);
 
-            pstmt.setString(5, employeeId);
-            pstmt.setString(6, employeeName);
+            pstmt.setString(6, employeeId);
+            pstmt.setString(7, employeeName);
 
-            pstmt.setString(7, ipAddress);
+            pstmt.setString(8, ipAddress);
 
-            pstmt.setString(8, itemCode);
-            pstmt.setString(9, itemName);
-            pstmt.setString(10, itemMake);
-            pstmt.setString(11, itemModel);
-            pstmt.setString(12, itemSerial);
-            pstmt.setString(13, itemCondition);
-            pstmt.setString(14, itemLocation);
-            pstmt.setString(15, itemCategory);
+            pstmt.setString(9, itemCode);
+            pstmt.setString(10, itemName);
+            pstmt.setString(11, itemMake);
+            pstmt.setString(12, itemModel);
+            pstmt.setString(13, itemSerial);
+            pstmt.setString(14, itemCondition);
+            pstmt.setString(15, itemLocation);
+            pstmt.setString(16, itemCategory);
 
-            pstmt.setString(16, imeiNo);
-            pstmt.setString(17, simNo);
+            pstmt.setString(17, imeiNo);
+            pstmt.setString(18, simNo);
 
-            pstmt.setString(18, poNo);
-            pstmt.setString(19, partyName);
+            pstmt.setString(19, poNo);
+            pstmt.setString(20, partyName);
 
-            pstmt.setString(20, status);
+            pstmt.setString(21, status);
 
-            pstmt.setTimestamp(21, Timestamp.valueOf(transactionTime));
+            pstmt.setTimestamp(22, Timestamp.valueOf(transactionTime));
 
-            if ("Scrap".equalsIgnoreCase(status)) {
-                pstmt.setTimestamp(22, Timestamp.valueOf(LocalDateTime.now()));
+            if ("SCRAPPED".equalsIgnoreCase(status)) {
+                pstmt.setTimestamp(23, Timestamp.valueOf(LocalDateTime.now()));
             } else {
-                pstmt.setNull(22, Types.TIMESTAMP);
+                pstmt.setNull(23, Types.TIMESTAMP);
             }
 
-            pstmt.setString(23, remarks);
+            pstmt.setString(24, remarks);
 
             if (itemCount == null || itemCount.isBlank()) {
-                pstmt.setNull(24, Types.DOUBLE);
+                pstmt.setNull(25, Types.DOUBLE);
             } else {
-                pstmt.setDouble(24, Double.parseDouble(itemCount));
+                pstmt.setDouble(25, Double.parseDouble(itemCount));
             }
 
-            pstmt.setString(25, unit);
+            pstmt.setString(26, unit);
+            pstmt.setBoolean(27, true);
 
             pstmt.executeUpdate();
             checkLowStock(itemName);
@@ -394,7 +399,6 @@ public class TransactionDAO {
                 if (rs.wasNull()) itemCount = 0;
 
                 TransactionHistory history = new TransactionHistory(
-
                         rs.getInt("transaction_id"),
 
                         safe(rs.getString("buy_sell")),
@@ -422,7 +426,7 @@ public class TransactionDAO {
                         safe(rs.getString("po_no")),
                         safe(rs.getString("party_name")),
 
-                        safe(rs.getString("status")),
+                        normalizeStatus(rs.getString("status")),
 
                         issued,
                         returned,
@@ -434,11 +438,12 @@ public class TransactionDAO {
                         safe(rs.getString("attachment_file")),
 
                         safe(lastModifiedBy),
-                        auditEntries
+                        auditEntries,
+                        rs.getInt("parent_transaction_id")
                 );
 
-                boolean available = isItemAvailable(history.getItemSerial());
-                history.setAvailable(available);
+                // ✅ read directly from DB
+                history.setAvailable(rs.getBoolean("is_available"));
 
                 historyList.add(history);
             }
@@ -518,7 +523,7 @@ public class TransactionDAO {
                         safe(rs.getString("po_no")),
                         safe(rs.getString("party_name")),
 
-                        safe(rs.getString("status")),
+                        normalizeStatus(rs.getString("status")),
 
                         issued,
                         returned,
@@ -530,8 +535,10 @@ public class TransactionDAO {
                         safe(rs.getString("attachment_file")),
 
                         safe(lastModifiedBy),
-                        auditEntries
+                        auditEntries,
+                        rs.getInt("parent_transaction_id")
                 );
+                history.setAvailable(rs.getBoolean("is_available"));
 
                 historyList.add(history);
             }
@@ -560,36 +567,6 @@ public class TransactionDAO {
     }
 
     // 🔹 Update Transaction Status
-    public void updateTransactionStatus(int transactionId, String status) {
-
-        try (Connection conn = DBConnection.getConnection()) {
-
-            TransactionHistory oldT = getTransactionById(transactionId);
-
-            String sql = """
-            UPDATE transactions
-            SET status = ?, returned_datetime = ?
-            WHERE transaction_id = ?
-        """;
-
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-                pstmt.setString(1, status);
-                pstmt.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
-                pstmt.setInt(3, transactionId);
-
-                pstmt.executeUpdate();
-            }
-
-            TransactionHistory newT = getTransactionById(transactionId);
-
-            logChanges(oldT, newT, UserUtil.getCurrentUser());
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void updateTransactionStatus(int transactionId, String status, String remarks) {
 
         try (Connection conn = DBConnection.getConnection()) {
@@ -598,26 +575,31 @@ public class TransactionDAO {
             TransactionHistory oldT = getTransactionById(transactionId);
 
             String sql = """
-            UPDATE transactions
-            SET status = ?, remarks = ?, returned_datetime = ?
-            WHERE transaction_id = ?
+        UPDATE transactions
+        SET status = ?, 
+            is_available = ?, 
+            remarks = ?, 
+            returned_datetime = ?
+        WHERE transaction_id = ?
         """;
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-                stmt.setString(1, status);
-                stmt.setString(2, remarks);
+                boolean available = "RETURNED".equalsIgnoreCase(status);
 
-                if ("Returned".equalsIgnoreCase(status)) {
-                    stmt.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+                stmt.setString(1, status.toUpperCase());
+                stmt.setBoolean(2, available);
+                stmt.setString(3, remarks);
+
+                if ("RETURNED".equalsIgnoreCase(status)) {
+                    stmt.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
                 } else {
-                    stmt.setNull(3, Types.TIMESTAMP);
+                    stmt.setNull(4, Types.TIMESTAMP);
                 }
 
-                stmt.setInt(4, transactionId);
+                stmt.setInt(5, transactionId);
 
                 stmt.executeUpdate();
-
             }
 
             // 2️⃣ Fetch NEW transaction
@@ -783,7 +765,7 @@ public class TransactionDAO {
                         safe(rs.getString("sim_no")),
                         safe(rs.getString("po_no")),
                         safe(rs.getString("party_name")),
-                        safe(rs.getString("status")),
+                        normalizeStatus(rs.getString("status")),
                         issued,
                         returned,
                         safe(rs.getString("remarks")),
@@ -791,7 +773,8 @@ public class TransactionDAO {
                         safe(rs.getString("unit")),
                         safe(rs.getString("attachment_file")),
                         "",
-                        new ArrayList<>()
+                        new ArrayList<>(),
+                        rs.getInt("parent_transaction_id")
                 );
             }
 
@@ -845,23 +828,29 @@ public class TransactionDAO {
 
         String sql = """
             SELECT
-               item_code,
-               item_name,
-               unit,
-               COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
-               SUM(
-                   CASE
-                       WHEN buy_sell = 'Buy' THEN item_count
-                       WHEN status = 'Issued' THEN -item_count
-                       WHEN status = 'Returned' THEN 0
-                       WHEN status = 'Scrap' THEN -item_count
-                       ELSE 0
-                   END
-               ) AS stock
-           FROM transactions
-           GROUP BY item_code, item_name, unit
-           HAVING stock > 0
-           ORDER BY item_name
+                item_code,
+                item_name,
+                unit,
+                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
+                SUM(item_count) AS stock
+            FROM (
+                SELECT t.*
+                FROM transactions t
+                JOIN (
+                    SELECT MAX(transaction_id) latest_id
+                    FROM transactions
+                    GROUP BY
+                        CASE
+                            WHEN item_serial IS NOT NULL AND item_serial != ''
+                            THEN item_serial
+                            ELSE transaction_id
+                        END
+                ) latest
+                ON t.transaction_id = latest.latest_id
+                WHERE UPPER(t.status) IN ('IN STOCK','RETURNED')
+            ) current_stock
+            GROUP BY item_code, item_name, unit
+            ORDER BY item_name
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -920,14 +909,13 @@ public class TransactionDAO {
         SUM(
             CASE
                 WHEN buy_sell = 'Buy' THEN item_count
-                WHEN status = 'Issued' THEN -item_count
-                WHEN status = 'Returned' THEN 0
-                WHEN status = 'Scrap' THEN -item_count
+                WHEN UPPER(status) = 'ISSUED' THEN -item_count
+                WHEN UPPER(status) = 'SCRAPPED' THEN -item_count
                 ELSE 0
             END
         ) AS stock
         FROM transactions
-        WHERE item_name = ?;
+        WHERE item_name = ?
     """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -1074,7 +1062,8 @@ public class TransactionDAO {
                         "",
 
                         "",
-                        new ArrayList<>()
+                        new ArrayList<>(),
+                        rs.getInt("parent_transaction_id")
                 );
 
                 list.add(history);
@@ -1232,7 +1221,6 @@ public class TransactionDAO {
         UPDATE transactions
         SET minimum_stock = ?
         WHERE item_name = ?
-        LIMIT 1
     """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -1248,10 +1236,201 @@ public class TransactionDAO {
         }
     }
 
-    public boolean isItemAvailable(String itemSerial) {
+    public List<TransactionHistory> getBuyTransactions() {
 
         String sql = """
-        SELECT buy_sell, status
+        SELECT *
+        FROM transactions
+        WHERE buy_sell = 'Buy'
+        ORDER BY issued_datetime DESC
+    """;
+
+        return fetchTransactions(sql);
+    }
+
+    public List<TransactionHistory> getInStockTransactions() {
+
+        String sql = """
+        SELECT t.*
+        FROM transactions t
+        JOIN (
+            SELECT MAX(transaction_id) latest_id
+            FROM transactions
+            GROUP BY
+                CASE
+                    WHEN item_serial IS NOT NULL AND item_serial != ''
+                    THEN item_serial
+                    ELSE CONCAT(item_code,'_',item_name)
+                END
+        ) latest
+        ON t.transaction_id = latest.latest_id
+        WHERE UPPER(t.status) IN ('IN STOCK','RETURNED')
+        ORDER BY t.issued_datetime DESC
+    """;
+
+        return fetchTransactions(sql);
+    }
+
+    public List<TransactionHistory> getIssuedTransactions() {
+
+        String sql = """
+        SELECT t.*
+        FROM transactions t
+        JOIN (
+            SELECT MAX(transaction_id) latest_id
+            FROM transactions
+            GROUP BY
+                CASE
+                    WHEN item_serial IS NOT NULL AND item_serial != ''
+                    THEN item_serial
+                    ELSE CONCAT(item_code,'_',item_name)
+                END
+        ) latest
+        ON t.transaction_id = latest.latest_id
+        WHERE UPPER(t.status) = 'ISSUED'
+        ORDER BY t.issued_datetime DESC
+    """;
+
+        return fetchTransactions(sql);
+    }
+
+    public List<TransactionHistory> getScrappedTransactions() {
+
+        String sql = """
+        SELECT t.*
+        FROM transactions t
+        JOIN (
+            SELECT MAX(transaction_id) latest_id
+            FROM transactions
+            GROUP BY
+                CASE
+                    WHEN item_serial IS NOT NULL AND item_serial != ''
+                    THEN item_serial
+                    ELSE CONCAT(item_code,'_',item_name)
+                END
+        ) latest
+        ON t.transaction_id = latest.latest_id
+        WHERE UPPER(t.status) = 'SCRAPPED'
+        ORDER BY t.returned_datetime DESC
+    """;
+
+        return fetchTransactions(sql);
+    }
+
+    public List<TransactionHistory> getReturnedTransactions() {
+
+        String sql = """
+        SELECT *
+        FROM transactions
+        WHERE UPPER(status) = 'RETURNED'
+        ORDER BY returned_datetime DESC
+    """;
+
+        return fetchTransactions(sql);
+    }
+
+    private List<TransactionHistory> fetchTransactions(String sql) {
+
+        List<TransactionHistory> historyList = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+
+                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+                Timestamp returnedTs = rs.getTimestamp("returned_datetime");
+
+                LocalDateTime issued =
+                        issuedTs != null ? issuedTs.toLocalDateTime() : null;
+
+                LocalDateTime returned =
+                        returnedTs != null ? returnedTs.toLocalDateTime() : null;
+
+                List<AuditEntry> auditEntries =
+                        getAuditTrail(rs.getInt("transaction_id"));
+
+                String lastModifiedBy =
+                        auditEntries.isEmpty() ? "" : auditEntries.get(0).getModifiedBy();
+
+                double itemCount = rs.getDouble("item_count");
+                if (rs.wasNull()) itemCount = 0;
+
+                TransactionHistory history = new TransactionHistory(
+
+                        rs.getInt("transaction_id"),
+
+                        safe(rs.getString("buy_sell")),
+                        safe(rs.getString("plant")),
+                        safe(rs.getString("department")),
+                        safe(rs.getString("location")),
+
+                        safe(rs.getString("employee_id")),
+                        safe(rs.getString("employee_name")),
+
+                        safe(rs.getString("ip_address")),
+
+                        safe(rs.getString("item_code")),
+                        safe(rs.getString("item_name")),
+                        safe(rs.getString("item_make")),
+                        safe(rs.getString("item_model")),
+                        safe(rs.getString("item_serial")),
+                        safe(rs.getString("item_condition")),
+                        safe(rs.getString("item_location")),
+                        safe(rs.getString("item_category")),
+
+                        safe(rs.getString("imei_no")),
+                        safe(rs.getString("sim_no")),
+
+                        safe(rs.getString("po_no")),
+                        safe(rs.getString("party_name")),
+
+                        normalizeStatus(rs.getString("status")),
+
+                        issued,
+                        returned,
+
+                        safe(rs.getString("remarks")),
+
+                        itemCount,
+                        safe(rs.getString("unit")),
+                        safe(rs.getString("attachment_file")),
+
+                        safe(lastModifiedBy),
+                        auditEntries,
+                        rs.getInt("parent_transaction_id")
+                );
+
+                // ✅ Use DB column instead of DB call
+                history.setAvailable(rs.getBoolean("is_available"));
+
+                historyList.add(history);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return historyList;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null) return "";
+        status = status.trim().toUpperCase();
+        return switch (status) {
+            case "IN STOCK", "IN_STOCK" -> "IN STOCK";
+            case "ISSUED" -> "ISSUED";
+            case "RETURNED" -> "RETURNED";
+            case "SCRAP", "SCRAPPED" -> "SCRAPPED";
+            default -> status;
+        };
+    }
+
+    public boolean isItemAvailableBySerial(String serial) {
+
+        String sql = """
+        SELECT is_available
         FROM transactions
         WHERE item_serial = ?
         ORDER BY transaction_id DESC
@@ -1260,30 +1439,19 @@ public class TransactionDAO {
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, itemSerial);
+
+            ps.setString(1, serial);
+
             ResultSet rs = ps.executeQuery();
+
             if (rs.next()) {
-                String buySell = rs.getString("buy_sell");
-                String status = rs.getString("status");
-                if ("Buy".equalsIgnoreCase(buySell)) {
-                    return true;
-                }
-                if ("Sell".equalsIgnoreCase(buySell)) {
-                    if ("Returned".equalsIgnoreCase(status)) {
-                        return true;
-                    }
-                    if ("Issued".equalsIgnoreCase(status)
-                            || "Scrap".equalsIgnoreCase(status)
-                            || "Scrapped".equalsIgnoreCase(status)) {
-                        return false;
-                    }
-                }
+                return rs.getBoolean("is_available");
             }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         return true;
     }
-
 }

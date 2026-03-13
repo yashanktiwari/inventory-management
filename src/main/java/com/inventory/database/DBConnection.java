@@ -240,6 +240,17 @@ public class DBConnection {
                 stmt.execute("ALTER TABLE transactions ADD COLUMN minimum_stock DOUBLE DEFAULT -1");
             } catch (SQLException ignored) {}
 
+            try {
+                stmt.execute("ALTER TABLE transactions ADD COLUMN is_available BOOLEAN DEFAULT TRUE;");
+            } catch (SQLException ignored) {}
+
+            try {
+                stmt.execute("""
+                ALTER TABLE transactions
+                ADD COLUMN parent_transaction_id INT NULL
+            """);
+            } catch (SQLException ignored) {}
+
             System.out.println("MySQL database initialized successfully.");
 
         } catch (SQLException e) {
