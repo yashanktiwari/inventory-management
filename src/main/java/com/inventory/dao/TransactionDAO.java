@@ -136,7 +136,9 @@ public class TransactionDAO {
             }
 
             pstmt.setString(26, unit);
-            pstmt.setBoolean(27, true);
+
+            boolean isAvailable = "IN STOCK".equalsIgnoreCase(status) || "RETURNED".equalsIgnoreCase(status);
+            pstmt.setBoolean(27, isAvailable);
 
             pstmt.executeUpdate();
             checkLowStock(itemName);
@@ -834,32 +836,49 @@ public class TransactionDAO {
 
         List<InventoryItem> inventory = new ArrayList<>();
 
+//        String sql = """
+//            SELECT
+//                item_code,
+//                item_name,
+//                unit,
+//                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
+//                SUM(item_count) AS stock
+//            FROM (
+//                SELECT *
+//                FROM (
+//                    SELECT *,
+//                           ROW_NUMBER() OVER (
+//                               PARTITION BY item_serial
+//                               ORDER BY issued_datetime DESC
+//                           ) rn
+//                    FROM transactions
+//                ) latest
+//                WHERE rn = 1
+//                AND UPPER(status) IN ('IN STOCK','RETURNED')
+//            ) current_stock
+//            GROUP BY item_code, item_name, unit
+//            ORDER BY item_name;
+//        """;
+
         String sql = """
-            SELECT
-                item_code,
-                item_name,
-                unit,
-                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
-                SUM(item_count) AS stock
-            FROM (
-                SELECT t.*
-                FROM transactions t
-                JOIN (
-                    SELECT MAX(transaction_id) latest_id
-                    FROM transactions
-                    GROUP BY
+                SELECT
+                    item_code,
+                    item_name,
+                    unit,
+                    COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
+                    SUM(
                         CASE
-                            WHEN item_serial IS NOT NULL AND item_serial != ''
-                            THEN item_serial
-                            ELSE transaction_id
+                            WHEN UPPER(buy_sell) = 'BUY' THEN item_count
+                            WHEN UPPER(status) = 'ISSUED' THEN -item_count
+                            WHEN UPPER(status) = 'SCRAPPED' THEN -item_count
+                            ELSE 0
                         END
-                ) latest
-                ON t.transaction_id = latest.latest_id
-                WHERE UPPER(t.status) IN ('IN STOCK','RETURNED')
-            ) current_stock
-            GROUP BY item_code, item_name, unit
-            ORDER BY item_name
-        """;
+                    ) AS stock
+                FROM transactions
+                GROUP BY item_code, item_name, unit
+                HAVING stock > 0
+                ORDER BY item_name;
+                """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -916,7 +935,7 @@ public class TransactionDAO {
         SELECT
         SUM(
             CASE
-                WHEN buy_sell = 'Buy' THEN item_count
+                WHEN UPPER(buy_sell) = 'BUY' THEN item_count
                 WHEN UPPER(status) = 'ISSUED' THEN -item_count
                 WHEN UPPER(status) = 'SCRAPPED' THEN -item_count
                 ELSE 0
@@ -995,18 +1014,19 @@ public class TransactionDAO {
         List<TransactionHistory> list = new ArrayList<>();
 
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        INNER JOIN (
-            SELECT item_serial, MAX(transaction_id) AS latest_id
+        SELECT *
+        FROM (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_serial
+                       ORDER BY issued_datetime DESC
+                   ) rn
             FROM transactions
             WHERE item_name = ?
-            GROUP BY item_serial
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE t.item_name = ?
-        AND (t.status IS NULL OR t.status NOT IN ('Issued','Scrap'))
-        ORDER BY t.issued_datetime;
+        ) t
+        WHERE rn = 1
+        AND (status IS NULL OR status NOT IN ('ISSUED','SCRAPPED'))
+        ORDER BY issued_datetime;
     """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -1096,7 +1116,7 @@ public class TransactionDAO {
         String sql = """
         SELECT COUNT(*) 
         FROM transactions
-        WHERE buy_sell = 'Buy'
+        WHERE UPPER(buy_sell) = 'BUY'
         AND item_code = ?
         AND item_name = ?
         AND item_make = ?
@@ -1249,7 +1269,7 @@ public class TransactionDAO {
         String sql = """
         SELECT *
         FROM transactions
-        WHERE buy_sell = 'Buy'
+        WHERE UPPER(buy_sell) = 'Buy'
         ORDER BY issued_datetime DESC
     """;
 
@@ -1259,67 +1279,58 @@ public class TransactionDAO {
     public List<TransactionHistory> getInStockTransactions() {
 
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        JOIN (
-            SELECT MAX(transaction_id) latest_id
+        SELECT *
+        FROM (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_serial
+                       ORDER BY issued_datetime DESC
+                   ) rn
             FROM transactions
-            GROUP BY
-                CASE
-                    WHEN item_serial IS NOT NULL AND item_serial != ''
-                    THEN item_serial
-                    ELSE CONCAT(item_code,'_',item_name)
-                END
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE UPPER(t.status) IN ('IN STOCK','RETURNED')
-        ORDER BY t.issued_datetime DESC
+        ) t
+        WHERE rn = 1
+        AND UPPER(status) IN ('IN STOCK','RETURNED')
+        ORDER BY issued_datetime DESC;
     """;
 
         return fetchTransactions(sql);
     }
 
     public List<TransactionHistory> getIssuedTransactions() {
-
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        JOIN (
-            SELECT MAX(transaction_id) latest_id
-            FROM transactions
-            GROUP BY
-                CASE
-                    WHEN item_serial IS NOT NULL AND item_serial != ''
-                    THEN item_serial
-                    ELSE CONCAT(item_code,'_',item_name)
-                END
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE UPPER(t.status) = 'ISSUED'
-        ORDER BY t.issued_datetime DESC
-    """;
+                SELECT *
+                FROM (
+                    SELECT *,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY item_serial
+                               ORDER BY issued_datetime DESC
+                           ) rn
+                    FROM transactions
+                ) t
+                WHERE rn = 1
+                AND status = 'ISSUED';
+                """;
 
-        return fetchTransactions(sql);
+        List<TransactionHistory> issuedTransactions = fetchTransactions(sql);
+        System.out.println(issuedTransactions);
+        return issuedTransactions;
     }
 
     public List<TransactionHistory> getScrappedTransactions() {
 
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        JOIN (
-            SELECT MAX(transaction_id) latest_id
+        SELECT *
+        FROM (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_serial
+                       ORDER BY issued_datetime DESC
+                   ) rn
             FROM transactions
-            GROUP BY
-                CASE
-                    WHEN item_serial IS NOT NULL AND item_serial != ''
-                    THEN item_serial
-                    ELSE CONCAT(item_code,'_',item_name)
-                END
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE UPPER(t.status) = 'SCRAPPED'
-        ORDER BY t.returned_datetime DESC
+        ) t
+        WHERE rn = 1
+        AND UPPER(status) = 'SCRAPPED'
+        ORDER BY returned_datetime DESC;
     """;
 
         return fetchTransactions(sql);
@@ -1441,7 +1452,7 @@ public class TransactionDAO {
         SELECT is_available
         FROM transactions
         WHERE item_serial = ?
-        ORDER BY transaction_id DESC
+        ORDER BY issued_datetime DESC
         LIMIT 1
     """;
 
@@ -1562,6 +1573,7 @@ public class TransactionDAO {
         WHERE item_code = ?
         AND item_serial = ?
         AND is_available = true
+        ORDER BY issued_datetime DESC
         LIMIT 1
     """;
 

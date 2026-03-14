@@ -54,7 +54,8 @@ public class ExportUtil {
                     "Returned Date",
                     "Remarks",
                     "Item Count",
-                    "Unit"
+                    "Unit",
+                    "Last Modified By"
             };
 
             for (int i = 0; i < columns.length; i++) {
@@ -103,11 +104,16 @@ public class ExportUtil {
 
                 row.createCell(23).setCellValue(nullSafe(t.getRemarks()));
 
-                if (t.getItemCount() != null) {
-                    row.createCell(24).setCellValue(t.getItemCount());
+                Double count = t.getItemCount();
+
+                if (count == null || count == 0) {
+                    row.createCell(24).setCellValue("");
+                } else {
+                    row.createCell(24).setCellValue(count);
                 }
 
-                row.createCell(24).setCellValue(nullSafe(t.getUnit()));
+                row.createCell(25).setCellValue(nullSafe(t.getUnit()));
+                row.createCell(26).setCellValue(nullSafe(t.getLastModifiedBy()));
             }
 
             for (int i = 0; i < columns.length; i++) {

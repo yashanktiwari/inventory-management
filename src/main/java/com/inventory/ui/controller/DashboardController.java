@@ -217,6 +217,12 @@ public class DashboardController {
                     }
 
                     searchField.clear();
+
+                    if (tableFilter != null) {
+                        tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+                        tableFilter.executeFilter();
+                    }
+
                     loadHistory();
                 });
 
@@ -1804,6 +1810,12 @@ public class DashboardController {
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
 
+            tableFilter.getColumnFilters().forEach(cf ->
+                    cf.getFilterValues().forEach(fv ->
+                            fv.selectedProperty().addListener((obs, o, n) -> updateSummary())
+                    )
+            );
+
             Platform.runLater(() -> {
                 restoreFilters();
             });
@@ -1922,6 +1934,33 @@ public class DashboardController {
         System.out.println("Excel export started");
 
         try {
+            Alert choiceDialog = new Alert(Alert.AlertType.CONFIRMATION);
+            choiceDialog.setTitle("Export Options");
+            choiceDialog.setHeaderText("Choose export scope");
+            choiceDialog.setContentText("What would you like to export");
+
+            ButtonType allDataButton = new ButtonType("All Transactions");
+            ButtonType currentTableButton = new ButtonType("Current Table only");
+            ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+            choiceDialog.getButtonTypes().setAll(allDataButton, currentTableButton, cancelButton);
+
+            Optional<ButtonType> result = choiceDialog.showAndWait();
+
+            if(result.isEmpty() || result.get() == cancelButton) {
+                System.out.println("Export cancelled by user");
+                return;
+            }
+
+            List<TransactionHistory> datatoExport;
+
+            if(result.get() == allDataButton) {
+                datatoExport = transactionDAO.getAllTransactions();
+                System.out.println("Exporting all transactions: " + datatoExport.size());
+            } else {
+                datatoExport = new ArrayList<>(historyTable.getItems());
+                System.out.println("Exporting current table: " + datatoExport.size());
+            }
 
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Excel File");
@@ -1939,7 +1978,7 @@ public class DashboardController {
             System.out.println("Export path: " + file.getAbsolutePath());
 
             ExportUtil.exportToExcel(
-                    historyTable.getItems(),
+                    datatoExport,
                     file.getAbsolutePath()
             );
 
@@ -2455,34 +2494,57 @@ public class DashboardController {
         Platform.runLater(this::rebuildTableFilter);
     }
 
+//    @FXML
+//    private void handleResetFilters() {
+//        if (tableFilter == null) return;
+//
+//        // Reset table filter
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            columnFilter.selectAllValues();
+//        });
+//        tableFilter.executeFilter();
+//
+//        if(columnsFrozen) {
+//            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+//            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+//            if(scrollTable != null && frozenTable != null) {
+//                Platform.runLater(() -> {
+//                    frozenTable.setItems(scrollTable.getItems());
+//                });
+//            }
+//        }
+//
+//        historyTable.refresh();
+//
+//        // Remove saved preferences
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//                String columnId = columnFilter.getTableColumn().getId();
+//                if (columnId == null) return;
+//                prefs.remove("filter_" + columnId);
+//            });
+//    }
+
     @FXML
     private void handleResetFilters() {
+
         if (tableFilter == null) return;
 
-        // Reset table filter
         tableFilter.getColumnFilters().forEach(columnFilter -> {
             columnFilter.selectAllValues();
         });
-        tableFilter.executeFilter();
 
-        if(columnsFrozen) {
-            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
-            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
-            if(scrollTable != null && frozenTable != null) {
-                Platform.runLater(() -> {
-                    frozenTable.setItems(scrollTable.getItems());
-                });
-            }
-        }
+        tableFilter.executeFilter();
 
         historyTable.refresh();
 
-        // Remove saved preferences
+        updateSummary();
+
         tableFilter.getColumnFilters().forEach(columnFilter -> {
-                String columnId = columnFilter.getTableColumn().getId();
-                if (columnId == null) return;
+            String columnId = columnFilter.getTableColumn().getId();
+            if (columnId != null) {
                 prefs.remove("filter_" + columnId);
-            });
+            }
+        });
     }
 
     @FXML
@@ -2729,8 +2791,13 @@ public class DashboardController {
         Platform.runLater(() -> {
             masterData.setAll(data);
 
-            if (tableFilter != null) {
-                tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+//            if (tableFilter != null) {
+//                tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+//                tableFilter.executeFilter();
+//            }
+            if (tableFilter == null) {
+                Platform.runLater(this::rebuildTableFilter);
+            } else {
                 tableFilter.executeFilter();
             }
 
@@ -3618,14 +3685,13 @@ public class DashboardController {
     }
 
     private void updateSummary() {
-        ObservableList<TransactionHistory> visibleItems = null;
+
+        ObservableList<TransactionHistory> visibleItems;
 
         if (columnsFrozen) {
             TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
-            if (scrollTable != null) {
-                visibleItems = scrollTable.getItems();
-            }
-        } else if (historyTable != null) {
+            visibleItems = scrollTable == null ? FXCollections.observableArrayList() : scrollTable.getItems();
+        } else {
             visibleItems = historyTable.getItems();
         }
 

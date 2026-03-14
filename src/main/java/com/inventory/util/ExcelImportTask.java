@@ -95,9 +95,9 @@ public class ExcelImportTask extends Task<Integer> {
                         ExcelHelper.getDateTime(row.getCell(22)));
 
                 t.setRemarks(ExcelHelper.getString(row.getCell(23)));
-
                 t.setItemCount(ExcelHelper.getDouble(row.getCell(24)));
                 t.setUnit(ExcelHelper.getString(row.getCell(25)));
+                t.setLastModifiedBy(ExcelHelper.getString(row.getCell(26)));
 
                 t.setAvailable(
                         "IN STOCK".equalsIgnoreCase(t.getStatus())
