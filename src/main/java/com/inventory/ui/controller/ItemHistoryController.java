@@ -3,6 +3,7 @@ package com.inventory.ui.controller;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.model.AuditEntry;
 import com.inventory.model.TransactionHistory;
+import com.inventory.util.AlertUtil;
 import com.inventory.util.AttachmentManager;
 import com.inventory.util.ExportUtil;
 import com.inventory.util.TableColumnPreferenceManager;
@@ -455,12 +456,34 @@ public class ItemHistoryController {
                 new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
         );
 
-        File file = fileChooser.showSaveDialog(itemHistoryTable.getScene().getWindow());
+        File file = fileChooser.showSaveDialog(
+                itemHistoryTable.getScene().getWindow()
+        );
 
-        if (file != null) {
+        if (file == null) {
+            return;
+        }
+
+        try {
+
             ExportUtil.exportToExcel(
                     itemHistoryTable.getItems(),
                     file.getAbsolutePath()
+            );
+
+            AlertUtil.showInfo(
+                    "Export Completed",
+                    "Excel file exported successfully."
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            AlertUtil.showError(
+                    "Export Failed",
+                    "Could not export Excel file.\n\n" +
+                            "Make sure the file is not open and try again."
             );
         }
     }

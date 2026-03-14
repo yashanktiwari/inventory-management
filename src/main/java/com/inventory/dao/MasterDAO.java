@@ -302,4 +302,301 @@ public class MasterDAO {
             e.printStackTrace();
         }
     }
+
+    public int bulkInsertItems(List<ItemMaster> items) {
+
+        if (items == null || items.isEmpty()) {
+            return 0;
+        }
+
+        String sql = """
+            INSERT IGNORE INTO master_items
+            (item_code, item_name)
+            VALUES (?, ?)
+        """;
+
+        int count = 0;
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            for (ItemMaster item : items) {
+                ps.setString(1, item.getItemCode());
+                ps.setString(2, item.getItemName());
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            conn.commit();
+
+            for (int result : results) {
+                if (result > 0 || result == Statement.SUCCESS_NO_INFO) count++;
+            }
+
+            ps.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw new RuntimeException("Failed to import items: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public int bulkInsertEmployees(List<EmployeeMaster> employees) {
+
+        if (employees == null || employees.isEmpty()) {
+            return 0;
+        }
+
+        String sql = """
+        INSERT IGNORE INTO master_employees
+        (employee_code, employee_name)
+        VALUES (?, ?)
+        """;
+
+        int count = 0;
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            for (EmployeeMaster emp : employees) {
+                ps.setString(1, emp.getEmployeeCode());
+                ps.setString(2, emp.getEmployeeName());
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            conn.commit();
+
+            for (int result : results) {
+                if (result > 0 || result == Statement.SUCCESS_NO_INFO) count++;
+            }
+
+            ps.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw new RuntimeException("Failed to import employees: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public int bulkInsertCategories(List<String> categories) {
+
+        if (categories == null || categories.isEmpty()) {
+            return 0;
+        }
+
+        String sql = """
+        INSERT IGNORE INTO master_plants
+        (plant_name)
+        VALUES (?)
+        """;
+
+        int count = 0;
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            for (String category : categories) {
+                ps.setString(1, category);
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            conn.commit();
+
+            for (int result : results) {
+                if (result > 0 || result == Statement.SUCCESS_NO_INFO) count++;
+            }
+
+            ps.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw new RuntimeException("Failed to import categories: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public int bulkInsertPlants(List<String> plants) {
+
+        if (plants == null || plants.isEmpty()) {
+            return 0;
+        }
+
+        String sql = """
+        INSERT IGNORE INTO master_departments
+        (department_name)
+        VALUES (?)
+        """;
+
+        int count = 0;
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            for (String plant : plants) {
+                ps.setString(1, plant);
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            conn.commit();
+
+            for (int result : results) {
+                if (result > 0 || result == Statement.SUCCESS_NO_INFO) count++;
+            }
+
+            ps.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw new RuntimeException("Failed to import plants: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public int bulkInsertDepartments(List<String> departments) {
+
+        if (departments == null || departments.isEmpty()) {
+            return 0;
+        }
+
+        String sql = """
+        INSERT OR IGNORE INTO master_departments
+        (department_name)
+        VALUES (?)
+        """;
+
+        int count = 0;
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            for (String department : departments) {
+                ps.setString(1, department);
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            conn.commit();
+
+            for (int result : results) {
+                if (result > 0 || result == Statement.SUCCESS_NO_INFO) count++;
+            }
+
+            ps.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw new RuntimeException("Failed to import departments: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return count;
+    }
 }

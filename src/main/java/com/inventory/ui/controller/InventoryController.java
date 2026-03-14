@@ -1,5 +1,6 @@
 package com.inventory.ui.controller;
 
+import com.inventory.dao.IndentDAO;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.model.InventoryItem;
 import javafx.application.Platform;
@@ -40,11 +41,17 @@ public class InventoryController {
     @FXML
     private TextField searchField;
 
-
     @FXML
     private Label totalItemsLabel;
 
+    @FXML
+    private VBox indentCard;
+
+    @FXML
+    private Label indentCountLabel;
+
     private final TransactionDAO transactionDAO = new TransactionDAO();
+    private final IndentDAO indentDAO = new IndentDAO();
     private static final int MAX_VISIBLE_ROWS = 12;
     private static final double ROW_HEIGHT = 36;
     private FilteredList<InventoryItem> filterPipeline;
@@ -55,6 +62,8 @@ public class InventoryController {
         inventoryTable.getStylesheets().add(
                 getClass().getResource("/css/inventory.css").toExternalForm()
         );
+
+        indentCard.setOnMouseClicked(e -> openIndentList());
 
         inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -72,6 +81,7 @@ public class InventoryController {
                     else if (item.getMinimumStock() >= 0 &&
                             item.getStock() < item.getMinimumStock()) {
 
+                        // Low stock highlight
                         setStyle("-fx-background-color: #ffe6e6;");
                     }
                     else {
@@ -80,9 +90,57 @@ public class InventoryController {
                 }
             };
 
+            ContextMenu menu = new ContextMenu();
+            MenuItem addIndent = new MenuItem("Add Indent");
+
+            menu.getItems().add(addIndent);
+
+            addIndent.setOnAction(e -> {
+
+                InventoryItem item = row.getItem();
+                if (item == null) return;
+
+                TextInputDialog dialog = new TextInputDialog();
+                dialog.setTitle("Add Indent");
+                dialog.setHeaderText(item.getItemName());
+                dialog.setContentText("Enter Quantity:");
+
+                dialog.showAndWait().ifPresent(value -> {
+
+                    try {
+
+                        double qty = Double.parseDouble(value);
+
+                        indentDAO.insertIndent(
+                                item.getItemCode(),
+                                item.getItemName(),
+                                qty
+                        );
+
+                        loadIndentCount(); // refresh dashboard card
+
+                    } catch (Exception ex) {
+
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setContentText("Invalid quantity");
+                        alert.show();
+                    }
+                });
+            });
+
+            row.setOnContextMenuRequested(event -> {
+
+                if (!row.isEmpty()) {
+                    menu.show(row, event.getScreenX(), event.getScreenY());
+                }
+            });
+
             row.setOnMouseClicked(event -> {
+
                 if (event.getClickCount() == 2 && !row.isEmpty()) {
+
                     InventoryItem item = row.getItem();
+
                     openAvailableInventory(item.getItemName());
                 }
             });
@@ -186,6 +244,7 @@ public class InventoryController {
             });
         });
 
+        loadIndentCount();
 
         Platform.runLater(() -> {
             Stage stage = (Stage) inventoryTable.getScene().getWindow();
@@ -211,7 +270,6 @@ public class InventoryController {
         totalItemsLabel.setText(String.valueOf(list.size()));
     }
 
-
     private void openAvailableInventory(String itemName) {
         try {
             FXMLLoader loader = new FXMLLoader(
@@ -233,5 +291,38 @@ public class InventoryController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void openIndentList() {
+
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/indent-list-view.fxml")
+            );
+
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Indent List");
+            stage.setScene(new Scene(root));
+
+            stage.initOwner(inventoryTable.getScene().getWindow());
+
+            // 🔥 Refresh indent count when window closes
+            stage.setOnHidden(e -> loadIndentCount());
+
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadIndentCount() {
+
+        int count = indentDAO.getIndentCount();
+
+        indentCountLabel.setText(String.valueOf(count));
     }
 }

@@ -1,5 +1,6 @@
 package com.inventory.ui.controller;
 
+import com.inventory.dao.IndentDAO;
 import com.inventory.dao.TransactionDAO;
 import com.inventory.model.TransactionHistory;
 import javafx.collections.FXCollections;
@@ -44,6 +45,7 @@ public class AvailableInventoryController {
     private TableColumn<TransactionHistory, LocalDateTime> issuedDateCol;
 
     private final TransactionDAO dao = new TransactionDAO();
+    private final IndentDAO indentDAO = new IndentDAO();
 
     public void loadData(String itemName) {
 
@@ -51,6 +53,72 @@ public class AvailableInventoryController {
                 dao.getAvailableSerialItems(itemName);
 
         table.setItems(FXCollections.observableArrayList(list));
+
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem addIndentItem = new MenuItem("Add Indent");
+
+        contextMenu.getItems().add(addIndentItem);
+
+        table.setRowFactory(tv -> {
+
+            TableRow<TransactionHistory> row = new TableRow<>();
+
+            row.setOnContextMenuRequested(event -> {
+
+                if (!row.isEmpty()) {
+
+                    table.getSelectionModel().select(row.getIndex());
+
+                    contextMenu.show(
+                            row,
+                            event.getScreenX(),
+                            event.getScreenY()
+                    );
+                }
+            });
+
+            return row;
+        });
+
+        addIndentItem.setOnAction(e -> {
+
+            TransactionHistory selected =
+                    table.getSelectionModel().getSelectedItem();
+
+            if (selected == null) {
+                return;
+            }
+
+            TextInputDialog dialog = new TextInputDialog();
+
+            dialog.setTitle("Add Indent");
+            dialog.setHeaderText(selected.getItemName());
+            dialog.setContentText("Enter Quantity:");
+
+            dialog.showAndWait().ifPresent(value -> {
+
+                try {
+
+                    double quantity = Double.parseDouble(value);
+
+                    indentDAO.insertIndent(
+                            selected.getItemCode(),
+                            selected.getItemName(),
+                            quantity
+                    );
+
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setContentText("Indent added successfully.");
+                    alert.showAndWait();
+
+                } catch (Exception ex) {
+
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setContentText("Invalid quantity.");
+                    alert.showAndWait();
+                }
+            });
+        });
 
         if (!list.isEmpty()) {
             double count = 0;

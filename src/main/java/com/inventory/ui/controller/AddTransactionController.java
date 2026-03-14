@@ -186,6 +186,7 @@ public class AddTransactionController {
         enforceUpperCase(itemModelField);
         enforceUpperCase(itemSerialField);
         enforceUpperCase(itemCategoryField);
+        enforceUpperCase(itemLocationField);
 
         enforceUpperCase(plantField);
         enforceUpperCase(departmentField);

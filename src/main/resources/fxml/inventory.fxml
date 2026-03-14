@@ -37,6 +37,28 @@
 
                 </VBox>
 
+                <!-- Indent list card -->
+                <VBox fx:id="indentCard"
+                      spacing="5"
+                      alignment="CENTER_LEFT"
+                      style="-fx-background-color:white;
+                 -fx-padding:15 20;
+                 -fx-background-radius:10;
+                 -fx-border-radius:10;
+                 -fx-border-color:#e5e9f0;
+                 -fx-cursor:hand;">
+
+                    <Label text="📝 Indent List"
+                           style="-fx-text-fill:#6b7c93;" />
+
+                    <Label fx:id="indentCountLabel"
+                           text="0"
+                           style="-fx-font-size:22px;
+                      -fx-font-weight:bold;
+                      -fx-text-fill:#2c3e50;" />
+
+                </VBox>
+
             </HBox>
 
         </VBox>
