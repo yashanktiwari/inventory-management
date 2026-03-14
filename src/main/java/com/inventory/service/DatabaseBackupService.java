@@ -40,6 +40,10 @@ public class DatabaseBackupService {
 
                 ProcessBuilder pb = new ProcessBuilder(
                         mysqldumpPath,
+                        "--routines",
+                        "--triggers",
+                        "--single-transaction",
+                        "--add-drop-table",
                         "-h", host,
                         "-P", port,
                         "-u", user,
