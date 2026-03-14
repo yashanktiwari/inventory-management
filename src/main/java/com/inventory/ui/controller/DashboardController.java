@@ -1,11 +1,9 @@
 package com.inventory.ui.controller;
 
 import com.inventory.dao.TransactionDAO;
-import com.inventory.database.AppConfig;
 import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
 import com.inventory.model.TransactionHistory;
-import com.inventory.service.DatabaseBackupService;
 import com.inventory.service.DatabaseConnectionMonitor;
 import com.inventory.ui.dialog.AdminPasswordDialog;
 import com.inventory.ui.dialog.DatabaseBackupDialog;
@@ -19,6 +17,7 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.layout.*;
 import javafx.stage.*;
@@ -32,11 +31,11 @@ import javafx.scene.control.*;
 import javafx.scene.control.SplitPane;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
-import java.util.concurrent.ScheduledExecutorService;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -45,10 +44,11 @@ import javafx.collections.transformation.SortedList;
 import javafx.collections.ListChangeListener;
 import org.controlsfx.control.table.ColumnFilter;
 import org.controlsfx.control.table.TableFilter;
+import org.controlsfx.control.textfield.CustomTextField;
 
 public class DashboardController {
 
-    @FXML private TextField searchField;
+    @FXML private CustomTextField searchField;
     @FXML private TableView<TransactionHistory> historyTable;
     @FXML private TableColumn<TransactionHistory, Integer> serialColumn;
     @FXML private VBox tableContainer;
@@ -121,6 +121,8 @@ public class DashboardController {
     @FXML private Label recordCountLabel;
 
     @FXML private TabPane dashboardTabs;
+    @FXML private DatePicker fromDatePicker;
+    @FXML private DatePicker toDatePicker;
 
     private String currentTab = "BUY";
     private ObservableList<TransactionHistory> masterData;
@@ -330,14 +332,20 @@ public class DashboardController {
                 )
         );
 
+        // Search Field
+        searchField.textProperty().addListener((obs, oldValue, newValue) -> applyDateFilter());
+        Button clearButton = new Button("✖");
+        clearButton.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-text-fill: #888;" +
+                        "-fx-font-size: 11;"
+        );
+        clearButton.setCursor(Cursor.HAND);
+        clearButton.setOnAction(e -> searchField.clear());
+        // show only when text exists
+        clearButton.visibleProperty().bind(searchField.textProperty().isNotEmpty());
+        searchField.setRight(clearButton);
 
-        // 🔹 Search
-        searchField.textProperty().addListener((obs, oldValue, newValue) -> {
-            if (filterPipeline == null) return;
-            filterPipeline.setPredicate(history ->
-                    DashboardSearchFilter.matches(history, newValue)
-            );
-        });
 
         masterData = FXCollections.observableArrayList();
 
@@ -352,6 +360,9 @@ public class DashboardController {
 
         attachSummaryListeners(historyTable);
         updateSummary();
+
+        fromDatePicker.valueProperty().addListener((obs, oldVal, newVal) -> applyDateFilter());
+        toDatePicker.valueProperty().addListener((obs, oldVal, newVal) -> applyDateFilter());
 
         loadHistory();
 
@@ -859,6 +870,43 @@ public class DashboardController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @FXML
+    private void handleClearDateFilter() {
+        fromDatePicker.setValue(null);
+        toDatePicker.setValue(null);
+    }
+
+    private void applyDateFilter() {
+
+        if (filterPipeline == null) return;
+
+        filterPipeline.setPredicate(history -> {
+
+            // Search filter
+            String searchText = searchField.getText();
+            boolean matchesSearch = DashboardSearchFilter.matches(history, searchText);
+
+            // Date filter
+            if (fromDatePicker.getValue() == null && toDatePicker.getValue() == null) {
+                return matchesSearch;
+            }
+
+            if (history.getIssuedDateTime() == null) {
+                return false;
+            }
+
+            LocalDate txDate = history.getIssuedDateTime().toLocalDate();
+
+            LocalDate from = fromDatePicker.getValue();
+            LocalDate to = toDatePicker.getValue();
+
+            boolean afterFrom = (from == null) || !txDate.isBefore(from);
+            boolean beforeTo = (to == null) || !txDate.isAfter(to);
+
+            return matchesSearch && afterFrom && beforeTo;
+        });
     }
 
     private void rebuildTableFilter() {
