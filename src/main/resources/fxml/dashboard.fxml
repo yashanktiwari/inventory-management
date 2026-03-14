@@ -32,6 +32,10 @@
                     <MenuItem text="Inventory"
                               onAction="#handleOpenInventory"/>
                     <SeparatorMenuItem/>
+                    <MenuItem text="Column Visibility Manager"
+                              onAction="#handleColumnVisibility"/>
+
+                    <SeparatorMenuItem/>
                     <MenuItem fx:id="freezeColumnsMenuItem"
                               text="Freeze Columns"
                               onAction="#handleFreezeColumns"/>
