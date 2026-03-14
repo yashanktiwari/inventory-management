@@ -16,6 +16,8 @@ public class TableColumnPreferenceManager<T> {
     private final String key;
     private final BooleanSupplier saveCondition;
     private final List<TableColumn<T, ?>> originalOrder = new ArrayList<>();
+    private boolean savingEnabled = true;
+    private ListChangeListener<TableColumn<T, ?>> columnListener;
 
     public TableColumnPreferenceManager(
             TableView<T> table,
@@ -37,14 +39,17 @@ public class TableColumnPreferenceManager<T> {
 
         restoreColumnOrder();
 
-        table.getColumns().addListener(
-                (ListChangeListener<TableColumn<T, ?>>) change -> {
+        columnListener = (ListChangeListener<TableColumn<T,?>>) change -> {
+            if(savingEnabled && (saveCondition == null || saveCondition.getAsBoolean())) {
+                saveColumnOrder();
+            }
+        };
 
-                    if (saveCondition == null || saveCondition.getAsBoolean()) {
-                        saveColumnOrder();
-                    }
-                }
-        );
+        table.getColumns().addListener(columnListener);
+    }
+
+    public void setSavingEnabled(boolean enabled) {
+        this.savingEnabled = enabled;
     }
 
     private void saveColumnOrder() {
@@ -57,16 +62,12 @@ public class TableColumnPreferenceManager<T> {
                 order.append(column.getId()).append(",");
             }
         }
-        System.out.println("Saving column order with key: " + key);
-        System.out.println("Order: " + order);
 
         String activeKey = table.getProperties()
                 .getOrDefault("columnOrderKey", key)
                 .toString();
 
         prefs.put(activeKey, order.toString());
-
-        System.out.println("Saving column order with key: " + activeKey);
     }
 
     private String getCurrentKey() {
@@ -75,7 +76,8 @@ public class TableColumnPreferenceManager<T> {
 
     private void restoreColumnOrder() {
 
-        String order = prefs.get(key, null);
+        String currentKey = getCurrentKey();
+        String order = prefs.get(currentKey, null);
 
         var columns = table.getColumns();
 
@@ -106,11 +108,8 @@ public class TableColumnPreferenceManager<T> {
     }
 
     public void restoreForKey(String newKey) {
-        System.out.println("restoreForKey() called with key: " + newKey);
 
         String order = prefs.get(newKey, null);
-
-        System.out.println("Stored order: " + order);
 
         if (order == null) return;
 
@@ -135,11 +134,5 @@ public class TableColumnPreferenceManager<T> {
         }
 
         columns.setAll(reordered);
-
-        System.out.println("Final restored order:");
-
-        table.getColumns().forEach(c ->
-                System.out.println("  " + c.getId())
-        );
     }
 }

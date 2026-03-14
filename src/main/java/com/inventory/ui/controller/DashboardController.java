@@ -186,8 +186,6 @@ public class DashboardController {
                             currentTab = "RETURNED";
                         }
                     }
-                    System.out.println("----- TAB SWITCH -----");
-                    System.out.println("Current Tab: " + currentTab);
 
                     searchField.clear();
 
@@ -202,7 +200,7 @@ public class DashboardController {
                             currentTab + "_dashboardColumnOrder"
                     );
 
-                    System.out.println("Resetting to default column order");
+                    columnPrefs.setSavingEnabled(false);
                     historyTable.getColumns().setAll(
                             serialColumn,
                             buySellColumn,
@@ -235,15 +233,7 @@ public class DashboardController {
                             auditColumn,
                             attachmentColumn
                     );
-                    System.out.println("Order after reset:");
-                    historyTable.getColumns().forEach(c ->
-                            System.out.println("  " + c.getId())
-                    );
-
-                    String key = currentTab + "_dashboardColumnOrder";
-                    System.out.println("Restoring column order using key: " + key);
-                    System.out.println("Saved value: " + prefs.get(key, "NULL"));
-
+                    columnPrefs.setSavingEnabled(true);
                     columnPrefs.restoreForKey(currentTab + "_dashboardColumnOrder");
                     restoreColumnVisibility();
                     Platform.runLater(this::rebuildTableFilter);
