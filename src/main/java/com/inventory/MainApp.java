@@ -1,7 +1,7 @@
 package com.inventory;
 
 import com.inventory.cache.MasterCache;
-import com.inventory.util.NotificationUtil;
+import com.inventory.service.DatabaseConnectionMonitor;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -14,10 +14,14 @@ import com.inventory.database.DBConnection;
 import com.inventory.ui.controller.DashboardController;
 import com.inventory.util.StoragePathDialog;
 
+import java.util.Objects;
+
 
 public class MainApp extends Application {
 
     private static Stage primaryStage;
+    private final DatabaseConnectionMonitor connectionMonitor =
+            new DatabaseConnectionMonitor();
 
     public static Stage getPrimaryStage() {
         return primaryStage;
@@ -26,10 +30,6 @@ public class MainApp extends Application {
     @Override
     public void start(Stage stage) throws Exception {
 
-        // 🔹 Try auto load MySQL config
-//        java.util.prefs.Preferences.userNodeForPackage(
-//                com.inventory.ui.controller.DashboardController.class
-//        ).removeNode();
         primaryStage = stage;
         boolean loaded = AppConfig.loadDatabaseConfig();
 
@@ -53,27 +53,25 @@ public class MainApp extends Application {
         Scene scene = new Scene(root, 1200, 650);
 
         scene.getStylesheets().add(
-                getClass().getResource("/css/table-filter.css").toExternalForm()
+                Objects.requireNonNull(getClass().getResource("/css/table-filter.css")).toExternalForm()
         );
 
         stage.setTitle("Inventory Management System");
         stage.setScene(scene);
 
-        stage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/inventory_icon.png")));
+        stage.getIcons().add(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/inventory_icon.png"))));
 
         // 🔹 Save column order when app closes
         stage.setOnCloseRequest(event -> {
             if (controller != null) {
                 controller.saveFilters();
-                controller.shutdownConnectionMonitor();
+                connectionMonitor.stop();
                 Platform.exit();
                 System.exit(0);
             }
         });
 
         stage.show();
-
-//        NotificationUtil.showLowStockNotification("Mouse", 3, 5);
 
         Platform.runLater(() -> {
             String attachmentPath = AppConfig.getAttachmentPath();
