@@ -180,6 +180,126 @@ public class TransactionHistory {
         return parentTransactionId;
     }
 
+    public void setTransactionId(int transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public void setBuySell(String buySell) {
+        this.buySell = buySell;
+    }
+
+    public void setPlant(String plant) {
+        this.plant = plant;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public void setEmployeeCode(String employeeCode) {
+        this.employeeCode = employeeCode;
+    }
+
+    public void setEmployeeName(String employeeName) {
+        this.employeeName = employeeName;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public void setItemCode(String itemCode) {
+        this.itemCode = itemCode;
+    }
+
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
+
+    public void setItemMake(String itemMake) {
+        this.itemMake = itemMake;
+    }
+
+    public void setItemModel(String itemModel) {
+        this.itemModel = itemModel;
+    }
+
+    public void setItemSerial(String itemSerial) {
+        this.itemSerial = itemSerial;
+    }
+
+    public void setItemCondition(String itemCondition) {
+        this.itemCondition = itemCondition;
+    }
+
+    public void setItemLocation(String itemLocation) {
+        this.itemLocation = itemLocation;
+    }
+
+    public void setItemCategory(String itemCategory) {
+        this.itemCategory = itemCategory;
+    }
+
+    public void setImeiNo(String imeiNo) {
+        this.imeiNo = imeiNo;
+    }
+
+    public void setSimNo(String simNo) {
+        this.simNo = simNo;
+    }
+
+    public void setPoNo(String poNo) {
+        this.poNo = poNo;
+    }
+
+    public void setPartyName(String partyName) {
+        this.partyName = partyName;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void setIssuedDateTime(LocalDateTime issuedDateTime) {
+        this.issuedDateTime = issuedDateTime;
+    }
+
+    public void setReturnedDateTime(LocalDateTime returnedDateTime) {
+        this.returnedDateTime = returnedDateTime;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
+    }
+
+    public void setItemCount(Double itemCount) {
+        this.itemCount = itemCount;
+    }
+
+    public void setMinimumStock(double minimumStock) {
+        this.minimumStock = minimumStock;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public void setAttachmentFile(String attachmentFile) {
+        this.attachmentFile = attachmentFile;
+    }
+
+    public void setLastModifiedBy(String lastModifiedBy) {
+        this.lastModifiedBy = lastModifiedBy;
+    }
+
+    public void setAuditEntries(List<AuditEntry> auditEntries) {
+        this.auditEntries = auditEntries;
+    }
+
     public void setParentTransactionId(Integer parentTransactionId) {
         this.parentTransactionId = parentTransactionId;
     }

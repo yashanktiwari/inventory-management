@@ -136,7 +136,9 @@ public class TransactionDAO {
             }
 
             pstmt.setString(26, unit);
-            pstmt.setBoolean(27, true);
+
+            boolean isAvailable = "IN STOCK".equalsIgnoreCase(status) || "RETURNED".equalsIgnoreCase(status);
+            pstmt.setBoolean(27, isAvailable);
 
             pstmt.executeUpdate();
             checkLowStock(itemName);
@@ -358,6 +360,7 @@ public class TransactionDAO {
 
     // 🔹 Get All Transactions
     public List<TransactionHistory> getAllTransactions() {
+        System.out.println("DAO: Fetching all transactions...");
 
         List<TransactionHistory> historyList = new ArrayList<>();
 
@@ -375,6 +378,12 @@ public class TransactionDAO {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
+                System.out.println(
+                        "DAO Row -> ID: " + rs.getInt("transaction_id") +
+                                " | Item: " + rs.getString("item_name") +
+                                " | Status: " + rs.getString("status") +
+                                " | Available: " + rs.getBoolean("is_available")
+                );
 
                 Timestamp issuedTs = rs.getTimestamp("issued_datetime");
                 Timestamp returnedTs = rs.getTimestamp("returned_datetime");
@@ -452,6 +461,7 @@ public class TransactionDAO {
             e.printStackTrace();
         }
 
+        System.out.println("DAO: Total transactions fetched = " + historyList.size());
         return historyList;
     }
 
@@ -826,32 +836,49 @@ public class TransactionDAO {
 
         List<InventoryItem> inventory = new ArrayList<>();
 
+//        String sql = """
+//            SELECT
+//                item_code,
+//                item_name,
+//                unit,
+//                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
+//                SUM(item_count) AS stock
+//            FROM (
+//                SELECT *
+//                FROM (
+//                    SELECT *,
+//                           ROW_NUMBER() OVER (
+//                               PARTITION BY item_serial
+//                               ORDER BY issued_datetime DESC
+//                           ) rn
+//                    FROM transactions
+//                ) latest
+//                WHERE rn = 1
+//                AND UPPER(status) IN ('IN STOCK','RETURNED')
+//            ) current_stock
+//            GROUP BY item_code, item_name, unit
+//            ORDER BY item_name;
+//        """;
+
         String sql = """
-            SELECT
-                item_code,
-                item_name,
-                unit,
-                COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
-                SUM(item_count) AS stock
-            FROM (
-                SELECT t.*
-                FROM transactions t
-                JOIN (
-                    SELECT MAX(transaction_id) latest_id
-                    FROM transactions
-                    GROUP BY
+                SELECT
+                    item_code,
+                    item_name,
+                    unit,
+                    COALESCE(MAX(minimum_stock), -1) AS minimum_stock,
+                    SUM(
                         CASE
-                            WHEN item_serial IS NOT NULL AND item_serial != ''
-                            THEN item_serial
-                            ELSE transaction_id
+                            WHEN UPPER(buy_sell) = 'BUY' THEN item_count
+                            WHEN UPPER(status) = 'ISSUED' THEN -item_count
+                            WHEN UPPER(status) = 'SCRAPPED' THEN -item_count
+                            ELSE 0
                         END
-                ) latest
-                ON t.transaction_id = latest.latest_id
-                WHERE UPPER(t.status) IN ('IN STOCK','RETURNED')
-            ) current_stock
-            GROUP BY item_code, item_name, unit
-            ORDER BY item_name
-        """;
+                    ) AS stock
+                FROM transactions
+                GROUP BY item_code, item_name, unit
+                HAVING stock > 0
+                ORDER BY item_name;
+                """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -908,7 +935,7 @@ public class TransactionDAO {
         SELECT
         SUM(
             CASE
-                WHEN buy_sell = 'Buy' THEN item_count
+                WHEN UPPER(buy_sell) = 'BUY' THEN item_count
                 WHEN UPPER(status) = 'ISSUED' THEN -item_count
                 WHEN UPPER(status) = 'SCRAPPED' THEN -item_count
                 ELSE 0
@@ -987,18 +1014,19 @@ public class TransactionDAO {
         List<TransactionHistory> list = new ArrayList<>();
 
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        INNER JOIN (
-            SELECT item_serial, MAX(transaction_id) AS latest_id
+        SELECT *
+        FROM (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_serial
+                       ORDER BY issued_datetime DESC
+                   ) rn
             FROM transactions
             WHERE item_name = ?
-            GROUP BY item_serial
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE t.item_name = ?
-        AND (t.status IS NULL OR t.status NOT IN ('Issued','Scrap'))
-        ORDER BY t.issued_datetime;
+        ) t
+        WHERE rn = 1
+        AND (status IS NULL OR status NOT IN ('ISSUED','SCRAPPED'))
+        ORDER BY issued_datetime;
     """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -1088,7 +1116,7 @@ public class TransactionDAO {
         String sql = """
         SELECT COUNT(*) 
         FROM transactions
-        WHERE buy_sell = 'Buy'
+        WHERE UPPER(buy_sell) = 'BUY'
         AND item_code = ?
         AND item_name = ?
         AND item_make = ?
@@ -1241,7 +1269,7 @@ public class TransactionDAO {
         String sql = """
         SELECT *
         FROM transactions
-        WHERE buy_sell = 'Buy'
+        WHERE UPPER(buy_sell) = 'Buy'
         ORDER BY issued_datetime DESC
     """;
 
@@ -1251,67 +1279,58 @@ public class TransactionDAO {
     public List<TransactionHistory> getInStockTransactions() {
 
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        JOIN (
-            SELECT MAX(transaction_id) latest_id
+        SELECT *
+        FROM (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_serial
+                       ORDER BY issued_datetime DESC
+                   ) rn
             FROM transactions
-            GROUP BY
-                CASE
-                    WHEN item_serial IS NOT NULL AND item_serial != ''
-                    THEN item_serial
-                    ELSE CONCAT(item_code,'_',item_name)
-                END
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE UPPER(t.status) IN ('IN STOCK','RETURNED')
-        ORDER BY t.issued_datetime DESC
+        ) t
+        WHERE rn = 1
+        AND UPPER(status) IN ('IN STOCK','RETURNED')
+        ORDER BY issued_datetime DESC;
     """;
 
         return fetchTransactions(sql);
     }
 
     public List<TransactionHistory> getIssuedTransactions() {
-
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        JOIN (
-            SELECT MAX(transaction_id) latest_id
-            FROM transactions
-            GROUP BY
-                CASE
-                    WHEN item_serial IS NOT NULL AND item_serial != ''
-                    THEN item_serial
-                    ELSE CONCAT(item_code,'_',item_name)
-                END
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE UPPER(t.status) = 'ISSUED'
-        ORDER BY t.issued_datetime DESC
-    """;
+                SELECT *
+                FROM (
+                    SELECT *,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY item_serial
+                               ORDER BY issued_datetime DESC
+                           ) rn
+                    FROM transactions
+                ) t
+                WHERE rn = 1
+                AND status = 'ISSUED';
+                """;
 
-        return fetchTransactions(sql);
+        List<TransactionHistory> issuedTransactions = fetchTransactions(sql);
+        System.out.println(issuedTransactions);
+        return issuedTransactions;
     }
 
     public List<TransactionHistory> getScrappedTransactions() {
 
         String sql = """
-        SELECT t.*
-        FROM transactions t
-        JOIN (
-            SELECT MAX(transaction_id) latest_id
+        SELECT *
+        FROM (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY item_serial
+                       ORDER BY issued_datetime DESC
+                   ) rn
             FROM transactions
-            GROUP BY
-                CASE
-                    WHEN item_serial IS NOT NULL AND item_serial != ''
-                    THEN item_serial
-                    ELSE CONCAT(item_code,'_',item_name)
-                END
-        ) latest
-        ON t.transaction_id = latest.latest_id
-        WHERE UPPER(t.status) = 'SCRAPPED'
-        ORDER BY t.returned_datetime DESC
+        ) t
+        WHERE rn = 1
+        AND UPPER(status) = 'SCRAPPED'
+        ORDER BY returned_datetime DESC;
     """;
 
         return fetchTransactions(sql);
@@ -1433,7 +1452,7 @@ public class TransactionDAO {
         SELECT is_available
         FROM transactions
         WHERE item_serial = ?
-        ORDER BY transaction_id DESC
+        ORDER BY issued_datetime DESC
         LIMIT 1
     """;
 
@@ -1453,5 +1472,159 @@ public class TransactionDAO {
         }
 
         return true;
+    }
+
+    public int insertTransactionFromExcel(TransactionHistory t) {
+
+        String sql = """
+        INSERT INTO transactions (
+            parent_transaction_id,
+            buy_sell,
+            plant,
+            department,
+            location,
+            employee_id,
+            employee_name,
+            ip_address,
+            item_code,
+            item_name,
+            item_make,
+            item_model,
+            item_serial,
+            item_condition,
+            item_location,
+            item_category,
+            imei_no,
+            sim_no,
+            po_no,
+            party_name,
+            status,
+            issued_datetime,
+            returned_datetime,
+            remarks,
+            item_count,
+            unit,
+            is_available
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setObject(1, t.getParentTransactionId());
+            ps.setString(2, t.getBuySell());
+            ps.setString(3, t.getPlant());
+            ps.setString(4, t.getDepartment());
+            ps.setString(5, t.getLocation());
+
+            ps.setString(6, t.getEmployeeCode());
+            ps.setString(7, t.getEmployeeName());
+            ps.setString(8, "");
+
+            ps.setString(9, t.getItemCode());
+            ps.setString(10, t.getItemName());
+            ps.setString(11, t.getItemMake());
+            ps.setString(12, t.getItemModel());
+            ps.setString(13, t.getItemSerial());
+            ps.setString(14, t.getItemCondition());
+            ps.setString(15, t.getItemLocation());
+            ps.setString(16, t.getItemCategory());
+
+            ps.setString(17, t.getImeiNo());
+            ps.setString(18, t.getSimNo());
+
+            ps.setString(19, t.getPoNo());
+            ps.setString(20, t.getPartyName());
+
+            ps.setString(21, t.getStatus());
+
+            ps.setObject(22, t.getIssuedDateTime());
+            ps.setObject(23, t.getReturnedDateTime());
+
+            ps.setString(24, t.getRemarks());
+
+            ps.setDouble(25, t.getItemCount());
+            ps.setString(26, t.getUnit());
+
+            ps.setBoolean(27, t.isAvailable());
+
+            ps.executeUpdate();
+
+            ResultSet rs = ps.getGeneratedKeys();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
+    public Integer findAvailableParent(String itemCode, String serial) {
+
+        String sql = """
+        SELECT transaction_id
+        FROM transactions
+        WHERE item_code = ?
+        AND item_serial = ?
+        AND is_available = true
+        ORDER BY issued_datetime DESC
+        LIMIT 1
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemCode);
+            ps.setString(2, serial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("transaction_id");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public void insertAuditWithTime(
+            int transactionId,
+            String user,
+            LocalDateTime modifiedAt,
+            String field,
+            String oldVal,
+            String newVal
+    ) {
+
+        String sql = """
+        INSERT INTO transaction_audit
+        (transaction_id, modified_by, modified_at, field_name, old_value, new_value)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, transactionId);
+            ps.setString(2, user);
+            ps.setTimestamp(3, Timestamp.valueOf(modifiedAt));
+            ps.setString(4, field);
+            ps.setString(5, oldVal);
+            ps.setString(6, newVal);
+
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

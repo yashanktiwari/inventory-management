@@ -157,7 +157,7 @@ public class AddTransactionController {
 
             } else {
                 statusBox.setItems(FXCollections.observableArrayList("ISSUED", "SCRAPPED"));
-                statusBox.setValue("Issued");
+                statusBox.setValue("ISSUED");
                 statusBox.setDisable(false);
             }
         });
@@ -1028,7 +1028,7 @@ public class AddTransactionController {
         if ("Buy".equalsIgnoreCase(type)) {
             hideBuyFields(true);
         } else {
-            statusBox.setValue("Issued");
+            statusBox.setValue("ISSUED");
             hideBuyFields(false);
         }
         changeLabelAndTitle(type);

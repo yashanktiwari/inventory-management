@@ -123,6 +123,7 @@ public class DashboardController {
     @FXML private MenuItem setupDatabase;
     @FXML private MenuItem backupDatabase;
     @FXML private MenuItem restoreDatabase;
+    @FXML private MenuItem importFromExcel;
     @FXML private TableColumn<TransactionHistory, Void> attachmentColumn;
     @FXML private Label recordCountLabel;
 
@@ -156,6 +157,8 @@ public class DashboardController {
     private FilteredList<TransactionHistory> filterPipeline;
     private AttachmentManager attachmentManager;
     private TableView<TransactionHistory> summarySourceTable;
+    private ListChangeListener<TransactionHistory> currentFilterListener;
+    private ObservableList<TransactionHistory> currentFilteredItems;
     private final ListChangeListener<TransactionHistory> summaryListListener =
             change -> updateSummary();
     private final ChangeListener<ObservableList<TransactionHistory>> summaryItemsListener =
@@ -216,6 +219,13 @@ public class DashboardController {
                     }
 
                     searchField.clear();
+
+                    if (tableFilter != null) {
+                        tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+                        tableFilter.executeFilter();
+                        updateSummary();
+                    }
+
                     loadHistory();
                 });
 
@@ -1787,7 +1797,6 @@ public class DashboardController {
 
         filterPipeline = new FilteredList<>(masterData, p -> true);
 
-
         SortedList<TransactionHistory> sortedData =
                 new SortedList<>(filterPipeline);
 
@@ -1802,9 +1811,20 @@ public class DashboardController {
 
         Platform.runLater(() -> {
             tableFilter = TableFilter.forTableView(historyTable).apply();
+            attachFilterListener(historyTable);
+            
+            // Listen to column changes to detect reordering and rebuild filter like freeze/unfreeze does
+            historyTable.getColumns().addListener((ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
+                if (tableFilter != null) {
+                    tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+                    tableFilter.executeFilter();
+                }
+                Platform.runLater(this::rebuildTableFilter);
+            });
 
             Platform.runLater(() -> {
                 restoreFilters();
+                updateSummary();
             });
 
             historyTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
@@ -1918,9 +1938,32 @@ public class DashboardController {
     @FXML
     private void handleExportExcel() {
 
-        System.out.println("Excel export started");
 
         try {
+            Alert choiceDialog = new Alert(Alert.AlertType.CONFIRMATION);
+            choiceDialog.setTitle("Export Options");
+            choiceDialog.setHeaderText("Choose export scope");
+            choiceDialog.setContentText("What would you like to export");
+
+            ButtonType allDataButton = new ButtonType("All Transactions");
+            ButtonType currentTableButton = new ButtonType("Current Table only");
+            ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+            choiceDialog.getButtonTypes().setAll(allDataButton, currentTableButton, cancelButton);
+
+            Optional<ButtonType> result = choiceDialog.showAndWait();
+
+            if(result.isEmpty() || result.get() == cancelButton) {
+                return;
+            }
+
+            List<TransactionHistory> datatoExport;
+
+            if(result.get() == allDataButton) {
+                datatoExport = transactionDAO.getAllTransactions();
+            } else {
+                datatoExport = new ArrayList<>(historyTable.getItems());
+            }
 
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Excel File");
@@ -1931,24 +1974,18 @@ public class DashboardController {
             File file = fileChooser.showSaveDialog(historyTable.getScene().getWindow());
 
             if (file == null) {
-                System.out.println("Export cancelled by user");
                 return;
             }
 
-            System.out.println("Export path: " + file.getAbsolutePath());
 
             ExportUtil.exportToExcel(
-                    historyTable.getItems(),
+                    datatoExport,
                     file.getAbsolutePath()
             );
-
-            System.out.println("Excel export finished");
 
             AlertUtil.showInfo("Export Completed", "Excel file exported successfully.");
 
         } catch (Exception e) {
-
-            System.out.println("Excel export FAILED");
             e.printStackTrace();
 
             AlertUtil.showError(
@@ -2218,6 +2255,112 @@ public class DashboardController {
     }
 
     @FXML
+    private void handleImportExcel() {
+
+        FileChooser chooser = new FileChooser();
+
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
+        );
+
+        File file = chooser.showOpenDialog(historyTable.getScene().getWindow());
+
+        if (file == null) return;
+
+        ExcelImportTask task = new ExcelImportTask(file);
+
+        ProgressBar progressBar = new ProgressBar();
+        progressBar.setPrefWidth(350);
+        progressBar.progressProperty().bind(task.progressProperty());
+
+        Label progressLabel = new Label();
+        progressLabel.textProperty().bind(task.messageProperty());
+
+        Button finishButton = new Button("Finish");
+        finishButton.setDisable(true);
+
+        VBox layout = new VBox(15, progressBar, progressLabel, finishButton);
+        layout.setStyle("-fx-padding:20; -fx-alignment:center;");
+
+        Stage dialog = new Stage();
+        dialog.setTitle("Import Excel");
+        dialog.setScene(new Scene(layout));
+        dialog.initOwner(historyTable.getScene().getWindow());
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setResizable(false);
+        dialog.setOnCloseRequest(event -> {
+            if (task.isRunning()) {
+                event.consume();
+            }
+        });
+        dialog.show();
+
+        finishButton.setOnAction(e -> {
+            dialog.close();
+            loadHistory();
+        });
+
+        task.setOnSucceeded(e -> {
+
+            progressLabel.textProperty().unbind();
+            progressLabel.setText(
+                    "Import completed: " + task.getValue() + " rows imported."
+            );
+
+            finishButton.setDisable(false);
+        });
+
+        task.setOnFailed(e -> {
+
+            progressLabel.textProperty().unbind();
+            progressLabel.setText(
+                    "Import failed: " + task.getException().getMessage()
+            );
+
+            finishButton.setDisable(false);
+        });
+
+        new Thread(task).start();
+    }
+
+    @FXML
+    private void handleDownloadTemplateMenu() {
+
+        FileChooser chooser = new FileChooser();
+
+        chooser.setInitialFileName("transaction_import_template.xlsx");
+
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
+        );
+
+        File file = chooser.showSaveDialog(historyTable.getScene().getWindow());
+
+        if (file == null) return;
+
+        try {
+
+            ExcelTemplateUtil.generateTransactionTemplate(
+                    file.getAbsolutePath()
+            );
+
+            AlertUtil.showInfo(
+                    "Template Created",
+                    "Excel template saved successfully."
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            AlertUtil.showError(
+                    "Template Error",
+                    e.getMessage()
+            );
+        }
+    }
+
+    @FXML
     private void handleFreezeColumns() {
 
         Dialog<String> dialog = new Dialog<>();
@@ -2277,12 +2420,19 @@ public class DashboardController {
                     throw new IllegalArgumentException();
                 }
 
-                captureFilters();
-
                 if (tableFilter != null) {
                     tableFilter.getColumnFilters().forEach(cf -> cf.selectAllValues());
                     tableFilter.executeFilter();
+                    updateSummary();
                 }
+                
+                // Clear saved filters so they don't get restored after freezing
+                tableFilter.getColumnFilters().forEach(columnFilter -> {
+                    String columnId = columnFilter.getTableColumn().getId();
+                    if (columnId != null) {
+                        prefs.remove("filter_" + columnId);
+                    }
+                });
 
                 // Reset filterPipeline to show all data temporarily
                 filterPipeline.setPredicate(p -> true);
@@ -2329,7 +2479,16 @@ public class DashboardController {
 
     @FXML
     private void handleUnfreezeColumns() {
-        captureFilters();
+        // Clear saved filters so they don't get restored after unfreezing
+        if (tableFilter != null) {
+            tableFilter.getColumnFilters().forEach(columnFilter -> {
+                String columnId = columnFilter.getTableColumn().getId();
+                if (columnId != null) {
+                    prefs.remove("filter_" + columnId);
+                }
+            });
+        }
+        
         freezeManager.restoreOriginalTable();
 
         VBox centerBox = (VBox) rootPane.getCenter();
@@ -2348,34 +2507,57 @@ public class DashboardController {
         Platform.runLater(this::rebuildTableFilter);
     }
 
+//    @FXML
+//    private void handleResetFilters() {
+//        if (tableFilter == null) return;
+//
+//        // Reset table filter
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//            columnFilter.selectAllValues();
+//        });
+//        tableFilter.executeFilter();
+//
+//        if(columnsFrozen) {
+//            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
+//            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
+//            if(scrollTable != null && frozenTable != null) {
+//                Platform.runLater(() -> {
+//                    frozenTable.setItems(scrollTable.getItems());
+//                });
+//            }
+//        }
+//
+//        historyTable.refresh();
+//
+//        // Remove saved preferences
+//        tableFilter.getColumnFilters().forEach(columnFilter -> {
+//                String columnId = columnFilter.getTableColumn().getId();
+//                if (columnId == null) return;
+//                prefs.remove("filter_" + columnId);
+//            });
+//    }
+
     @FXML
     private void handleResetFilters() {
+
         if (tableFilter == null) return;
 
-        // Reset table filter
         tableFilter.getColumnFilters().forEach(columnFilter -> {
             columnFilter.selectAllValues();
         });
-        tableFilter.executeFilter();
 
-        if(columnsFrozen) {
-            TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
-            TableView<TransactionHistory> frozenTable = freezeManager.getFrozenTable();
-            if(scrollTable != null && frozenTable != null) {
-                Platform.runLater(() -> {
-                    frozenTable.setItems(scrollTable.getItems());
-                });
-            }
-        }
+        tableFilter.executeFilter();
 
         historyTable.refresh();
 
-        // Remove saved preferences
+        updateSummary();
+
         tableFilter.getColumnFilters().forEach(columnFilter -> {
-                String columnId = columnFilter.getTableColumn().getId();
-                if (columnId == null) return;
+            String columnId = columnFilter.getTableColumn().getId();
+            if (columnId != null) {
                 prefs.remove("filter_" + columnId);
-            });
+            }
+        });
     }
 
     @FXML
@@ -2554,6 +2736,7 @@ public class DashboardController {
                 // Apply filter to scroll table only
                 tableFilter = TableFilter.forTableView(scrollTable).apply();
                 attachSummaryListeners(scrollTable);
+                attachFilterListener(scrollTable);
 
                 frozenTable.setItems(scrollTable.getItems());
 
@@ -2562,6 +2745,11 @@ public class DashboardController {
                     if(newItems != null) {
                         frozenTable.setItems(newItems);
                     }
+                });
+                
+                // Listen to column changes to detect reordering and re-attach filter listener
+                scrollTable.getColumns().addListener((ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
+                    attachFilterListener(scrollTable);
                 });
 
                 // Restore saved filter state
@@ -2580,8 +2768,16 @@ public class DashboardController {
             historyTable.refresh();
             tableFilter = TableFilter.forTableView(historyTable).apply();
             attachSummaryListeners(historyTable);
+            attachFilterListener(historyTable);
+            
+            // Listen to column changes to detect reordering and re-attach filter listener
+            historyTable.getColumns().addListener((ListChangeListener<TableColumn<TransactionHistory, ?>>) change -> {
+                attachFilterListener(historyTable);
+            });
+            
             restoreFilters();
             tableFilter.executeFilter();
+            updateSummary();
         }
     }
 
@@ -2607,6 +2803,23 @@ public class DashboardController {
         }
     }
 
+    private void attachFilterListener(TableView<TransactionHistory> table) {
+        ObservableList<TransactionHistory> filteredItems = table.getItems();
+        if (filteredItems != null) {
+            // Remove old listener from the old items object if it exists
+            if (currentFilteredItems != null && currentFilterListener != null) {
+                currentFilteredItems.removeListener(currentFilterListener);
+            }
+            
+            // Create and attach new listener
+            currentFilterListener = (ListChangeListener<TransactionHistory>) change -> {
+                updateSummary();
+            };
+            filteredItems.addListener(currentFilterListener);
+            currentFilteredItems = filteredItems;
+        }
+    }
+
     private void loadHistory() {
         if (!DBConnection.isDatabaseSet()) return;
         List<TransactionHistory> data;
@@ -2622,9 +2835,11 @@ public class DashboardController {
         Platform.runLater(() -> {
             masterData.setAll(data);
 
-            if (tableFilter != null) {
-                tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+            if (tableFilter == null) {
+                Platform.runLater(this::rebuildTableFilter);
+            } else {
                 tableFilter.executeFilter();
+                updateSummary();
             }
 
             if(columnsFrozen) {
@@ -2950,8 +3165,6 @@ public class DashboardController {
 
 
     private void restoreBackup(String filePath) {
-        System.out.println("restore backup called");
-
         new Thread(() -> {
 
             try {
@@ -2959,7 +3172,6 @@ public class DashboardController {
                 Platform.runLater(() -> historyTable.setDisable(true));
 
                 String mysqlPath = AppConfig.getMysqlPath();
-                System.out.println("mysql path -> " + mysqlPath);
                 if (mysqlPath == null) {
                     Platform.runLater(() -> {
                         AlertUtil.showError("Error", "mysql path not configured.");
@@ -2974,12 +3186,6 @@ public class DashboardController {
                 String user = DBConnection.getUsername();
                 String pass = DBConnection.getPassword();
 
-                System.out.println("host -> " + host);
-                System.out.println("port -> " + port);
-                System.out.println("db -> " + db);
-                System.out.println("user -> " + user);
-                System.out.println("pass -> " + pass);
-
                 // 🔴 STEP 1 — Drop & recreate database
                 ProcessBuilder dropDb = new ProcessBuilder(
                         mysqlPath,
@@ -2990,8 +3196,6 @@ public class DashboardController {
                         "-e",
                         "DROP DATABASE IF EXISTS " + db + "; CREATE DATABASE " + db + ";"
                 );
-
-                System.out.println("drop command -> " + dropDb);
 
                 Process dropProcess = dropDb.start();
 
@@ -3017,10 +3221,6 @@ public class DashboardController {
                 int dropExit = dropProcess.waitFor();
 
                 if (dropExit != 0) {
-                    System.out.println("Error in dropping -> " + dropErrors.toString());
-                    System.out.println("Exit code: " + dropExit);
-                    System.out.println("Output: " + dropErrors);
-
                     Platform.runLater(() -> {
                         historyTable.setDisable(false);
                         AlertUtil.showError("Drop Failed", dropErrors.toString());
@@ -3037,8 +3237,6 @@ public class DashboardController {
                         "-p" + pass,
                         db
                 );
-
-                System.out.println("restore -> " + restorePb);
 
                 restorePb.redirectInput(new File(filePath));
 
@@ -3075,7 +3273,6 @@ public class DashboardController {
                         );
 
                     } else {
-                        System.out.println("Restore error -> " + restoreErrors.toString());
                         AlertUtil.showError(
                                 "Restore Failed",
                                 restoreErrors.toString()
@@ -3084,7 +3281,6 @@ public class DashboardController {
                 });
 
             } catch (Exception e) {
-                System.out.println("error message -> " + e.getMessage());
                 e.printStackTrace();
 
                 Platform.runLater(() -> {
@@ -3511,14 +3707,13 @@ public class DashboardController {
     }
 
     private void updateSummary() {
-        ObservableList<TransactionHistory> visibleItems = null;
+
+        ObservableList<TransactionHistory> visibleItems;
 
         if (columnsFrozen) {
             TableView<TransactionHistory> scrollTable = freezeManager.getScrollTable();
-            if (scrollTable != null) {
-                visibleItems = scrollTable.getItems();
-            }
-        } else if (historyTable != null) {
+            visibleItems = scrollTable == null ? FXCollections.observableArrayList() : scrollTable.getItems();
+        } else {
             visibleItems = historyTable.getItems();
         }
 
