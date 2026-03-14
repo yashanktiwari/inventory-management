@@ -5,10 +5,7 @@ import com.inventory.database.ConnectionState;
 import com.inventory.database.DBConnection;
 import com.inventory.model.TransactionHistory;
 import com.inventory.service.DatabaseConnectionMonitor;
-import com.inventory.ui.dialog.AdminPasswordDialog;
-import com.inventory.ui.dialog.DatabaseBackupDialog;
-import com.inventory.ui.dialog.DatabaseSetupDialog;
-import com.inventory.ui.dialog.ExcelImportDialog;
+import com.inventory.ui.dialog.*;
 import com.inventory.ui.table.*;
 import com.inventory.util.*;
 import com.inventory.util.TableFreezeManager;
@@ -148,6 +145,7 @@ public class DashboardController {
             change -> updateSummary();
     private final DatabaseConnectionMonitor connectionMonitor =
             new DatabaseConnectionMonitor();
+    private TableColumnPreferenceManager<TransactionHistory> columnPrefs;
     private final ChangeListener<ObservableList<TransactionHistory>> summaryItemsListener =
             (obs, oldItems, newItems) -> {
                 if (oldItems != null) {
@@ -161,15 +159,8 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
-        TableColumnPreferenceManager<TransactionHistory> columnPrefs =
-                new TableColumnPreferenceManager<>(
-                        historyTable,
-                        "dashboardColumnOrder",
-                        DashboardController.class,
-                        () -> !columnsFrozen
-                );
 
-        columnPrefs.initialize();
+        initializeColumnPreferences();
 
         ToggleGroup tabGroup = new ToggleGroup();
 
@@ -181,27 +172,18 @@ public class DashboardController {
 
                         case 0 -> {
                             currentTab = "BUY";
-                            showBuySellColumn(true);
                         }
-
                         case 1 -> {
                             currentTab = "IN STOCK";
-                            showBuySellColumn(false);   // 🔥 hide
                         }
-
                         case 2 -> {
                             currentTab = "ISSUED";
-                            showBuySellColumn(true);
                         }
-
                         case 3 -> {
                             currentTab = "SCRAPPED";
-                            showBuySellColumn(true);
                         }
-
                         case 4 -> {
                             currentTab = "RETURNED";
-                            showBuySellColumn(true);
                         }
                     }
 
@@ -213,6 +195,48 @@ public class DashboardController {
                         updateSummary();
                     }
 
+                    historyTable.getProperties().put(
+                            "columnOrderKey",
+                            currentTab + "_dashboardColumnOrder"
+                    );
+
+                    columnPrefs.setSavingEnabled(false);
+                    historyTable.getColumns().setAll(
+                            serialColumn,
+                            buySellColumn,
+                            plantColumn,
+                            departmentColumn,
+                            locationColumn,
+                            itemLocationColumn,
+                            itemCategoryColumn,
+                            employeeCodeColumn,
+                            employeeNameColumn,
+                            ipAddressColumn,
+                            itemCodeColumn,
+                            itemNameColumn,
+                            itemMakeColumn,
+                            itemModelColumn,
+                            itemSerialColumn,
+                            itemConditionColumn,
+                            itemCountColumn,
+                            unitColumn,
+                            imeiColumn,
+                            simColumn,
+                            poColumn,
+                            partyColumn,
+                            statusColumn,
+                            issuedColumn,
+                            returnedColumn,
+                            remarksColumn,
+                            actionColumn,
+                            deleteColumn,
+                            auditColumn,
+                            attachmentColumn
+                    );
+                    columnPrefs.setSavingEnabled(true);
+                    columnPrefs.restoreForKey(currentTab + "_dashboardColumnOrder");
+                    restoreColumnVisibility();
+                    Platform.runLater(this::rebuildTableFilter);
                     loadHistory();
                 });
 
@@ -346,6 +370,7 @@ public class DashboardController {
         clearButton.visibleProperty().bind(searchField.textProperty().isNotEmpty());
         searchField.setRight(clearButton);
 
+        restoreColumnVisibility();
 
         masterData = FXCollections.observableArrayList();
 
@@ -573,32 +598,6 @@ public class DashboardController {
                     e.getClass().getSimpleName() + "\n" + e.getMessage()
             );
         }
-    }
-
-    private void showExportSuccessDialog(String type, String path) {
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-
-        alert.setTitle("Export Completed");
-        alert.setHeaderText(type + " export completed successfully");
-
-        alert.setContentText(
-                "File saved at:\n\n" + path
-        );
-
-        Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
-
-        okButton.setStyle(
-                "-fx-background-color:#2ecc71;" +
-                        "-fx-text-fill:white;" +
-                        "-fx-font-weight:bold;"
-        );
-
-        alert.getDialogPane().setStyle(
-                "-fx-font-size:14px;"
-        );
-
-        alert.showAndWait();
     }
 
     @FXML
@@ -878,6 +877,57 @@ public class DashboardController {
         toDatePicker.setValue(null);
     }
 
+    @FXML
+    private void handleColumnVisibility() {
+
+        ColumnVisibilityDialog.show(
+                historyTable,
+                DashboardController.class,
+                currentTab,
+                List.of("BUY", "IN STOCK", "ISSUED", "SCRAPPED", "RETURNED")
+        );
+
+        // reset filters safely
+        if (tableFilter != null) {
+            tableFilter.getColumnFilters().forEach(ColumnFilter::selectAllValues);
+        }
+
+        // rebuild filter to sync hidden columns
+        Platform.runLater(this::rebuildTableFilter);
+
+        historyTable.refresh();
+    }
+
+    @FXML
+    private void handleOpenMasterDialog() {
+
+        try {
+
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/master-dialog.fxml")
+            );
+
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Master Data Management");
+            stage.setScene(new Scene(root, 650, 450));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void handleSetupDatabase() {
+        DatabaseSetupDialog.show(
+                historyTable.getScene().getWindow(),
+                this::loadHistory
+        );
+    }
+
     private void applyDateFilter() {
 
         if (filterPipeline == null) return;
@@ -1062,14 +1112,6 @@ public class DashboardController {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    @FXML
-    public void handleSetupDatabase() {
-        DatabaseSetupDialog.show(
-                historyTable.getScene().getWindow(),
-                this::loadHistory
-        );
     }
 
     public void handleExit() {
@@ -1455,28 +1497,6 @@ public class DashboardController {
         recordCountLabel.setText(String.valueOf(totalRecords));
     }
 
-    @FXML
-    private void handleOpenMasterDialog() {
-
-        try {
-
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/fxml/master-dialog.fxml")
-            );
-
-            Parent root = loader.load();
-
-            Stage stage = new Stage();
-            stage.setTitle("Master Data Management");
-            stage.setScene(new Scene(root, 650, 450));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     private void showBuySellColumn(boolean visible) {
         buySellColumn.setVisible(visible);
 //        buySellColumn.setManaged(visible);
@@ -1494,5 +1514,61 @@ public class DashboardController {
             node.setStyle("-fx-pref-width: " + tabWidth + ";");
         });
 
+    }
+
+    private void showExportSuccessDialog(String type, String path) {
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+        alert.setTitle("Export Completed");
+        alert.setHeaderText(type + " export completed successfully");
+
+        alert.setContentText(
+                "File saved at:\n\n" + path
+        );
+
+        Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
+
+        okButton.setStyle(
+                "-fx-background-color:#2ecc71;" +
+                        "-fx-text-fill:white;" +
+                        "-fx-font-weight:bold;"
+        );
+
+        alert.getDialogPane().setStyle(
+                "-fx-font-size:14px;"
+        );
+
+        alert.showAndWait();
+    }
+
+    private void restoreColumnVisibility() {
+
+        Preferences prefs =
+                Preferences.userNodeForPackage(DashboardController.class);
+
+        for (TableColumn<?, ?> col : historyTable.getColumns()) {
+
+            if (col.getId() == null) continue;
+
+            boolean visible =
+                    prefs.getBoolean(currentTab + "_column_visible_" + col.getId(), true);
+
+            col.setVisible(visible);
+        }
+    }
+
+    private void initializeColumnPreferences() {
+
+        if (columnPrefs != null) return;
+
+        columnPrefs = new TableColumnPreferenceManager<>(
+                historyTable,
+                currentTab + "_dashboardColumnOrder",
+                DashboardController.class,
+                () -> !columnsFrozen
+        );
+
+        columnPrefs.initialize();
     }
 }
