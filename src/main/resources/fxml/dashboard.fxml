@@ -3,6 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.Circle?>
+<?import org.controlsfx.control.textfield.CustomTextField?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.inventory.ui.controller.DashboardController">
@@ -73,15 +74,26 @@
             <VBox spacing="6">
 
                 <HBox spacing="10" alignment="CENTER_LEFT">
+
                     <Label text="Search:"/>
-                    <TextField fx:id="searchField"
-                               promptText="Search"
-                               prefWidth="450"/>
+
+                    <CustomTextField fx:id="searchField"
+                                     promptText="Search"
+                                     prefWidth="350"/>
+
+                    <Label text="From:"/>
+                    <DatePicker fx:id="fromDatePicker" prefWidth="130"/>
+
+                    <Label text="To:"/>
+                    <DatePicker fx:id="toDatePicker" prefWidth="130"/>
+
+                    <Button text="Clear" onAction="#handleClearDateFilter"/>
 
                     <Region HBox.hgrow="ALWAYS"/>
 
                     <Label text="Total Records:" style="-fx-font-size:14px"/>
                     <Label fx:id="recordCountLabel" text="0" style="-fx-font-size:14px"/>
+
                 </HBox>
 
                 <TabPane fx:id="dashboardTabs"
