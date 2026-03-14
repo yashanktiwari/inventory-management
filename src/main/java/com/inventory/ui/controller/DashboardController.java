@@ -123,6 +123,7 @@ public class DashboardController {
     @FXML private MenuItem setupDatabase;
     @FXML private MenuItem backupDatabase;
     @FXML private MenuItem restoreDatabase;
+    @FXML private MenuItem importFromExcel;
     @FXML private TableColumn<TransactionHistory, Void> attachmentColumn;
     @FXML private Label recordCountLabel;
 
@@ -2215,6 +2216,112 @@ public class DashboardController {
                 }
             });
         });
+    }
+
+    @FXML
+    private void handleImportExcel() {
+
+        FileChooser chooser = new FileChooser();
+
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
+        );
+
+        File file = chooser.showOpenDialog(historyTable.getScene().getWindow());
+
+        if (file == null) return;
+
+        ExcelImportTask task = new ExcelImportTask(file);
+
+        ProgressBar progressBar = new ProgressBar();
+        progressBar.setPrefWidth(350);
+        progressBar.progressProperty().bind(task.progressProperty());
+
+        Label progressLabel = new Label();
+        progressLabel.textProperty().bind(task.messageProperty());
+
+        Button finishButton = new Button("Finish");
+        finishButton.setDisable(true);
+
+        VBox layout = new VBox(15, progressBar, progressLabel, finishButton);
+        layout.setStyle("-fx-padding:20; -fx-alignment:center;");
+
+        Stage dialog = new Stage();
+        dialog.setTitle("Import Excel");
+        dialog.setScene(new Scene(layout));
+        dialog.initOwner(historyTable.getScene().getWindow());
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setResizable(false);
+        dialog.setOnCloseRequest(event -> {
+            if (task.isRunning()) {
+                event.consume();
+            }
+        });
+        dialog.show();
+
+        finishButton.setOnAction(e -> {
+            dialog.close();
+            loadHistory();
+        });
+
+        task.setOnSucceeded(e -> {
+
+            progressLabel.textProperty().unbind();
+            progressLabel.setText(
+                    "Import completed: " + task.getValue() + " rows imported."
+            );
+
+            finishButton.setDisable(false);
+        });
+
+        task.setOnFailed(e -> {
+
+            progressLabel.textProperty().unbind();
+            progressLabel.setText(
+                    "Import failed: " + task.getException().getMessage()
+            );
+
+            finishButton.setDisable(false);
+        });
+
+        new Thread(task).start();
+    }
+
+    @FXML
+    private void handleDownloadTemplateMenu() {
+
+        FileChooser chooser = new FileChooser();
+
+        chooser.setInitialFileName("transaction_import_template.xlsx");
+
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx")
+        );
+
+        File file = chooser.showSaveDialog(historyTable.getScene().getWindow());
+
+        if (file == null) return;
+
+        try {
+
+            ExcelTemplateUtil.generateTransactionTemplate(
+                    file.getAbsolutePath()
+            );
+
+            AlertUtil.showInfo(
+                    "Template Created",
+                    "Excel template saved successfully."
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            AlertUtil.showError(
+                    "Template Error",
+                    e.getMessage()
+            );
+        }
     }
 
     @FXML

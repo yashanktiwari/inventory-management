@@ -358,6 +358,7 @@ public class TransactionDAO {
 
     // 🔹 Get All Transactions
     public List<TransactionHistory> getAllTransactions() {
+        System.out.println("DAO: Fetching all transactions...");
 
         List<TransactionHistory> historyList = new ArrayList<>();
 
@@ -375,6 +376,12 @@ public class TransactionDAO {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
+                System.out.println(
+                        "DAO Row -> ID: " + rs.getInt("transaction_id") +
+                                " | Item: " + rs.getString("item_name") +
+                                " | Status: " + rs.getString("status") +
+                                " | Available: " + rs.getBoolean("is_available")
+                );
 
                 Timestamp issuedTs = rs.getTimestamp("issued_datetime");
                 Timestamp returnedTs = rs.getTimestamp("returned_datetime");
@@ -452,6 +459,7 @@ public class TransactionDAO {
             e.printStackTrace();
         }
 
+        System.out.println("DAO: Total transactions fetched = " + historyList.size());
         return historyList;
     }
 
@@ -1453,5 +1461,158 @@ public class TransactionDAO {
         }
 
         return true;
+    }
+
+    public int insertTransactionFromExcel(TransactionHistory t) {
+
+        String sql = """
+        INSERT INTO transactions (
+            parent_transaction_id,
+            buy_sell,
+            plant,
+            department,
+            location,
+            employee_id,
+            employee_name,
+            ip_address,
+            item_code,
+            item_name,
+            item_make,
+            item_model,
+            item_serial,
+            item_condition,
+            item_location,
+            item_category,
+            imei_no,
+            sim_no,
+            po_no,
+            party_name,
+            status,
+            issued_datetime,
+            returned_datetime,
+            remarks,
+            item_count,
+            unit,
+            is_available
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setObject(1, t.getParentTransactionId());
+            ps.setString(2, t.getBuySell());
+            ps.setString(3, t.getPlant());
+            ps.setString(4, t.getDepartment());
+            ps.setString(5, t.getLocation());
+
+            ps.setString(6, t.getEmployeeCode());
+            ps.setString(7, t.getEmployeeName());
+            ps.setString(8, "");
+
+            ps.setString(9, t.getItemCode());
+            ps.setString(10, t.getItemName());
+            ps.setString(11, t.getItemMake());
+            ps.setString(12, t.getItemModel());
+            ps.setString(13, t.getItemSerial());
+            ps.setString(14, t.getItemCondition());
+            ps.setString(15, t.getItemLocation());
+            ps.setString(16, t.getItemCategory());
+
+            ps.setString(17, t.getImeiNo());
+            ps.setString(18, t.getSimNo());
+
+            ps.setString(19, t.getPoNo());
+            ps.setString(20, t.getPartyName());
+
+            ps.setString(21, t.getStatus());
+
+            ps.setObject(22, t.getIssuedDateTime());
+            ps.setObject(23, t.getReturnedDateTime());
+
+            ps.setString(24, t.getRemarks());
+
+            ps.setDouble(25, t.getItemCount());
+            ps.setString(26, t.getUnit());
+
+            ps.setBoolean(27, t.isAvailable());
+
+            ps.executeUpdate();
+
+            ResultSet rs = ps.getGeneratedKeys();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
+    public Integer findAvailableParent(String itemCode, String serial) {
+
+        String sql = """
+        SELECT transaction_id
+        FROM transactions
+        WHERE item_code = ?
+        AND item_serial = ?
+        AND is_available = true
+        LIMIT 1
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemCode);
+            ps.setString(2, serial);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("transaction_id");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public void insertAuditWithTime(
+            int transactionId,
+            String user,
+            LocalDateTime modifiedAt,
+            String field,
+            String oldVal,
+            String newVal
+    ) {
+
+        String sql = """
+        INSERT INTO transaction_audit
+        (transaction_id, modified_by, modified_at, field_name, old_value, new_value)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, transactionId);
+            ps.setString(2, user);
+            ps.setTimestamp(3, Timestamp.valueOf(modifiedAt));
+            ps.setString(4, field);
+            ps.setString(5, oldVal);
+            ps.setString(6, newVal);
+
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
