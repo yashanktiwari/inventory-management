@@ -4,13 +4,16 @@ import com.inventory.cache.MasterCache;
 import com.inventory.dao.MasterDAO;
 import com.inventory.model.master.*;
 import com.inventory.util.AlertUtil;
+import com.inventory.util.MasterExcelImportTask;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.util.Optional;
 
 public class MasterDialogController {
@@ -426,4 +429,270 @@ public class MasterDialogController {
         });
     }
 
+//    @FXML
+//    private void handleImportExcel() {
+//
+//        String type = typeComboBox.getValue();
+//
+//        if (type == null) {
+//            AlertUtil.showError("Validation Error", "Please select a master type first.");
+//            return;
+//        }
+//
+//        FileChooser fileChooser = new FileChooser();
+//        fileChooser.setTitle("Select Excel File to Import");
+//        fileChooser.getExtensionFilters().add(
+//                new FileChooser.ExtensionFilter("Excel Files", ".xlsx", ".xls")
+//        );
+//
+//        File file = fileChooser.showOpenDialog(typeComboBox.getScene().getWindow());
+//
+//        if (file == null) return;
+//
+//        String expectedColumns = getExpectedColumnsForType(type);
+//
+//        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+//        confirmAlert.setTitle("Import " + type);
+//        confirmAlert.setHeaderText("Import " + type + " from Excel");
+//        confirmAlert.setContentText(
+//                "Expected Excel format:\n" +
+//                        "First row: Column headers\n" +
+//                        "Columns: " + expectedColumns + "\n\n" +
+//                        "Duplicate entries will be ignored.\n\n" +
+//                        "Continue with import?"
+//        );
+//
+//        Optional<ButtonType> result = confirmAlert.showAndWait();
+//
+//        if (result.isEmpty() || result.get() != ButtonType.OK) {
+//            return;
+//        }
+//
+//        MasterExcelImportTask task = new MasterExcelImportTask(file, type);
+//
+//        ProgressDialog progressDialog = new ProgressDialog();
+//        progressDialog.setTitle("Importing " + type);
+//        progressDialog.setHeaderText("Importing data from Excel...");
+//        progressDialog.progressProperty().bind(task.progressProperty());
+//        progressDialog.messageProperty().bind(task.messageProperty());
+//
+//        task.setOnSucceeded(event -> {
+//            progressDialog.close();
+//
+//            Integer count = task.getValue();
+//
+//            javafx.application.Platform.runLater(() -> {
+//                MasterCache.loadCache();
+//                loadTable();
+//
+//                if (count == 0) {
+//                    Alert warningAlert = new Alert(Alert.AlertType.WARNING);
+//                    warningAlert.setTitle("Import Complete");
+//                    warningAlert.setHeaderText("No Records Imported");
+//                    warningAlert.setContentText(
+//                            "No records were imported. Possible reasons:\n" +
+//                                    "- Excel file is empty or has no data rows\n" +
+//                                    "- All records already exist in the database\n" +
+//                                    "- Data format doesn't match expected columns"
+//                    );
+//                    warningAlert.getButtonTypes().setAll(ButtonType.OK);
+//                    warningAlert.showAndWait();
+//                } else {
+//                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+//                    successAlert.setTitle("Import Complete");
+//                    successAlert.setHeaderText("Import Successful");
+//                    successAlert.setContentText(
+//                            "Successfully imported " + count + " " + type + " records."
+//                    );
+//                    successAlert.getButtonTypes().setAll(ButtonType.OK);
+//                    successAlert.showAndWait();
+//                }
+//            });
+//        });
+//
+//        task.setOnFailed(event -> {
+//            progressDialog.close();
+//
+//            Throwable ex = task.getException();
+//
+//            javafx.application.Platform.runLater(() -> {
+//                AlertUtil.showError(
+//                        "Import Failed",
+//                        "Failed to import data: " + ex.getMessage()
+//                );
+//            });
+//
+//            ex.printStackTrace();
+//        });
+//
+//        task.setOnCancelled(event -> {
+//            progressDialog.close();
+//
+//            javafx.application.Platform.runLater(() -> {
+//                AlertUtil.showError("Import Cancelled", "Import was cancelled by user.");
+//            });
+//        });
+//
+//        Thread thread = new Thread(task);
+//        thread.setDaemon(true);
+//        thread.start();
+//
+//        progressDialog.showAndWait();
+//    }
+
+    @FXML
+    private void handleImportExcel() {
+
+        String type = typeComboBox.getValue();
+
+        if (type == null) {
+            AlertUtil.showError("Validation Error", "Please select a master type first.");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select Excel File to Import");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx", "*.xls")
+        );
+
+        File file = fileChooser.showOpenDialog(typeComboBox.getScene().getWindow());
+
+        if (file == null) return;
+
+        String expectedColumns = getExpectedColumnsForType(type);
+
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Import " + type);
+        confirmAlert.setHeaderText("Import " + type + " from Excel");
+        confirmAlert.setContentText(
+                "Expected Excel format:\n" +
+                "First row: Column headers\n" +
+                "Columns: " + expectedColumns + "\n\n" +
+                "Duplicate entries will be ignored.\n\n" +
+                "Continue with import?"
+        );
+
+        Optional<ButtonType> result = confirmAlert.showAndWait();
+
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        MasterExcelImportTask task = new MasterExcelImportTask(file, type);
+
+        ProgressDialog progressDialog = new ProgressDialog();
+        progressDialog.setTitle("Importing " + type);
+        progressDialog.setHeaderText("Importing data from Excel...");
+        progressDialog.progressProperty().bind(task.progressProperty());
+        progressDialog.messageProperty().bind(task.messageProperty());
+
+        task.setOnSucceeded(event -> {
+            progressDialog.close();
+
+            Integer count = task.getValue();
+
+            javafx.application.Platform.runLater(() -> {
+                MasterCache.loadCache();
+                loadTable();
+
+                if (count == 0) {
+                    Alert warningAlert = new Alert(Alert.AlertType.WARNING);
+                    warningAlert.setTitle("Import Complete");
+                    warningAlert.setHeaderText("No Records Imported");
+                    warningAlert.setContentText(
+                            "No records were imported. Possible reasons:\n" +
+                            "- Excel file is empty or has no data rows\n" +
+                            "- All records already exist in the database\n" +
+                            "- Data format doesn't match expected columns"
+                    );
+                    warningAlert.getButtonTypes().setAll(ButtonType.OK);
+                    warningAlert.showAndWait();
+                } else {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("Import Complete");
+                    successAlert.setHeaderText("Import Successful");
+                    successAlert.setContentText(
+                            "Successfully imported " + count + " " + type + " records."
+                    );
+                    successAlert.getButtonTypes().setAll(ButtonType.OK);
+                    successAlert.showAndWait();
+                }
+            });
+        });
+
+        task.setOnFailed(event -> {
+            progressDialog.close();
+
+            Throwable ex = task.getException();
+
+            javafx.application.Platform.runLater(() -> {
+                AlertUtil.showError(
+                        "Import Failed",
+                        "Failed to import data: " + ex.getMessage()
+                );
+            });
+
+            ex.printStackTrace();
+        });
+
+        task.setOnCancelled(event -> {
+            progressDialog.close();
+
+            javafx.application.Platform.runLater(() -> {
+                AlertUtil.showError("Import Cancelled", "Import was cancelled by user.");
+            });
+        });
+
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        thread.start();
+
+        progressDialog.showAndWait();
+    }
+
+    private String getExpectedColumnsForType(String type) {
+        return switch (type) {
+            case "Item Code" -> "Item Code, Item Name";
+            case "Employee Code" -> "Employee Code, Employee Name";
+            case "Category" -> "Category Name";
+            case "Plant" -> "Plant Name";
+            case "Department" -> "Department Name";
+            default -> "";
+        };
+    }
+
+    private static class ProgressDialog extends Dialog<Void> {
+
+        private final ProgressBar progressBar;
+        private final Label messageLabel;
+
+        public ProgressDialog() {
+            setTitle("Progress");
+            setHeaderText("Processing...");
+
+            progressBar = new ProgressBar();
+            progressBar.setPrefWidth(400);
+
+            messageLabel = new Label();
+
+            javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(10);
+            content.getChildren().addAll(progressBar, messageLabel);
+            content.setPadding(new javafx.geometry.Insets(20));
+
+            getDialogPane().setContent(content);
+            getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
+
+            Button cancelButton = (Button) getDialogPane().lookupButton(ButtonType.CANCEL);
+            cancelButton.setOnAction(e -> close());
+        }
+
+        public javafx.beans.property.DoubleProperty progressProperty() {
+            return progressBar.progressProperty();
+        }
+
+        public javafx.beans.property.StringProperty messageProperty() {
+            return messageLabel.textProperty();
+        }
+    }
 }

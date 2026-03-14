@@ -20,14 +20,9 @@
                     <MenuItem fx:id="restoreDatabase" text="Restore Database"
                               onAction="#handleRestoreDatabase"/>
                     <SeparatorMenuItem/>
-                    <Menu text="Excel">
-                        <MenuItem fx:id="importFromExcel" text="Import from excel"
-                                  onAction="#handleImportExcel"/>
-                        <SeparatorMenuItem/>
-                        <MenuItem fx:id="downloadExcelTemplate" text="Download excel template"
-                                  onAction="#handleDownloadTemplateMenu"/>
-                    </Menu>
-
+                    <MenuItem fx:id="importFromExcel" text="Import from excel"
+                              onAction="#handleImportExcel"/>
+                    <SeparatorMenuItem/>
                     <MenuItem text="Exit"
                               onAction="#handleExit"/>
                 </Menu>

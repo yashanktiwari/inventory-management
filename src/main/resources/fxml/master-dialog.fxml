@@ -49,6 +49,7 @@
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Add" onAction="#handleAdd"/>
         <Button fx:id="deleteButton" text="Delete" onAction="#handleDelete"/>
+        <Button text="Import from Excel" onAction="#handleImportExcel"/>
     </HBox>
 
 </VBox>

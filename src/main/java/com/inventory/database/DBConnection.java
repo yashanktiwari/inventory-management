@@ -200,11 +200,21 @@ public class DBConnection {
             )
             """;
 
+            String createIndentTable = """
+                CREATE TABLE IF NOT EXISTS indents (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    item_code VARCHAR(100),
+                    item_name VARCHAR(255),
+                    quantity DOUBLE
+                )
+            """;
+
 
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
             stmt.execute(createTransactionsTable);
             stmt.execute(createAuditTable);
+            stmt.execute(createIndentTable);
             stmt.execute(createMasterItems);
             stmt.execute(createMasterEmployees);
             stmt.execute(createMasterCategories);

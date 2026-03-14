@@ -16,169 +16,158 @@ import java.util.List;
 public class ExportUtil {
 
     // ===================== EXCEL =====================
-    public static void exportToExcel(List<TransactionHistory> data, String filePath) {
+    public static void exportToExcel(List<TransactionHistory> data, String filePath) throws Exception {
 
-        try (Workbook workbook = new XSSFWorkbook()) {
+        Workbook workbook = new XSSFWorkbook();
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
 
-            DateTimeFormatter formatter =
-                    DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
+        // ================= TRANSACTION SHEET =================
+        Sheet sheet = workbook.createSheet("Transactions");
 
-            // ================= TRANSACTION SHEET =================
-            Sheet sheet = workbook.createSheet("Transactions");
+        Row header = sheet.createRow(0);
 
-            Row header = sheet.createRow(0);
+        String[] columns = {
+                "Transaction ID",
+                "Buy/Sell",
+                "Plant",
+                "Department",
+                "Location",
+                "Employee ID",
+                "Employee Name",
+                "IP Address",
+                "Item Code",
+                "Item Name",
+                "Item Make",
+                "Item Model",
+                "Item Serial",
+                "Item Condition",
+                "Item Location",
+                "Item Category",
+                "IMEI No",
+                "SIM No",
+                "PO No",
+                "Party Name",
+                "Status",
+                "Issued Date",
+                "Returned Date",
+                "Remarks",
+                "Item Count",
+                "Unit",
+                "Last Modified By"
+        };
 
-            String[] columns = {
-                    "Transaction ID",
-                    "Buy/Sell",
-                    "Plant",
-                    "Department",
-                    "Location",
-                    "Employee ID",
-                    "Employee Name",
-                    "IP Address",
-                    "Item Code",
-                    "Item Name",
-                    "Item Make",
-                    "Item Model",
-                    "Item Serial",
-                    "Item Condition",
-                    "Item Location",
-                    "Item Category",
-                    "IMEI No",
-                    "SIM No",
-                    "PO No",
-                    "Party Name",
-                    "Status",
-                    "Issued Date",
-                    "Returned Date",
-                    "Remarks",
-                    "Item Count",
-                    "Unit",
-                    "Last Modified By"
-            };
+        for (int i = 0; i < columns.length; i++) {
+            header.createCell(i).setCellValue(columns[i]);
+        }
 
-            for (int i = 0; i < columns.length; i++) {
-                header.createCell(i).setCellValue(columns[i]);
+        int rowNum = 1;
+
+        for (TransactionHistory t : data) {
+
+            Row row = sheet.createRow(rowNum++);
+
+            row.createCell(0).setCellValue(t.getTransactionId());
+            row.createCell(1).setCellValue(nullSafe(t.getBuySell()));
+            row.createCell(2).setCellValue(nullSafe(t.getPlant()));
+            row.createCell(3).setCellValue(nullSafe(t.getDepartment()));
+            row.createCell(4).setCellValue(nullSafe(t.getLocation()));
+            row.createCell(5).setCellValue(nullSafe(t.getEmployeeCode()));
+            row.createCell(6).setCellValue(nullSafe(t.getEmployeeName()));
+            row.createCell(7).setCellValue(nullSafe(t.getIpAddress()));
+            row.createCell(8).setCellValue(nullSafe(t.getItemCode()));
+            row.createCell(9).setCellValue(nullSafe(t.getItemName()));
+            row.createCell(10).setCellValue(nullSafe(t.getItemMake()));
+            row.createCell(11).setCellValue(nullSafe(t.getItemModel()));
+            row.createCell(12).setCellValue(nullSafe(t.getItemSerial()));
+            row.createCell(13).setCellValue(nullSafe(t.getItemCondition()));
+            row.createCell(14).setCellValue(nullSafe(t.getItemLocation()));
+            row.createCell(15).setCellValue(nullSafe(t.getItemCategory()));
+            row.createCell(16).setCellValue(nullSafe(t.getImeiNo()));
+            row.createCell(17).setCellValue(nullSafe(t.getSimNo()));
+            row.createCell(18).setCellValue(nullSafe(t.getPoNo()));
+            row.createCell(19).setCellValue(nullSafe(t.getPartyName()));
+            row.createCell(20).setCellValue(nullSafe(t.getStatus()));
+
+            if (t.getIssuedDateTime() != null) {
+                row.createCell(21)
+                        .setCellValue(t.getIssuedDateTime().format(formatter));
             }
 
-            int rowNum = 1;
+            if (t.getReturnedDateTime() != null) {
+                row.createCell(22)
+                        .setCellValue(t.getReturnedDateTime().format(formatter));
+            } else {
+                row.createCell(22).setCellValue("Not Returned");
+            }
 
-            for (TransactionHistory t : data) {
+            row.createCell(23).setCellValue(nullSafe(t.getRemarks()));
 
-                Row row = sheet.createRow(rowNum++);
+            Double count = t.getItemCount();
+
+            if (count == null || count == 0) {
+                row.createCell(24).setCellValue("");
+            } else {
+                row.createCell(24).setCellValue(count);
+            }
+
+            row.createCell(25).setCellValue(nullSafe(t.getUnit()));
+            row.createCell(26).setCellValue(nullSafe(t.getLastModifiedBy()));
+        }
+
+        for (int i = 0; i < columns.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        // ================= AUDIT SHEET =================
+
+        Sheet auditSheet = workbook.createSheet("Audit History");
+
+        Row auditHeader = auditSheet.createRow(0);
+
+        String[] auditColumns = {
+                "Transaction ID",
+                "Modified By",
+                "Modified At",
+                "Field",
+                "Old Value",
+                "New Value"
+        };
+
+        for (int i = 0; i < auditColumns.length; i++) {
+            auditHeader.createCell(i).setCellValue(auditColumns[i]);
+        }
+
+        int auditRow = 1;
+
+        for (TransactionHistory t : data) {
+
+            if (t.getAuditEntries() == null) continue;
+
+            for (AuditEntry audit : t.getAuditEntries()) {
+
+                Row row = auditSheet.createRow(auditRow++);
 
                 row.createCell(0).setCellValue(t.getTransactionId());
-                row.createCell(1).setCellValue(nullSafe(t.getBuySell()));
-                row.createCell(2).setCellValue(nullSafe(t.getPlant()));
-                row.createCell(3).setCellValue(nullSafe(t.getDepartment()));
-                row.createCell(4).setCellValue(nullSafe(t.getLocation()));
-                row.createCell(5).setCellValue(nullSafe(t.getEmployeeCode()));
-                row.createCell(6).setCellValue(nullSafe(t.getEmployeeName()));
-                row.createCell(7).setCellValue(nullSafe(t.getIpAddress()));
-                row.createCell(8).setCellValue(nullSafe(t.getItemCode()));
-                row.createCell(9).setCellValue(nullSafe(t.getItemName()));
-                row.createCell(10).setCellValue(nullSafe(t.getItemMake()));
-                row.createCell(11).setCellValue(nullSafe(t.getItemModel()));
-                row.createCell(12).setCellValue(nullSafe(t.getItemSerial()));
-                row.createCell(13).setCellValue(nullSafe(t.getItemCondition()));
-                row.createCell(14).setCellValue(nullSafe(t.getItemLocation()));
-                row.createCell(15).setCellValue(nullSafe(t.getItemCategory()));
-                row.createCell(16).setCellValue(nullSafe(t.getImeiNo()));
-                row.createCell(17).setCellValue(nullSafe(t.getSimNo()));
-                row.createCell(18).setCellValue(nullSafe(t.getPoNo()));
-                row.createCell(19).setCellValue(nullSafe(t.getPartyName()));
-                row.createCell(20).setCellValue(nullSafe(t.getStatus()));
+                row.createCell(1).setCellValue(nullSafe(audit.getModifiedBy()));
 
-                if (t.getIssuedDateTime() != null) {
-                    row.createCell(21)
-                            .setCellValue(t.getIssuedDateTime().format(formatter));
+                if (audit.getModifiedAt() != null) {
+                    row.createCell(2)
+                            .setCellValue(audit.getModifiedAt().format(formatter));
                 }
 
-                if (t.getReturnedDateTime() != null) {
-                    row.createCell(22)
-                            .setCellValue(t.getReturnedDateTime().format(formatter));
-                } else {
-                    row.createCell(22).setCellValue("Not Returned");
-                }
-
-                row.createCell(23).setCellValue(nullSafe(t.getRemarks()));
-
-                Double count = t.getItemCount();
-
-                if (count == null || count == 0) {
-                    row.createCell(24).setCellValue("");
-                } else {
-                    row.createCell(24).setCellValue(count);
-                }
-
-                row.createCell(25).setCellValue(nullSafe(t.getUnit()));
-                row.createCell(26).setCellValue(nullSafe(t.getLastModifiedBy()));
+                row.createCell(3).setCellValue(nullSafe(audit.getFieldName()));
+                row.createCell(4).setCellValue(nullSafe(audit.getOldValue()));
+                row.createCell(5).setCellValue(nullSafe(audit.getNewValue()));
             }
+        }
 
-            for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+        for (int i = 0; i < auditColumns.length; i++) {
+            auditSheet.autoSizeColumn(i);
+        }
 
-            // ================= AUDIT SHEET =================
-
-            Sheet auditSheet = workbook.createSheet("Audit History");
-
-            Row auditHeader = auditSheet.createRow(0);
-
-            String[] auditColumns = {
-                    "Transaction ID",
-                    "Modified By",
-                    "Modified At",
-                    "Field",
-                    "Old Value",
-                    "New Value"
-            };
-
-            for (int i = 0; i < auditColumns.length; i++) {
-                auditHeader.createCell(i).setCellValue(auditColumns[i]);
-            }
-
-            int auditRow = 1;
-
-            for (TransactionHistory t : data) {
-
-                if (t.getAuditEntries() == null) continue;
-
-                for (AuditEntry audit : t.getAuditEntries()) {
-
-                    Row row = auditSheet.createRow(auditRow++);
-
-                    row.createCell(0).setCellValue(t.getTransactionId());
-                    row.createCell(1).setCellValue(nullSafe(audit.getModifiedBy()));
-
-                    if (audit.getModifiedAt() != null) {
-                        row.createCell(2)
-                                .setCellValue(audit.getModifiedAt().format(formatter));
-                    }
-
-                    row.createCell(3).setCellValue(nullSafe(audit.getFieldName()));
-                    row.createCell(4).setCellValue(nullSafe(audit.getOldValue()));
-                    row.createCell(5).setCellValue(nullSafe(audit.getNewValue()));
-                }
-            }
-
-            for (int i = 0; i < auditColumns.length; i++) {
-                auditSheet.autoSizeColumn(i);
-            }
-
-            try (FileOutputStream fos = new FileOutputStream(filePath)) {
-                workbook.write(fos);
-            }
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            AlertUtil.showError(
-                    "Export Failed",
-                    "Excel export failed:\n" + e.getMessage()
-            );
+        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+            workbook.write(fos);
         }
     }
 

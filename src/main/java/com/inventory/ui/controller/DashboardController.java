@@ -1762,23 +1762,23 @@ public class DashboardController {
                                 history.getPlant().toLowerCase().contains(keyword))
                                 || (history.getDepartment() != null &&
                                 history.getDepartment().toLowerCase().contains(keyword))
-                                ||      (history.getLocation() != null &&
+                                || (history.getLocation() != null &&
                                 history.getLocation().toLowerCase().contains(keyword))
                                 || (history.getEmployeeCode() != null &&
                                 history.getEmployeeCode().toLowerCase().contains(keyword))
-                                ||      (history.getEmployeeName() != null &&
+                                || (history.getEmployeeName() != null &&
                                 history.getEmployeeName().toLowerCase().contains(keyword))
                                 || (history.getIpAddress() != null &&
                                 history.getIpAddress().toLowerCase().contains(keyword))
                                 || history.getItemCode() != null &&
                                 history.getItemCode().toLowerCase().contains(keyword))
-                                ||      (history.getItemName() != null &&
+                                || (history.getItemName() != null &&
                                 history.getItemName().toLowerCase().contains(keyword))
                                 || (history.getItemMake() != null &&
                                 history.getItemMake().toLowerCase().contains(keyword))
                                 || (history.getItemModel() != null &&
                                 history.getItemModel().toLowerCase().contains(keyword))
-                                ||      (history.getItemSerial() != null &&
+                                || (history.getItemSerial() != null &&
                                 history.getItemSerial().toLowerCase().contains(keyword))
                                 || (history.getImeiNo() != null &&
                                 history.getImeiNo().toLowerCase().contains(keyword))
@@ -1789,7 +1789,14 @@ public class DashboardController {
                                 || (history.getPartyName() != null &&
                                 history.getPartyName().toLowerCase().contains(keyword))
                                 || (history.getStatus() != null &&
-                                history.getStatus().toLowerCase().contains(keyword));
+                                history.getStatus().toLowerCase().contains(keyword))
+                                || (history.getItemCategory() != null &&
+                                history.getItemCategory().toLowerCase().contains(keyword))
+                                || (history.getItemLocation() != null &&
+                                history.getItemLocation().toLowerCase().contains(keyword))
+                                || (history.getItemCondition() != null &&
+                                history.getItemCondition().toLowerCase().contains(keyword))
+                        ;
             });
         });
 
@@ -3011,7 +3018,7 @@ public class DashboardController {
         Label appName = new Label("Inventory Management System");
         appName.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        Label version = new Label("Version 1.2.0");
+        Label version = new Label("Version 1.3.0");
         version.setStyle("-fx-font-size: 13px;");
 
         Label author = new Label("Developed by Yashank Tiwari");

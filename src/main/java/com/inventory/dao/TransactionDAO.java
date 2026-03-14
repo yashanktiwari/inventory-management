@@ -154,9 +154,9 @@ public class TransactionDAO {
                 // 🔹 Insert first audit record
                 insertAudit(
                         transactionId,
-                        currentUser,
+                        currentUser.toUpperCase(),
                         "CREATE_TRANSACTION",
-                        "",
+                        "Empty",
                         "Transaction created"
                 );
 
@@ -256,6 +256,7 @@ public class TransactionDAO {
                     oldValues.put("item_serial", rs.getString("item_serial"));
                     oldValues.put("item_condition", rs.getString("item_condition"));
                     oldValues.put("item_category", rs.getString("item_category"));
+                    oldValues.put("item_location", rs.getString("item_location"));
                     oldValues.put("imei_no", rs.getString("imei_no"));
                     oldValues.put("sim_no", rs.getString("sim_no"));
                     oldValues.put("po_no", rs.getString("po_no"));
@@ -335,6 +336,7 @@ public class TransactionDAO {
             checkAndAudit(transactionId, currentUser, "employee_id", oldValues.get("employee_id"), employeeCode);
             checkAndAudit(transactionId, currentUser, "employee_name", oldValues.get("employee_name"), employeeName);
             checkAndAudit(transactionId, currentUser, "ip_address", oldValues.get("ip_address"), ip);
+            checkAndAudit(transactionId, currentUser, "item_serial", oldValues.get("item_serial"), itemSerial);
             checkAndAudit(transactionId, currentUser, "item_code", oldValues.get("item_code"), itemCode);
             checkAndAudit(transactionId, currentUser, "item_name", oldValues.get("item_name"), itemName);
             checkAndAudit(transactionId, currentUser, "item_make", oldValues.get("item_make"), itemMake);
@@ -601,7 +603,7 @@ public class TransactionDAO {
                 stmt.setBoolean(2, available);
                 stmt.setString(3, remarks);
 
-                if ("RETURNED".equalsIgnoreCase(status)) {
+                if ("RETURNED".equalsIgnoreCase(status) || "SCRAPPED".equalsIgnoreCase(status)) {
                     stmt.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
                 } else {
                     stmt.setNull(4, Types.TIMESTAMP);
@@ -686,8 +688,8 @@ public class TransactionDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, transactionId);
-            ps.setString(2, user);
-            ps.setString(3, field);
+            ps.setString(2, user.toUpperCase());
+            ps.setString(3, field.toUpperCase());
             ps.setString(4, oldVal);
             ps.setString(5, newVal);
 
@@ -802,7 +804,7 @@ public class TransactionDAO {
         if (!Objects.equals(oldT.getStatus(), newT.getStatus())) {
             insertAudit(oldT.getTransactionId(),
                     user,
-                    "Status",
+                    "STATUS",
                     oldT.getStatus(),
                     newT.getStatus());
         }
@@ -810,7 +812,7 @@ public class TransactionDAO {
         if (!Objects.equals(oldT.getRemarks(), newT.getRemarks())) {
             insertAudit(oldT.getTransactionId(),
                     user,
-                    "Remarks",
+                    "REMARKS",
                     oldT.getRemarks(),
                     newT.getRemarks());
         }
@@ -818,7 +820,7 @@ public class TransactionDAO {
         if (!Objects.equals(oldT.getAttachmentFile(), newT.getAttachmentFile())) {
             insertAudit(oldT.getTransactionId(),
                     user,
-                    "Attachment",
+                    "ATTACHMENT",
                     oldT.getAttachmentFile(),
                     newT.getAttachmentFile());
         }
@@ -826,7 +828,7 @@ public class TransactionDAO {
         if (!Objects.equals(oldT.getItemCount(), newT.getItemCount())) {
             insertAudit(oldT.getTransactionId(),
                     user,
-                    "Item Count",
+                    "ITEM COUNT",
                     String.valueOf(oldT.getItemCount()),
                     String.valueOf(newT.getItemCount()));
         }
@@ -1009,6 +1011,101 @@ public class TransactionDAO {
     }
 
 
+//    public List<TransactionHistory> getAvailableSerialItems(String itemName) {
+//
+//        List<TransactionHistory> list = new ArrayList<>();
+//
+//        String sql = """
+//        SELECT *
+//        FROM (
+//            SELECT *,
+//                   ROW_NUMBER() OVER (
+//                       PARTITION BY item_serial
+//                       ORDER BY issued_datetime DESC
+//                   ) rn
+//            FROM transactions
+//            WHERE item_name = ?
+//        ) t
+//        WHERE rn = 1
+//        AND (status IS NULL OR status NOT IN ('ISSUED','SCRAPPED'))
+//        ORDER BY issued_datetime;
+//    """;
+//
+//        try (Connection conn = DBConnection.getConnection();
+//             PreparedStatement ps = conn.prepareStatement(sql)) {
+//
+//            ps.setString(1, itemName);
+//            ps.setString(2, itemName);
+//
+//            ResultSet rs = ps.executeQuery();
+//
+//            while (rs.next()) {
+//
+//                Timestamp issuedTs = rs.getTimestamp("issued_datetime");
+//
+//                LocalDateTime issued =
+//                        issuedTs != null ? issuedTs.toLocalDateTime() : null;
+//
+//                String serial = rs.getString("item_serial");
+//                if (serial == null) serial = "";
+//
+//                TransactionHistory history = new TransactionHistory(
+//
+//                        rs.getInt("transaction_id"),
+//
+//                        rs.getString("buy_sell"),
+//                        "",
+//                        "",
+//                        "",
+//
+//                        "",
+//                        "",
+//
+//                        "",
+//
+//                        rs.getString("item_code"),
+//                        itemName,
+//
+//                        rs.getString("item_make"),
+//                        rs.getString("item_model"),
+//                        serial,
+//                        rs.getString("item_condition"),
+//                        "",
+//                        "",
+//
+//                        "",
+//                        "",
+//
+//                        "",
+//                        "",
+//
+//                        rs.getString("status"),
+//
+//                        issued,
+//                        null,
+//
+//                        "",
+//
+//                        rs.getDouble("item_count"),
+//                        rs.getString("unit"),
+//
+//                        "",
+//
+//                        "",
+//                        new ArrayList<>(),
+//                        rs.getInt("parent_transaction_id")
+//                );
+//
+//                list.add(history);
+//            }
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        return list;
+//    }
+
     public List<TransactionHistory> getAvailableSerialItems(String itemName) {
 
         List<TransactionHistory> list = new ArrayList<>();
@@ -1026,14 +1123,14 @@ public class TransactionDAO {
         ) t
         WHERE rn = 1
         AND (status IS NULL OR status NOT IN ('ISSUED','SCRAPPED'))
-        ORDER BY issued_datetime;
+        ORDER BY issued_datetime
     """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
+            // Only ONE parameter exists in the query
             ps.setString(1, itemName);
-            ps.setString(2, itemName);
 
             ResultSet rs = ps.executeQuery();
 
@@ -1062,7 +1159,7 @@ public class TransactionDAO {
                         "",
 
                         rs.getString("item_code"),
-                        itemName,
+                        rs.getString("item_name"),
 
                         rs.getString("item_make"),
                         rs.getString("item_model"),
@@ -1193,8 +1290,8 @@ public class TransactionDAO {
             String newValue
     ) {
 
-        String oldVal = oldValue == null ? "" : oldValue;
-        String newVal = newValue == null ? "" : newValue;
+        String oldVal = oldValue == null ? "" : oldValue.trim();
+        String newVal = newValue == null ? "" : newValue.trim();
 
         // 🔹 Special handling for numeric fields
         if ("item_count".equals(field)) {
@@ -1237,8 +1334,8 @@ public class TransactionDAO {
             return;
         }
 
-        // 🔹 Default comparison
-        if (!oldVal.equals(newVal)) {
+        // 🔹 Default comparison (ignore case + trim)
+        if (!oldVal.equalsIgnoreCase(newVal)) {
             insertAudit(transactionId, user, field, oldVal, newVal);
         }
     }
