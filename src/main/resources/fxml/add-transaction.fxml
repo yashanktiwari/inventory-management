@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox spacing="8"
+<VBox spacing="6"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.inventory.ui.controller.AddTransactionController"
       style="-fx-padding: 25; -fx-background-color: #f4f6f8;">

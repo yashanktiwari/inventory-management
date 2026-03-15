@@ -1,5 +1,6 @@
 package com.inventory;
 
+import atlantafx.base.theme.PrimerLight;
 import com.inventory.cache.MasterCache;
 import com.inventory.service.DatabaseConnectionMonitor;
 import javafx.application.Application;
@@ -22,6 +23,10 @@ public class MainApp extends Application {
     private static Stage primaryStage;
     private final DatabaseConnectionMonitor connectionMonitor =
             new DatabaseConnectionMonitor();
+    public static final String GLOBAL_CSS =
+            Objects.requireNonNull(
+                    MainApp.class.getResource("/css/global.css")
+            ).toExternalForm();
 
     public static Stage getPrimaryStage() {
         return primaryStage;
@@ -29,7 +34,6 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-
         primaryStage = stage;
         boolean loaded = AppConfig.loadDatabaseConfig();
 
@@ -50,10 +54,15 @@ public class MainApp extends Application {
 
         DashboardController controller = loader.getController();
 
+        // Atlantafx theme
+        Application.setUserAgentStylesheet(
+                new PrimerLight().getUserAgentStylesheet()
+        );
+
         Scene scene = new Scene(root, 1200, 650);
 
         scene.getStylesheets().add(
-                Objects.requireNonNull(getClass().getResource("/css/table-filter.css")).toExternalForm()
+                Objects.requireNonNull(getClass().getResource("/css/global.css")).toExternalForm()
         );
 
         stage.setTitle("Inventory Management System");

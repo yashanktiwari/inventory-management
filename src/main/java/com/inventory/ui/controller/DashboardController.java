@@ -159,6 +159,17 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
+        Platform.runLater(() -> {
+            Scene scene = historyTable.getScene();
+            if (scene != null && scene.getStylesheets().stream()
+                    .noneMatch(s -> s.contains("dashboard.css"))) {
+                scene.getStylesheets().add(
+                        getClass()
+                                .getResource("/css/dashboard.css")
+                                .toExternalForm()
+                );
+            }
+        });
 
         initializeColumnPreferences();
 
@@ -239,6 +250,7 @@ public class DashboardController {
                     Platform.runLater(this::rebuildTableFilter);
                     loadHistory();
                 });
+
 
         dashboardTabs.widthProperty().addListener((obs, oldVal, newVal) -> {
 
@@ -516,6 +528,16 @@ public class DashboardController {
 
 //            Scene scene = new Scene(loader.load(), 700, 650);
             Scene scene = new Scene(loader.load());
+
+            var css = getClass().getResource("/css/add-transaction.css");
+
+            System.out.println(css);
+
+            scene.getStylesheets().add(css.toExternalForm());
+
+//            scene.getStylesheets().add(
+//                    getClass().getResource("/css/add-transaction.css").toExternalForm()
+//            );
 
             AddTransactionController controller = loader.getController();
             controller.setOnTransactionSaved(this::loadHistory);
@@ -926,6 +948,11 @@ public class DashboardController {
                 historyTable.getScene().getWindow(),
                 this::loadHistory
         );
+    }
+
+    @FXML
+    private void handleWorkLog() {
+        WorkLogDialog.show();
     }
 
     private void applyDateFilter() {
@@ -1409,6 +1436,9 @@ public class DashboardController {
             );
 
             Scene scene = new Scene(loader.load());
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource("/css/add-transaction.css")).toExternalForm()
+            );
 
             AddTransactionController controller = loader.getController();
 
@@ -1440,6 +1470,9 @@ public class DashboardController {
             );
 
             Scene scene = new Scene(loader.load());
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource("/css/add-transaction.css")).toExternalForm()
+            );
 
             AddTransactionController controller = loader.getController();
 

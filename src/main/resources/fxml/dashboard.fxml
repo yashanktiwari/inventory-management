@@ -51,6 +51,10 @@
                               onAction="#handleOpenMasterDialog"/>
                 </Menu>
 
+                <Menu text="Activity">
+                    <MenuItem text="Work Log"
+                              onAction="#handleWorkLog"/>
+                </Menu>
 
                 <Menu text="Settings">
                     <MenuItem text="Change Attachment Path"

@@ -1,0 +1,304 @@
+/* ------------------------------------------------
+   Dashboard Layout
+------------------------------------------------ */
+
+.dashboard-container {
+    -fx-background-color: #f9fafb;
+}
+
+/* ------------------------------------------------
+   Page Title
+------------------------------------------------ */
+
+.dashboard-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 0 5 0;
+}
+
+/* ------------------------------------------------
+   Search / Filter Row
+------------------------------------------------ */
+
+.dashboard-filters {
+
+    -fx-background-color: white;
+
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 8;
+
+    -fx-background-radius: 8;
+
+    -fx-padding: 10 12 10 12;
+}
+
+/* ------------------------------------------------
+   Inputs
+------------------------------------------------ */
+
+.text-field,
+.combo-box,
+.date-picker {
+
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+
+    -fx-background-radius: 6;
+
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+
+}
+
+.text-field {
+    -fx-pref-height: 32;
+}
+
+.date-picker {
+    -fx-pref-height: 32;
+}
+
+/* ------------------------------------------------
+   Table Styling
+------------------------------------------------ */
+
+.table-view {
+
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 6;
+
+    -fx-background-radius: 6;
+
+}
+
+/* ------------------------------------------------
+   Table Header
+------------------------------------------------ */
+
+.table-view .column-header-background {
+
+    -fx-background-color: #f3f4f6;
+
+}
+
+.table-view .column-header {
+
+    -fx-border-color: transparent #e5e7eb transparent transparent;
+
+}
+
+.table-view .column-header .label {
+
+    -fx-font-weight: bold;
+
+}
+
+/* ------------------------------------------------
+   Row Styling
+------------------------------------------------ */
+
+.table-row-cell {
+    -fx-border-color: transparent transparent #f1f5f9 transparent;
+}
+
+/* Zebra rows */
+
+.table-row-cell:odd {
+    -fx-background-color: #fbfdff;
+}
+
+/* Hover */
+
+.table-row-cell:hover {
+    -fx-background-color: #f8fafc;
+}
+
+/* Selected row */
+
+.table-row-cell:selected {
+    -fx-background-color: #2563eb;
+}
+
+/* ------------------------------------------------
+   Selected Row Text Behaviour
+------------------------------------------------ */
+
+/* Normal cells */
+
+.table-view .table-row-cell:selected .table-cell {
+    -fx-text-fill: white;
+}
+
+/* Hyperlinks */
+
+.table-view .table-row-cell:selected .hyperlink {
+    -fx-text-fill: white;
+}
+
+/* ------------------------------------------------
+   Status Badge
+------------------------------------------------ */
+
+.status-badge {
+
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 20;
+
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+
+}
+
+.status-instock {
+
+    -fx-background-color: #fef3c7;
+    -fx-text-fill: #92400e;
+
+}
+
+.status-issued {
+
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1e40af;
+
+}
+
+.status-returned {
+
+    -fx-background-color: #d1fae5;
+    -fx-text-fill: #065f46;
+
+}
+
+.status-scrapped {
+
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: #374151;
+
+}
+
+/* ------------------------------------------------
+   Update Status Button
+------------------------------------------------ */
+
+.status-action-btn {
+
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+
+    -fx-padding: 4 12 4 12;
+
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+
+    -fx-cursor: hand;
+
+    -fx-border-color: transparent;
+
+}
+
+/* IN STOCK */
+
+.status-action-stock {
+    -fx-background-color: #ab4505;
+    -fx-text-fill: white;
+}
+
+/* ISSUED */
+
+.status-action-issued {
+    -fx-background-color: #3b82f6;
+    -fx-text-fill: white;
+}
+
+/* RETURNED */
+
+.status-action-returned {
+    -fx-background-color: #076e2d;
+    -fx-text-fill: white;
+}
+
+/* SCRAPPED */
+
+.status-action-scrapped {
+    -fx-background-color: #1a1f26;
+    -fx-text-fill: white;
+}
+
+/* Hover effect */
+
+.status-action-btn:hover {
+    -fx-opacity: 0.9;
+}
+
+/* ------------------------------------------------
+   Buy / Sell Badge
+------------------------------------------------ */
+
+.buy-sell-badge {
+
+    -fx-padding: 3 12 3 12;
+    -fx-background-radius: 20;
+
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+
+}
+
+.buy-badge {
+
+    -fx-background-color: #d1fae5;
+    -fx-text-fill: #065f46;
+
+}
+
+.sell-badge {
+
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #7f1d1d;
+
+}
+
+/* ------------------------------------------------
+   Preserve badge colors on row selection
+------------------------------------------------ */
+
+.table-view .table-row-cell:selected .status-badge {
+    -fx-text-fill: inherit;
+}
+
+.table-view .table-row-cell:selected .buy-sell-badge {
+    -fx-text-fill: inherit;
+}
+
+/* ------------------------------------------------
+   Ensure update-status button text remains white
+------------------------------------------------ */
+
+.table-view .table-row-cell:selected .status-action-btn {
+    -fx-text-fill: white;
+}
+
+/* ------------------------------------------------
+   Bottom Toolbar
+------------------------------------------------ */
+
+.dashboard-bottom-bar {
+
+    -fx-background-color: white;
+
+    -fx-border-color: #e5e7eb transparent transparent transparent;
+
+}
+
+/* ------------------------------------------------
+   Connection Indicator
+------------------------------------------------ */
+
+.connection-ok {
+    -fx-fill: #22c55e;
+}
+
+.connection-error {
+    -fx-fill: #ef4444;
+}

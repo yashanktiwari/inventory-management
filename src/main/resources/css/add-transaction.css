@@ -1,0 +1,104 @@
+/* ------------------------------------------------
+   Root dialog
+------------------------------------------------ */
+
+.root {
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+    -fx-background-color: #fff5f5;
+}
+
+/* ------------------------------------------------
+   Layout spacing
+------------------------------------------------ */
+
+.vbox {
+    -fx-spacing: 5;
+}
+
+.hbox {
+    -fx-spacing: 5;
+}
+
+/* ------------------------------------------------
+   Labels
+------------------------------------------------ */
+
+.label {
+    -fx-font-size: 13px;
+    -fx-padding: 1 4 1 0;
+}
+
+/* ------------------------------------------------
+   Input controls
+------------------------------------------------ */
+
+.text-field,
+.combo-box,
+.date-picker,
+.spinner {
+
+    -fx-pref-height: 26;
+    -fx-min-height: 26;
+    -fx-max-height: 26;
+
+    -fx-padding: 3 7 3 7;
+
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+
+}
+
+/* ------------------------------------------------
+   TextArea
+------------------------------------------------ */
+
+.text-area {
+
+    -fx-pref-row-count: 3;
+    -fx-pref-height: 60;
+
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+
+}
+
+/* ------------------------------------------------
+   ComboBox cells
+------------------------------------------------ */
+
+.combo-box .list-cell {
+    -fx-padding: 3 7 3 7;
+}
+
+/* ------------------------------------------------
+   Spinner arrows
+------------------------------------------------ */
+
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-padding: 2;
+}
+
+/* ------------------------------------------------
+   Buttons
+------------------------------------------------ */
+
+.button {
+
+    -fx-pref-height: 28;
+    -fx-padding: 3 10 3 10;
+
+}
+
+/* ------------------------------------------------
+   Suggestion popup
+------------------------------------------------ */
+
+.list-view {
+    -fx-font-size: 13px;
+}
+
+.list-cell {
+    -fx-padding: 3 7 3 7;
+}

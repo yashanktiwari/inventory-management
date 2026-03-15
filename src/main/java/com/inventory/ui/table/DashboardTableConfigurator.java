@@ -37,18 +37,66 @@ public class DashboardTableConfigurator {
         // BUY / SELL
         buySellColumn.setCellValueFactory(new PropertyValueFactory<>("buySell"));
 
-        buySellColumn.setCellFactory(col ->
-                createStyledHyperlinkCell(openBuySell, value -> {
+        buySellColumn.setCellFactory(column -> new TableCell<>() {
 
-                    if ("BUY".equalsIgnoreCase(value))
-                        return "-fx-background-color:#d4edda;";
+            private final Hyperlink badge = new Hyperlink();
 
-                    if ("SELL".equalsIgnoreCase(value))
-                        return "-fx-background-color:#f8d7da;";
+            {
+                badge.getStyleClass().add("buy-sell-badge");
+                badge.setAlignment(Pos.CENTER);
+                badge.setCursor(Cursor.HAND);
+                badge.setUnderline(false);
 
-                    return "";
-                })
-        );
+                badge.setOnAction(e -> {
+
+                    TransactionHistory row =
+                            getTableView().getItems().get(getIndex());
+
+                    openBuySell.accept(row);
+                });
+
+//                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+//
+//                    if (newRow != null) {
+//
+//                        badge.textFillProperty().bind(
+//                                Bindings.when(newRow.selectedProperty())
+//                                        .then(Color.WHITE)
+//                                        .otherwise(Color.BLACK)
+//                        );
+//                    }
+//                });
+            }
+
+            @Override
+            protected void updateItem(String value, boolean empty) {
+
+                super.updateItem(value, empty);
+
+                if (empty || value == null) {
+                    setText(null);
+                    setGraphic(null);
+                    badge.getStyleClass().removeAll("buy-badge","sell-badge");
+                    return;
+                }
+
+                badge.setText(value.toUpperCase());
+
+                badge.getStyleClass().removeAll(
+                        "buy-badge",
+                        "sell-badge"
+                );
+
+                if ("BUY".equalsIgnoreCase(value)) {
+                    badge.getStyleClass().add("buy-badge");
+                } else if ("SELL".equalsIgnoreCase(value)) {
+                    badge.getStyleClass().add("sell-badge");
+                }
+
+                setGraphic(badge);
+                setAlignment(Pos.CENTER);
+            }
+        });
 
         // PLANT
         plantColumn.setCellValueFactory(new PropertyValueFactory<>("plant"));
@@ -80,6 +128,13 @@ public class DashboardTableConfigurator {
 
         statusColumn.setCellFactory(column -> new TableCell<>() {
 
+            private final Label badge = new Label();
+
+            {
+                badge.getStyleClass().add("status-badge");
+                badge.setAlignment(Pos.CENTER);
+            }
+
             @Override
             protected void updateItem(String status, boolean empty) {
 
@@ -87,27 +142,36 @@ public class DashboardTableConfigurator {
 
                 if (empty || status == null) {
                     setText(null);
-                    setStyle("");
+                    setGraphic(null);
+                    badge.getStyleClass().removeAll(
+                            "status-instock",
+                            "status-issued",
+                            "status-returned",
+                            "status-scrapped"
+                    );
                     return;
                 }
 
-                setText(status.toUpperCase());
-                setAlignment(Pos.CENTER);
+                badge.setText(status.toUpperCase());
+
+                badge.getStyleClass().removeAll(
+                        "status-instock",
+                        "status-issued",
+                        "status-returned",
+                        "status-scrapped"
+                );
 
                 switch (status.toUpperCase()) {
 
-                    case "ISSUED" ->
-                            setStyle("-fx-background-color:#d6eaff;");
+                    case "IN STOCK" -> badge.getStyleClass().add("status-instock");
+                    case "ISSUED" -> badge.getStyleClass().add("status-issued");
+                    case "RETURNED" -> badge.getStyleClass().add("status-returned");
+                    case "SCRAPPED" -> badge.getStyleClass().add("status-scrapped");
 
-                    case "RETURNED" ->
-                            setStyle("-fx-background-color:#d4edda;");
-
-                    case "SCRAPPED" ->
-                            setStyle("-fx-background-color:#e0e0e0;");
-
-                    case "IN STOCK" ->
-                            setStyle("-fx-background-color:#fff3cd;");
                 }
+
+                setGraphic(badge);
+                setAlignment(Pos.CENTER);
             }
         });
 
@@ -139,7 +203,8 @@ public class DashboardTableConfigurator {
             private final Hyperlink link = new Hyperlink();
 
             {
-                link.setStyle("-fx-text-fill:black; -fx-underline:false;");
+                link.setUnderline(false);
+                link.setStyle("-fx-text-fill:black;");
                 link.setCursor(Cursor.HAND);
 
                 link.setOnAction(e -> {

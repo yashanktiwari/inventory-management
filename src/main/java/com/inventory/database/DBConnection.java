@@ -215,6 +215,16 @@ public class DBConnection {
                 )
             """;
 
+            String createWorkLogTable = """
+                CREATE TABLE IF NOT EXISTS work_log (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(100) NOT NULL,
+                    work_type VARCHAR(20) NOT NULL,
+                    details TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """;
+
 
             stmt.execute(createItemsTable);
             stmt.execute(createPersonsTable);
@@ -227,6 +237,7 @@ public class DBConnection {
             stmt.execute(createMasterPlants);
             stmt.execute(createMasterDepartments);
             stmt.execute(createMasterParties);
+            stmt.execute(createWorkLogTable);
 
             try {
                 stmt.execute("ALTER TABLE transactions ADD COLUMN item_count DOUBLE");

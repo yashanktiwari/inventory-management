@@ -6,6 +6,7 @@ import com.inventory.model.TransactionHistory;
 import com.inventory.util.AttachmentManager;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.Cursor;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -88,6 +89,7 @@ public class DashboardActionColumns {
             private final Button updateBtn = new Button("Update");
 
             {
+                updateBtn.getStyleClass().add("status-action-btn");
                 updateBtn.setOnAction(event -> {
 
                     TransactionHistory history =
@@ -166,9 +168,20 @@ public class DashboardActionColumns {
                 String buySell = history.getBuySell();
                 String status = history.getStatus();
 
-                if ("Buy".equalsIgnoreCase(buySell)) {
+                updateBtn.setCursor(updateBtn.isDisabled() ? Cursor.DEFAULT : Cursor.HAND);
+                updateBtn.getStyleClass().removeAll(
+                        "status-action-stock",
+                        "status-action-issued",
+                        "status-action-returned",
+                        "status-action-scrapped"
+                );
+
+                if ("BUY".equalsIgnoreCase(buySell)) {
+
                     updateBtn.setDisable(true);
                     updateBtn.setText("IN STOCK");
+                    updateBtn.getStyleClass().add("status-action-stock");
+
                 } else {
 
                     switch (status.toUpperCase()) {
@@ -176,16 +189,19 @@ public class DashboardActionColumns {
                         case "ISSUED" -> {
                             updateBtn.setDisable(false);
                             updateBtn.setText("ISSUED");
+                            updateBtn.getStyleClass().add("status-action-issued");
                         }
 
                         case "RETURNED" -> {
                             updateBtn.setDisable(true);
                             updateBtn.setText("RETURNED");
+                            updateBtn.getStyleClass().add("status-action-returned");
                         }
 
                         case "SCRAPPED" -> {
                             updateBtn.setDisable(true);
                             updateBtn.setText("SCRAPPED");
+                            updateBtn.getStyleClass().add("status-action-scrapped");
                         }
                     }
                 }
