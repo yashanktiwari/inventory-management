@@ -1133,7 +1133,7 @@ public class DashboardController {
         Label appName = new Label("Inventory Management System");
         appName.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        Label version = new Label("Version 1.0.0");
+        Label version = new Label("Version 1.1.0");
         version.setStyle("-fx-font-size: 13px;");
 
         Label author = new Label("Developed by Yashank Tiwari");

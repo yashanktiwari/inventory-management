@@ -174,6 +174,7 @@ public class AddTransactionController {
         setupCategoryAutocomplete();
         setupPlantAutocomplete();
         setupDepartmentAutocomplete();
+        setupPartyAutocomplete();
         setupAutoComplete();
 
         // Force uppercase input
@@ -809,7 +810,6 @@ public class AddTransactionController {
         );
     }
 
-
     private void setupItemAutocomplete() {
 
         List<String> itemCodes =
@@ -879,6 +879,20 @@ public class AddTransactionController {
         );
     }
 
+    private void setupPartyAutocomplete() {
+
+        List<String> parties =
+                MasterCache.partyCache.values()
+                        .stream()
+                        .map(p -> p.getPartyName())
+                        .toList();
+
+        setupSuggestionField(
+                partyField,
+                parties,
+                party -> {}
+        );
+    }
 
     private void setupSuggestionField(
             TextField field,
@@ -1018,8 +1032,6 @@ public class AddTransactionController {
             }
         });
     }
-
-
 
     public void setTransactionType(String type) {
 

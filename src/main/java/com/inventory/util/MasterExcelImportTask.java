@@ -154,6 +154,28 @@ public class MasterExcelImportTask extends Task<Integer> {
 
                     importedCount = dao.bulkInsertDepartments(departments);
                 }
+
+                case "Party" -> {
+                    List<String> parties = new ArrayList<>();
+
+                    for (int i = 1; i <= totalRows; i++) {
+                        if (isCancelled()) break;
+
+                        Row row = sheet.getRow(i);
+                        if (row == null) continue;
+
+                        String party = ExcelHelper.getString(row.getCell(0));
+
+                        if (party.isEmpty()) continue;
+
+                        parties.add(party);
+
+                        updateProgress(i, totalRows);
+                        updateMessage("Processing row " + i + " of " + totalRows);
+                    }
+
+                    importedCount = dao.bulkInsertParties(parties);
+                }
             }
         }
 
@@ -211,6 +233,14 @@ public class MasterExcelImportTask extends Task<Integer> {
                 if (!"DEPARTMENT NAME".equalsIgnoreCase(col1)) {
                     throw new IllegalArgumentException(
                             "Invalid Excel format. Expected column: Department Name"
+                    );
+                }
+            }
+
+            case "Party" -> {
+                if (!"PARTY NAME".equalsIgnoreCase(col1)) {
+                    throw new IllegalArgumentException(
+                            "Invalid Excel format. Expected column: Party Name"
                     );
                 }
             }
