@@ -53,7 +53,7 @@ public class DatabaseBackupDialog {
 
                 String filePath = folder.getAbsolutePath()
                         + File.separator
-                        + "backup_" + date + ".sql";
+                        + "backup_" + date + ".zip";
 
                 pathField.setText(filePath);
             }
@@ -82,8 +82,8 @@ public class DatabaseBackupDialog {
                 return;
             }
 
-            if (!path.endsWith(".sql")) {
-                path += ".sql";
+            if (!path.toLowerCase().endsWith(".zip")) {
+                path += ".zip";
             }
 
             DatabaseBackupService.createBackup(table, path);
@@ -113,7 +113,7 @@ public class DatabaseBackupDialog {
         icon.setStyle("-fx-font-size: 20;");
 
         TextField pathField = new TextField();
-        pathField.setPromptText("Select backup (.sql) file");
+        pathField.setPromptText("Select backup (.zip) file");
 
         Button browseBtn = new Button("Browse");
 
@@ -122,7 +122,7 @@ public class DatabaseBackupDialog {
             FileChooser fc = new FileChooser();
 
             fc.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("SQL Files", "*.sql")
+                    new FileChooser.ExtensionFilter("Backup Files (*.zip)", "*.zip")
             );
 
             File file = fc.showOpenDialog(owner);
