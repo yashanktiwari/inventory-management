@@ -16,6 +16,7 @@ public class MasterCache {
     public static Map<String, CategoryMaster> categoryCache = new HashMap<>();
     public static Map<String, PlantMaster> plantCache = new HashMap<>();
     public static Map<String, DepartmentMaster> departmentCache = new HashMap<>();
+    public static Map<String, PartyMaster> partyCache = new HashMap<>();
 
 
     public static void loadCache() {
@@ -25,6 +26,15 @@ public class MasterCache {
         categoryCache.clear();
         plantCache.clear();
         departmentCache.clear();
+
+        partyCache.clear();
+
+        for (PartyMaster p : masterDAO.getAllParties()) {
+            partyCache.put(
+                    p.getPartyName().toLowerCase(),
+                    p
+            );
+        }
 
         List<ItemMaster> items = masterDAO.getAllItems();
         for(ItemMaster item : items) {

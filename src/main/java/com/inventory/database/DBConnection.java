@@ -200,6 +200,12 @@ public class DBConnection {
             )
             """;
 
+            String createMasterParties = """
+            CREATE TABLE IF NOT EXISTS master_parties (
+                party_name VARCHAR(255) PRIMARY KEY
+            )
+            """;
+
             String createIndentTable = """
                 CREATE TABLE IF NOT EXISTS indents (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -220,6 +226,7 @@ public class DBConnection {
             stmt.execute(createMasterCategories);
             stmt.execute(createMasterPlants);
             stmt.execute(createMasterDepartments);
+            stmt.execute(createMasterParties);
 
             try {
                 stmt.execute("ALTER TABLE transactions ADD COLUMN item_count DOUBLE");

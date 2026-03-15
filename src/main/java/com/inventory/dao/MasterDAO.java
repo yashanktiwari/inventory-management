@@ -129,6 +129,29 @@ public class MasterDAO {
         return list;
     }
 
+    public List<PartyMaster> getAllParties() {
+
+        List<PartyMaster> list = new ArrayList<>();
+
+        String sql = "SELECT party_name FROM master_parties";
+
+        try(Connection conn = DBConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+
+            while(rs.next()) {
+                list.add(new PartyMaster(
+                        rs.getString("party_name")
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
     public void addItem(ItemMaster item) {
 
         String sql = """
@@ -303,6 +326,40 @@ public class MasterDAO {
         }
     }
 
+    public void addParty(String party) {
+
+        String sql = """
+    INSERT INTO master_parties
+    (party_name)
+    VALUES (?)
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, party);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteParty(String party) {
+
+        String sql = "DELETE FROM master_parties WHERE party_name = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, party);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public int bulkInsertItems(List<ItemMaster> items) {
 
         if (items == null || items.isEmpty()) {
@@ -430,7 +487,7 @@ public class MasterDAO {
         }
 
         String sql = """
-        INSERT IGNORE INTO master_plants
+        INSERT IGNORE INTO master_categories
         (plant_name)
         VALUES (?)
         """;
@@ -489,7 +546,7 @@ public class MasterDAO {
         }
 
         String sql = """
-        INSERT IGNORE INTO master_departments
+        INSERT IGNORE INTO master_plants
         (department_name)
         VALUES (?)
         """;
@@ -586,6 +643,65 @@ public class MasterDAO {
                 }
             }
             throw new RuntimeException("Failed to import departments: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public int bulkInsertParties(List<String> parties) {
+
+        if (parties == null || parties.isEmpty()) {
+            return 0;
+        }
+
+        String sql = """
+        INSERT IGNORE INTO master_parties
+        (party_name)
+        VALUES (?)
+        """;
+
+        int count = 0;
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            for (String party : parties) {
+                ps.setString(1, party);
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            conn.commit();
+
+            for (int result : results) {
+                if (result > 0 || result == Statement.SUCCESS_NO_INFO) count++;
+            }
+
+            ps.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw new RuntimeException("Failed to import parties: " + e.getMessage(), e);
         } finally {
             if (conn != null) {
                 try {

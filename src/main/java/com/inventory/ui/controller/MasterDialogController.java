@@ -43,7 +43,8 @@ public class MasterDialogController {
                 "Employee Code",
                 "Category",
                 "Plant",
-                "Department"
+                "Department",
+                "Party"
         ));
 
         typeComboBox.setValue("Item Code");
@@ -174,6 +175,23 @@ public class MasterDialogController {
                         FXCollections.observableArrayList(masterDAO.getAllDepartments())
                 );
             }
+
+            case "Party" -> {
+
+                TableColumn<PartyMaster, String> partyCol =
+                        new TableColumn<>("Party Name");
+
+                partyCol.setCellValueFactory(data ->
+                        new SimpleStringProperty(
+                                data.getValue().getPartyName()
+                        ));
+
+                masterTable.getColumns().add(partyCol);
+
+                masterTable.setItems(
+                        FXCollections.observableArrayList(masterDAO.getAllParties())
+                );
+            }
         }
     }
 
@@ -219,6 +237,10 @@ public class MasterDialogController {
 
             case "Department" -> {
                 masterDAO.addDepartment(codeField.getText().trim().toUpperCase());
+            }
+
+            case "Party" -> {
+                masterDAO.addParty(codeField.getText().trim().toUpperCase());
             }
         }
         MasterCache.loadCache();
@@ -274,6 +296,11 @@ public class MasterDialogController {
                 DepartmentMaster dep = (DepartmentMaster) selected;
                 masterDAO.deleteDepartment(dep.getDepartmentName());
             }
+
+            case "Party" -> {
+                PartyMaster party = (PartyMaster) selected;
+                masterDAO.deleteParty(party.getPartyName());
+            }
         }
         // Reload cache
         MasterCache.loadCache();
@@ -305,7 +332,7 @@ public class MasterDialogController {
                 modelBox.setManaged(false);
             }
 
-            case "Category", "Plant", "Department" -> {
+            case "Category", "Plant", "Department", "Party" -> {
                 codeBox.setVisible(true);
                 codeBox.setManaged(true);
 
@@ -348,6 +375,10 @@ public class MasterDialogController {
 
             case "Department" -> {
                 codeField.setPromptText("Department Name");
+            }
+
+            case "Party" -> {
+                codeField.setPromptText("Party Name");
             }
         }
     }
@@ -414,6 +445,13 @@ public class MasterDialogController {
                     return false;
                 }
             }
+
+            case "Party" -> {
+                if (code.isEmpty()) {
+                    AlertUtil.showError("Validation Error", "Party name cannot be empty.");
+                    return false;
+                }
+            }
         }
 
         return true;
@@ -428,117 +466,6 @@ public class MasterDialogController {
             }
         });
     }
-
-//    @FXML
-//    private void handleImportExcel() {
-//
-//        String type = typeComboBox.getValue();
-//
-//        if (type == null) {
-//            AlertUtil.showError("Validation Error", "Please select a master type first.");
-//            return;
-//        }
-//
-//        FileChooser fileChooser = new FileChooser();
-//        fileChooser.setTitle("Select Excel File to Import");
-//        fileChooser.getExtensionFilters().add(
-//                new FileChooser.ExtensionFilter("Excel Files", ".xlsx", ".xls")
-//        );
-//
-//        File file = fileChooser.showOpenDialog(typeComboBox.getScene().getWindow());
-//
-//        if (file == null) return;
-//
-//        String expectedColumns = getExpectedColumnsForType(type);
-//
-//        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-//        confirmAlert.setTitle("Import " + type);
-//        confirmAlert.setHeaderText("Import " + type + " from Excel");
-//        confirmAlert.setContentText(
-//                "Expected Excel format:\n" +
-//                        "First row: Column headers\n" +
-//                        "Columns: " + expectedColumns + "\n\n" +
-//                        "Duplicate entries will be ignored.\n\n" +
-//                        "Continue with import?"
-//        );
-//
-//        Optional<ButtonType> result = confirmAlert.showAndWait();
-//
-//        if (result.isEmpty() || result.get() != ButtonType.OK) {
-//            return;
-//        }
-//
-//        MasterExcelImportTask task = new MasterExcelImportTask(file, type);
-//
-//        ProgressDialog progressDialog = new ProgressDialog();
-//        progressDialog.setTitle("Importing " + type);
-//        progressDialog.setHeaderText("Importing data from Excel...");
-//        progressDialog.progressProperty().bind(task.progressProperty());
-//        progressDialog.messageProperty().bind(task.messageProperty());
-//
-//        task.setOnSucceeded(event -> {
-//            progressDialog.close();
-//
-//            Integer count = task.getValue();
-//
-//            javafx.application.Platform.runLater(() -> {
-//                MasterCache.loadCache();
-//                loadTable();
-//
-//                if (count == 0) {
-//                    Alert warningAlert = new Alert(Alert.AlertType.WARNING);
-//                    warningAlert.setTitle("Import Complete");
-//                    warningAlert.setHeaderText("No Records Imported");
-//                    warningAlert.setContentText(
-//                            "No records were imported. Possible reasons:\n" +
-//                                    "- Excel file is empty or has no data rows\n" +
-//                                    "- All records already exist in the database\n" +
-//                                    "- Data format doesn't match expected columns"
-//                    );
-//                    warningAlert.getButtonTypes().setAll(ButtonType.OK);
-//                    warningAlert.showAndWait();
-//                } else {
-//                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-//                    successAlert.setTitle("Import Complete");
-//                    successAlert.setHeaderText("Import Successful");
-//                    successAlert.setContentText(
-//                            "Successfully imported " + count + " " + type + " records."
-//                    );
-//                    successAlert.getButtonTypes().setAll(ButtonType.OK);
-//                    successAlert.showAndWait();
-//                }
-//            });
-//        });
-//
-//        task.setOnFailed(event -> {
-//            progressDialog.close();
-//
-//            Throwable ex = task.getException();
-//
-//            javafx.application.Platform.runLater(() -> {
-//                AlertUtil.showError(
-//                        "Import Failed",
-//                        "Failed to import data: " + ex.getMessage()
-//                );
-//            });
-//
-//            ex.printStackTrace();
-//        });
-//
-//        task.setOnCancelled(event -> {
-//            progressDialog.close();
-//
-//            javafx.application.Platform.runLater(() -> {
-//                AlertUtil.showError("Import Cancelled", "Import was cancelled by user.");
-//            });
-//        });
-//
-//        Thread thread = new Thread(task);
-//        thread.setDaemon(true);
-//        thread.start();
-//
-//        progressDialog.showAndWait();
-//    }
 
     @FXML
     private void handleImportExcel() {
@@ -658,6 +585,7 @@ public class MasterDialogController {
             case "Category" -> "Category Name";
             case "Plant" -> "Plant Name";
             case "Department" -> "Department Name";
+            case "Party" -> "Party Name";
             default -> "";
         };
     }
