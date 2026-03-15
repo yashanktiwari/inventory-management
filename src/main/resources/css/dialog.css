@@ -1,0 +1,26 @@
+.dialog-pane {
+    -fx-background-color: white;
+    -fx-padding: 20;
+}
+
+.dialog-container {
+    -fx-background-color: white;
+}
+
+.dialog-pane .label {
+    -fx-font-weight: 600;
+}
+
+.dialog-pane .button {
+    -fx-padding: 6 16 6 16;
+}
+
+.dialog-pane .button:default {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+}
+
+.dialog-pane .text-area,
+.dialog-pane .choice-box {
+    -fx-pref-width: 300;
+}

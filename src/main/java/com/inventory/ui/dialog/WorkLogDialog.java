@@ -93,8 +93,6 @@ public class WorkLogDialog {
         toDate.setPromptText("To date");
         toDate.setPrefWidth(150);
 
-        Button apply = new Button("Apply");
-        apply.getStyleClass().add("primary-button");
         Button clear = new Button("Clear");
         clear.getStyleClass().add("secondary-button");
         clear.disableProperty().bind(
@@ -106,8 +104,6 @@ public class WorkLogDialog {
         FontIcon filterIcon = new FontIcon("fas-filter");
         FontIcon calendarIcon1 = new FontIcon("fas-calendar");
         FontIcon calendarIcon2 = new FontIcon("fas-calendar");
-
-        apply.setOnAction(e -> loadData());
 
         clear.setOnAction(e -> {
 
@@ -132,7 +128,6 @@ public class WorkLogDialog {
         HBox toBox = new HBox(6, calendarIcon2, toDate);
         toBox.setAlignment(Pos.CENTER_LEFT);
 
-//        HBox filters = new HBox(24, typeBox, fromBox, toBox, apply, clear);
         Region space1 = new Region();
         space1.setMinWidth(16);
 
@@ -148,7 +143,6 @@ public class WorkLogDialog {
                 space1,
                 fromBox,
                 toBox,
-                apply,
                 clear
         );
 

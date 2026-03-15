@@ -54,18 +54,6 @@ public class DashboardTableConfigurator {
 
                     openBuySell.accept(row);
                 });
-
-//                tableRowProperty().addListener((obs, oldRow, newRow) -> {
-//
-//                    if (newRow != null) {
-//
-//                        badge.textFillProperty().bind(
-//                                Bindings.when(newRow.selectedProperty())
-//                                        .then(Color.WHITE)
-//                                        .otherwise(Color.BLACK)
-//                        );
-//                    }
-//                });
             }
 
             @Override
@@ -120,6 +108,7 @@ public class DashboardTableConfigurator {
 
         // ITEM CATEGORY
         itemCategoryColumn.setCellValueFactory(new PropertyValueFactory<>("itemCategory"));
+        itemLocationColumn.setPrefWidth(120);
         itemCategoryColumn.setCellFactory(col ->
                 createHyperlinkCell(openItemCategory));
 
@@ -234,10 +223,16 @@ public class DashboardTableConfigurator {
 
                 if (empty || value == null) {
                     setGraphic(null);
+                    setTooltip(null);
                 } else {
-                    link.setText(value.toUpperCase());
+
+                    String text = value.toUpperCase();
+
+                    link.setText(text);
                     setGraphic(link);
                     setAlignment(Pos.CENTER);
+
+                    TableCellTooltipUtil.applyTooltip(this, text);
                 }
             }
         };

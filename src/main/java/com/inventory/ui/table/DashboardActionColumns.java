@@ -1,21 +1,36 @@
 package com.inventory.ui.table;
 
 import com.inventory.dao.TransactionDAO;
+import com.inventory.database.AppConfig;
 import com.inventory.model.AuditEntry;
 import com.inventory.model.TransactionHistory;
+import com.inventory.ui.dialog.DialogManager;
+import com.inventory.util.AlertUtil;
 import com.inventory.util.AttachmentManager;
+import com.inventory.util.PasswordUtil;
+import javafx.animation.PauseTransition;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.geometry.Bounds;
+import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Popup;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javafx.util.Pair;
 
+import java.awt.MouseInfo;
+import java.awt.geom.Point2D;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class DashboardActionColumns {
@@ -42,8 +57,8 @@ public class DashboardActionColumns {
         serialColumn.setCellFactory(col -> new TableCell<>() {
 
             private final Hyperlink link = new Hyperlink();
-
             {
+                TooltipCellFactory.create();
                 link.setStyle("-fx-text-fill:black; -fx-underline:false;");
 
                 link.setOnAction(e -> {
@@ -86,58 +101,28 @@ public class DashboardActionColumns {
 
         actionColumn.setCellFactory(col -> new TableCell<>() {
 
-            private final Button updateBtn = new Button("Update");
+            private final Hyperlink updateLink = new Hyperlink();
+            private final Label statusLabel = new Label();
 
             {
-                updateBtn.getStyleClass().add("status-action-btn");
-                updateBtn.setOnAction(event -> {
+                updateLink.setUnderline(false);
+                updateLink.setCursor(Cursor.HAND);
+                updateLink.getStyleClass().add("status-action-link");
+
+                statusLabel.getStyleClass().add("status-action-label");
+
+                updateLink.setOnAction(event -> {
 
                     TransactionHistory history =
                             getTableView().getItems().get(getIndex());
 
-                    if (!"ISSUED".equals(currentTab)) return;
-
-                    Dialog<Pair<String, String>> dialog = new Dialog<>();
-                    dialog.setTitle("Update Status");
-
-                    ChoiceBox<String> statusChoice = new ChoiceBox<>();
-                    statusChoice.getItems().addAll("RETURNED", "SCRAPPED");
-                    statusChoice.setValue(history.getStatus());
-
-                    TextArea remarksArea = new TextArea(history.getRemarks());
-                    remarksArea.setPrefRowCount(3);
-
-                    VBox content = new VBox(10,
-                            new Label("Status"),
-                            statusChoice,
-                            new Label("Remarks"),
-                            remarksArea
-                    );
-
-                    dialog.getDialogPane().setContent(content);
-
-                    ButtonType updateBtnType =
-                            new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
-
-                    dialog.getDialogPane().getButtonTypes().addAll(
-                            updateBtnType,
-                            ButtonType.CANCEL
-                    );
-
-                    dialog.setResultConverter(button -> {
-
-                        if (button == updateBtnType) {
-                            return new Pair<>(
-                                    statusChoice.getValue(),
-                                    remarksArea.getText()
-                            );
-                        }
-
-                        return null;
-                    });
+                    if (!"ISSUED".equals(history.getStatus())) return;
 
                     Optional<Pair<String, String>> result =
-                            dialog.showAndWait();
+                            DialogManager.showStatusDialog(
+                                    history.getStatus(),
+                                    history.getRemarks()
+                            );
 
                     result.ifPresent(pair -> {
 
@@ -168,8 +153,7 @@ public class DashboardActionColumns {
                 String buySell = history.getBuySell();
                 String status = history.getStatus();
 
-                updateBtn.setCursor(updateBtn.isDisabled() ? Cursor.DEFAULT : Cursor.HAND);
-                updateBtn.getStyleClass().removeAll(
+                updateLink.getStyleClass().removeAll(
                         "status-action-stock",
                         "status-action-issued",
                         "status-action-returned",
@@ -178,35 +162,36 @@ public class DashboardActionColumns {
 
                 if ("BUY".equalsIgnoreCase(buySell)) {
 
-                    updateBtn.setDisable(true);
-                    updateBtn.setText("IN STOCK");
-                    updateBtn.getStyleClass().add("status-action-stock");
+                    updateLink.setDisable(true);
+                    updateLink.setText("IN STOCK");
+                    updateLink.getStyleClass().add("status-action-stock");
 
                 } else {
 
                     switch (status.toUpperCase()) {
 
                         case "ISSUED" -> {
-                            updateBtn.setDisable(false);
-                            updateBtn.setText("ISSUED");
-                            updateBtn.getStyleClass().add("status-action-issued");
+                            updateLink.setDisable(false);
+                            updateLink.setText("ISSUED");
+                            updateLink.getStyleClass().add("status-action-issued");
                         }
 
                         case "RETURNED" -> {
-                            updateBtn.setDisable(true);
-                            updateBtn.setText("RETURNED");
-                            updateBtn.getStyleClass().add("status-action-returned");
+                            updateLink.setDisable(true);
+                            updateLink.setText("RETURNED");
+                            updateLink.getStyleClass().add("status-action-returned");
                         }
 
                         case "SCRAPPED" -> {
-                            updateBtn.setDisable(true);
-                            updateBtn.setText("SCRAPPED");
-                            updateBtn.getStyleClass().add("status-action-scrapped");
+                            updateLink.setDisable(true);
+                            updateLink.setText("SCRAPPED");
+                            updateLink.getStyleClass().add("status-action-scrapped");
                         }
                     }
                 }
 
-                setGraphic(updateBtn);
+                setGraphic(updateLink);
+                setAlignment(Pos.CENTER);
             }
         });
 
@@ -217,33 +202,61 @@ public class DashboardActionColumns {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.setStyle(
-                        "-fx-background-color:#ff4d4d;" +
-                                "-fx-text-fill:white;" +
-                                "-fx-font-weight:bold;"
-                );
+                deleteButton.getStyleClass().add("delete-action-button");
 
                 deleteButton.setOnAction(event -> {
 
                     TransactionHistory data =
                             getTableView().getItems().get(getIndex());
 
-                    Alert confirm =
-                            new Alert(Alert.AlertType.CONFIRMATION);
+                    Optional<String> passwordResult =
+                            DialogManager.showAdminPasswordDialog();
 
-                    confirm.setHeaderText("Delete Transaction?");
+                    if (passwordResult.isEmpty()) {
+                        return;
+                    }
 
-                    confirm.showAndWait().ifPresent(res -> {
+                    String password = passwordResult.get().trim();
 
-                        if (res == ButtonType.OK) {
+                    if (password.isEmpty()) {
+                        AlertUtil.showError(
+                                "Authorization Failed",
+                                "Password cannot be empty."
+                        );
+                        return;
+                    }
 
-                            transactionDAO.deleteTransaction(
-                                    data.getTransactionId()
-                            );
+                    String enteredHash = PasswordUtil.hashPassword(password);
+                    String storedHash = AppConfig.getAdminPasswordHash();
 
-                            reload.accept(null);
-                        }
-                    });
+                    if (!enteredHash.equals(storedHash)) {
+
+                        AlertUtil.showError(
+                                "Authorization Failed",
+                                "Invalid admin password. You are not allowed to delete this transaction."
+                        );
+
+                        return;
+                    }
+
+                    boolean confirmed = AlertUtil.showConfirmation(
+                            "Confirm Delete",
+                            "Are you sure you want to delete this transaction?\n\nThis action cannot be undone."
+                    );
+
+                    if (confirmed) {
+
+                        transactionDAO.deleteTransaction(
+                                data.getTransactionId()
+                        );
+
+                        reload.accept(null);
+
+                        AlertUtil.showInfo(
+                                "Deleted",
+                                "Transaction deleted successfully."
+                        );
+                    }
                 });
             }
 
@@ -253,6 +266,7 @@ public class DashboardActionColumns {
                 super.updateItem(item, empty);
 
                 setGraphic(empty ? null : deleteButton);
+                setAlignment(Pos.CENTER);
             }
         });
 
@@ -267,28 +281,83 @@ public class DashboardActionColumns {
         auditColumn.setCellFactory(col -> new TableCell<>() {
 
             private final Popup popup = new Popup();
-            private final VBox container = new VBox(10);
+            private final VBox container = new VBox(8);
+            private boolean mouseInsidePopup = false;
 
             {
+                container.getStyleClass().add("audit-popup");
+
                 ScrollPane scroll = new ScrollPane(container);
                 scroll.setPrefWidth(420);
+                scroll.setMaxHeight(300);
                 scroll.setFitToWidth(true);
 
-                popup.getContent().add(scroll);
+                scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+                scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
 
+                popup.getContent().add(scroll);
+                popup.setAutoHide(false);
+
+                // show popup
                 setOnMouseEntered(e -> {
 
-                    if (!container.getChildren().isEmpty()) {
+                    if (container.getChildren().isEmpty()) return;
 
-                        popup.show(
-                                getScene().getWindow(),
-                                e.getScreenX() + 10,
-                                e.getScreenY() + 10
-                        );
+                    Bounds cellBounds = localToScreen(getBoundsInLocal());
+
+                    double popupHeight = scroll.prefHeight(-1);
+                    double screenHeight = Screen.getPrimary().getVisualBounds().getHeight();
+
+                    double x = cellBounds.getMinX();
+                    double yBelow = cellBounds.getMaxY() + 4;
+                    double yAbove = cellBounds.getMinY() - popupHeight - 4;
+
+                    double y = (yBelow + popupHeight > screenHeight) ? yAbove : yBelow;
+
+                    popup.show(getScene().getWindow(), x, y);
+                });
+
+                // hide popup when leaving cell
+                setOnMouseExited(e -> {
+
+                    PauseTransition delay = new PauseTransition(Duration.millis(150));
+
+                    delay.setOnFinished(ev -> {
+                        if (!mouseInsidePopup) {
+                            popup.hide();
+                        }
+                    });
+
+                    delay.play();
+                });
+
+                scroll.setOnMouseEntered(e -> mouseInsidePopup = true);
+
+                scroll.setOnMouseExited(e -> {
+                    mouseInsidePopup = false;
+
+                    PauseTransition delay = new PauseTransition(Duration.millis(150));
+                    delay.setOnFinished(ev -> popup.hide());
+                    delay.play();
+                });
+
+                // hide popup on table scroll
+                table.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+
+                    ScrollBar vBar = (ScrollBar) table.lookup(".scroll-bar:vertical");
+                    ScrollBar hBar = (ScrollBar) table.lookup(".scroll-bar:horizontal");
+
+                    if (vBar != null) {
+                        vBar.valueProperty().addListener((o, oldVal, newVal) -> popup.hide());
+                    }
+
+                    if (hBar != null) {
+                        hBar.valueProperty().addListener((o, oldVal, newVal) -> popup.hide());
                     }
                 });
 
-                setOnMouseExited(e -> popup.hide());
+                // hide popup on mouse wheel scroll
+                table.setOnScroll(e -> popup.hide());
             }
 
             @Override
@@ -308,25 +377,65 @@ public class DashboardActionColumns {
 
                 setText(user.toUpperCase());
 
-                if (t.getAuditEntries() == null) return;
+                Map<String, List<AuditEntry>> grouped = new LinkedHashMap<>();
 
                 for (AuditEntry entry : t.getAuditEntries()) {
 
-                    Label line = new Label(
-                            entry.getFieldName() +
-                                    " : " +
-                                    entry.getOldValue() +
-                                    " → " +
-                                    entry.getNewValue()
+                    String key = entry.getModifiedBy() + "|" + entry.getModifiedAt();
+
+                    grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
+                }
+
+                int groupIndex = 0;
+                int totalGroups = grouped.size();
+
+                for (var group : grouped.entrySet()) {
+
+                    List<AuditEntry> groupEntries = group.getValue();
+                    AuditEntry first = groupEntries.get(0);
+
+                    Label header = new Label(
+                            first.getModifiedBy() +
+                                    " | " +
+                                    formatter.format(first.getModifiedAt())
                     );
 
-                    container.getChildren().add(line);
+                    header.getStyleClass().add("audit-header");
+
+                    VBox block = new VBox(2);
+                    block.getChildren().add(header);
+
+                    for (AuditEntry entry : groupEntries) {
+
+                        Label change = new Label(
+                                entry.getFieldName() +
+                                        " : " +
+                                        entry.getOldValue() +
+                                        " → " +
+                                        entry.getNewValue()
+                        );
+
+                        change.getStyleClass().add("audit-change");
+
+                        block.getChildren().add(change);
+                    }
+
+                    container.getChildren().add(block);
+
+                    if (groupIndex < totalGroups - 1) {
+                        Separator sep = new Separator();
+                        sep.getStyleClass().add("audit-separator");
+                        container.getChildren().add(sep);
+                    }
+
+                    groupIndex++;
                 }
             }
         });
 
         // ================= ATTACHMENT COLUMN =================
 
+        attachmentColumn.setPrefWidth(120);
         attachmentColumn.setCellFactory(col -> new TableCell<>() {
 
             private final Button btn = new Button();

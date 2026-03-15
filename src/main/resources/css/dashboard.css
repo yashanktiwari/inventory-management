@@ -178,23 +178,15 @@
 }
 
 /* ------------------------------------------------
-   Update Status Button
+   Update Status Link
 ------------------------------------------------ */
 
-.status-action-btn {
-
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-
-    -fx-padding: 4 12 4 12;
-
+.status-action-link {
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 20;
     -fx-font-weight: bold;
     -fx-font-size: 12px;
-
     -fx-cursor: hand;
-
-    -fx-border-color: transparent;
-
 }
 
 /* IN STOCK */
@@ -227,7 +219,7 @@
 
 /* Hover effect */
 
-.status-action-btn:hover {
+.status-action-link:hover {
     -fx-opacity: 0.9;
 }
 
@@ -264,18 +256,54 @@
 ------------------------------------------------ */
 
 .table-view .table-row-cell:selected .status-badge {
-    -fx-text-fill: inherit;
+    -fx-text-fill: #92400e;
+}
+
+.table-view .table-row-cell:selected .status-instock {
+    -fx-text-fill: #92400e;
+}
+
+.table-view .table-row-cell:selected .status-issued {
+    -fx-text-fill: #1e40af;
+}
+
+.table-view .table-row-cell:selected .status-returned {
+    -fx-text-fill: #065f46;
+}
+
+.table-view .table-row-cell:selected .status-scrapped {
+    -fx-text-fill: #374151;
 }
 
 .table-view .table-row-cell:selected .buy-sell-badge {
     -fx-text-fill: inherit;
 }
 
+.table-view .table-row-cell:selected .buy-badge {
+    -fx-text-fill: #065f46;
+}
+
+.table-view .table-row-cell:selected .sell-badge {
+    -fx-text-fill: #7f1d1d;
+}
+
 /* ------------------------------------------------
-   Ensure update-status button text remains white
+   Ensure update-status link text remains white
 ------------------------------------------------ */
 
-.table-view .table-row-cell:selected .status-action-btn {
+.table-view .table-row-cell:selected .status-action-link {
+    -fx-text-fill: white;
+}
+
+.table-view .table-row-cell:selected .status-action-link:disabled {
+    -fx-text-fill: white;
+}
+
+/* ------------------------------------------------
+   Attachment button text styling on row selection
+------------------------------------------------ */
+
+.table-view .table-row-cell:selected .table-cell Button {
     -fx-text-fill: white;
 }
 
@@ -301,4 +329,131 @@
 
 .connection-error {
     -fx-fill: #ef4444;
+}
+
+/* ------------------------------------------------
+   Update Status Link - Disabled State Fix
+------------------------------------------------ */
+
+/* Prevent JavaFX grey-out effect */
+
+.status-action-link:disabled {
+    -fx-opacity: 1;
+}
+
+/* Ensure text stays white */
+
+.status-action-link:disabled {
+    -fx-text-fill: white;
+}
+
+/* Also when row is selected */
+
+.table-view .table-row-cell:selected .status-action-link:disabled {
+    -fx-text-fill: white;
+}
+
+/* ------------------------------------------------
+   Delete Button (Same style family as status badges)
+------------------------------------------------ */
+
+.delete-action-button {
+
+    -fx-padding: 3 12 3 12;
+    -fx-background-radius: 20;
+
+    -fx-background-color: #ef4444;
+    -fx-text-fill: white;
+
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+
+    -fx-cursor: hand;
+}
+
+/* Hover */
+
+.delete-action-button:hover {
+    -fx-background-color: #dc2626;
+}
+
+/* Prevent JavaFX grey-out */
+
+.delete-action-button:disabled {
+    -fx-opacity: 1;
+}
+
+/* Keep text white on selected row */
+
+.table-view .table-row-cell:selected .delete-action-button {
+    -fx-text-fill: white;
+}
+
+/* ------------------------------------------------
+   Audit Popup
+------------------------------------------------ */
+
+.audit-popup {
+
+    -fx-background-color: white;
+
+    -fx-padding: 10;
+
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 6;
+
+    -fx-background-radius: 6;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 10, 0, 0, 3);
+
+}
+
+
+/* ------------------------------------------------
+   Audit Popup Styling
+------------------------------------------------ */
+
+.audit-header {
+
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+
+}
+
+.audit-change {
+
+    -fx-font-size: 12px;
+    -fx-text-fill: #374151;
+
+}
+
+/* Audit separator */
+
+.audit-separator {
+
+    -fx-padding: 6 0 6 0;
+
+}
+
+.audit-separator .line {
+
+    -fx-border-color: #e5e7eb;
+
+}
+
+/* ------------------------------------------------
+   Audit Popup Scroll
+------------------------------------------------ */
+
+.audit-scroll {
+
+    -fx-background-color: white;
+    -fx-border-color: transparent;
+
+}
+
+.audit-scroll .viewport {
+
+    -fx-background-color: white;
+
 }

@@ -529,11 +529,7 @@ public class DashboardController {
 //            Scene scene = new Scene(loader.load(), 700, 650);
             Scene scene = new Scene(loader.load());
 
-            var css = getClass().getResource("/css/add-transaction.css");
-
-            System.out.println(css);
-
-            scene.getStylesheets().add(css.toExternalForm());
+            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/css/add-transaction.css")).toExternalForm());
 
 //            scene.getStylesheets().add(
 //                    getClass().getResource("/css/add-transaction.css").toExternalForm()

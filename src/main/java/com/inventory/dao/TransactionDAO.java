@@ -1409,7 +1409,6 @@ public class TransactionDAO {
                 """;
 
         List<TransactionHistory> issuedTransactions = fetchTransactions(sql);
-        System.out.println(issuedTransactions);
         return issuedTransactions;
     }
 

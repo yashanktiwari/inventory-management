@@ -1,90 +1,82 @@
 package com.inventory.util;
 
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 import javafx.stage.Modality;
 
 import java.util.Optional;
 
 public class AlertUtil {
 
-//    private static Alert createAlert(Alert.AlertType type, String title, String message) {
-//
-//        Alert alert = new Alert(type);
-//        alert.initModality(Modality.APPLICATION_MODAL);
-//
-//        alert.setTitle(title);
-//        alert.setHeaderText(title);
-//
-//        Label content = new Label(message);
-//        content.setWrapText(true);
-//        content.setFont(Font.font(14));
-//        content.setMaxWidth(420);
-//
-//        alert.getDialogPane().setContent(content);
-//
-//        alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
-//        alert.getDialogPane().setPrefWidth(450);
-//
-//        alert.getDialogPane().setStyle("""
-//                -fx-background-color: white;
-//                -fx-font-size: 14px;
-//                """);
-//
-//        return alert;
-//    }
-
     private static Alert createAlert(Alert.AlertType type, String title, String message) {
-
         Alert alert = new Alert(type);
         alert.initModality(Modality.APPLICATION_MODAL);
-
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(message);
+        alert.setGraphic(null);
+
+        Label messageLabel = new Label(message);
+        messageLabel.setWrapText(true);
+
+        // This is the crucial part for wrapping in Dialogs
+        messageLabel.setPrefWidth(380);
+        messageLabel.setMaxWidth(380);
+        messageLabel.setMinHeight(Region.USE_PREF_SIZE);
+
+        VBox content = new VBox(messageLabel);
+        content.setFillWidth(true);
 
         DialogPane pane = alert.getDialogPane();
+        pane.setContent(content);
 
+        // Ensure the pane itself expands to the content
         pane.setPrefWidth(450);
-        pane.setMinHeight(Region.USE_PREF_SIZE);   // ⭐ IMPORTANT
+        pane.setMinHeight(Region.USE_PREF_SIZE);
+        pane.setPadding(new Insets(14));
 
         pane.setStyle("""
-        -fx-background-color: white;
-        -fx-font-size: 14px;
+    -fx-background-color: white;
+    -fx-font-size: 14px;
     """);
 
-        alert.getButtonTypes().setAll(ButtonType.OK);
-
         return alert;
+    }
+
+    private static void styleButton(Button button, String color) {
+
+        if (button == null) return;
+
+        button.setStyle("""
+                -fx-background-color:%s;
+                -fx-text-fill:white;
+                -fx-font-weight:bold;
+                -fx-padding:6 18 6 18;
+                -fx-background-radius:6;
+                """.formatted(color));
     }
 
     public static void showInfo(String title, String message) {
 
         Alert alert = createAlert(Alert.AlertType.INFORMATION, title, message);
 
+        alert.getButtonTypes().setAll(ButtonType.OK);
+
         Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
-        okButton.setStyle("""
-                -fx-background-color:#2ecc71;
-                -fx-text-fill:white;
-                -fx-font-weight:bold;
-                """);
+        styleButton(okButton, "#22c55e");
 
         alert.showAndWait();
     }
 
     public static void showError(String title, String message) {
+
         Alert alert = createAlert(Alert.AlertType.ERROR, title, message);
 
-        // showAndWait() must be called, but we can style the button
-        // by accessing the DialogPane's button nodes safely.
-        alert.setOnShown(e -> {
-            Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
-            if (okButton != null) {
-                okButton.setStyle("-fx-background-color:#e74c3c; -fx-text-fill:white; -fx-font-weight:bold;");
-            }
-        });
+        alert.getButtonTypes().setAll(ButtonType.OK);
+
+        Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
+        styleButton(okButton, "#ef4444");
 
         alert.showAndWait();
     }
@@ -93,12 +85,10 @@ public class AlertUtil {
 
         Alert alert = createAlert(Alert.AlertType.WARNING, title, message);
 
+        alert.getButtonTypes().setAll(ButtonType.OK);
+
         Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
-        okButton.setStyle("""
-                -fx-background-color:#f39c12;
-                -fx-text-fill:white;
-                -fx-font-weight:bold;
-                """);
+        styleButton(okButton, "#f59e0b");
 
         alert.showAndWait();
     }
@@ -107,16 +97,24 @@ public class AlertUtil {
 
         Alert alert = createAlert(Alert.AlertType.CONFIRMATION, title, message);
 
+        alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+
         Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
         okButton.setText("Confirm");
-        okButton.setStyle("""
-                -fx-background-color:#3498db;
-                -fx-text-fill:white;
-                -fx-font-weight:bold;
-                """);
+        styleButton(okButton, "#2563eb");
 
         Button cancelButton = (Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL);
-        cancelButton.setText("Cancel");
+
+        if (cancelButton != null) {
+            cancelButton.setText("Cancel");
+            cancelButton.setStyle("""
+                    -fx-background-color:#e5e7eb;
+                    -fx-text-fill:#111827;
+                    -fx-font-weight:bold;
+                    -fx-padding:6 18 6 18;
+                    -fx-background-radius:6;
+                    """);
+        }
 
         Optional<ButtonType> result = alert.showAndWait();
 
